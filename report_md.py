@@ -19,13 +19,21 @@ def generate_md(metrics: dict, output_path: Path = DEFAULT_OUTPUT) -> None:
     parts = [
         "# AI Adoption Metrics Report",
         "",
-        f"Generated at {metrics.get('generated_at', '')}",
+        f"Reported Date:  {(metrics.get('generated_at') or '')[:10]}",
         "",
     ]
 
     velocity = metrics.get("velocity") or []
     if velocity:
         parts.append("## Velocity trend")
+        parts.append("")
+        # Bar chart: proportional bars (max 40 chars width)
+        max_vel = max((row.get("velocity") or 0) for row in velocity) or 1
+        for row in velocity:
+            v = row.get("velocity") or 0
+            bar_len = int(40 * v / max_vel) if max_vel else 0
+            bar = "█" * bar_len
+            parts.append(f"- **{row.get('sprint_name', '')}**: {bar} {v}")
         parts.append("")
         headers = ["Sprint", "Start", "End", "Velocity (points)", "Issues done"]
         rows = [

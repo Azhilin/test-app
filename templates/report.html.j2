@@ -15,15 +15,20 @@
     th { font-weight: 600; color: #555; }
     .number { text-align: right; }
     .empty { color: #999; font-style: italic; }
+    .chart-container { position: relative; height: 280px; margin-bottom: 1.25rem; }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
   <h1>AI Adoption Metrics Report</h1>
-  <p class="meta">Generated at {{ metrics.generated_at }}</p>
+  <p class="meta">Reported Date:  {{ metrics.generated_at[:10] }}</p>
 
   <section>
     <h2>Velocity trend</h2>
     {% if metrics.velocity %}
+    <div class="chart-container">
+      <canvas id="velocityChart" aria-label="Velocity per sprint bar chart"></canvas>
+    </div>
     <table>
       <thead>
         <tr>
@@ -94,6 +99,59 @@
       </tbody>
     </table>
   </section>
+  {% endif %}
+  {% if metrics.velocity %}
+  <script>
+    (function() {
+      var ctx = document.getElementById('velocityChart').getContext('2d');
+      var velocityData = {{ metrics.velocity | tojson }};
+      velocityData = velocityData.slice().reverse();
+      var labels = velocityData.map(function(r) { return r.sprint_name; });
+      var values = velocityData.map(function(r) { return r.velocity; });
+      var maxVal = Math.max.apply(null, values) || 1;
+      var avg = values.length ? values.reduce(function(a, b) { return a + b; }, 0) / values.length : 0;
+      var avgLine = values.map(function() { return Math.round(avg * 10) / 10; });
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              type: 'bar',
+              label: 'Velocity (points)',
+              data: values,
+              backgroundColor: 'rgba(54, 162, 235, 0.7)',
+              borderColor: 'rgb(54, 162, 235)',
+              borderWidth: 1
+            },
+            {
+              type: 'line',
+              label: 'Average Velocity',
+              data: avgLine,
+              borderColor: 'rgb(34, 139, 34)',
+              backgroundColor: 'transparent',
+              borderWidth: 2,
+              pointRadius: 0,
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { stepSize: maxVal <= 10 ? 1 : Math.ceil(maxVal / 10) }
+            }
+          }
+        }
+      });
+    })();
+  </script>
   {% endif %}
 </body>
 </html>
