@@ -44,14 +44,25 @@ def get_sprints(jira: Jira, board_id: int) -> list[dict[str, Any]]:
     return ordered
 
 
-def get_issues_for_sprint(jira: Jira, board_id: int, sprint_id: int) -> list[dict[str, Any]]:
-    """Return all issues in the sprint (paginated). Includes basic fields."""
+def get_filter_jql(jira: Jira) -> str:
+    """Return the JQL string for the configured filter ID, or empty string if not set."""
+    if config.JIRA_FILTER_ID is None:
+        return ""
+    try:
+        f = jira.get_filter(config.JIRA_FILTER_ID)
+        return (f.get("jql") or "").strip()
+    except Exception:
+        return ""
+
+
+def get_issues_for_sprint(jira: Jira, board_id: int, sprint_id: int, jql: str = "") -> list[dict[str, Any]]:
+    """Return all issues in the sprint (paginated). If jql is set, only issues matching that JQL are returned."""
     all_issues: list[dict[str, Any]] = []
     start = 0
     limit = 50
     while True:
         result = jira.get_all_issues_for_sprint_in_board(
-            board_id, sprint_id, start=start, limit=limit
+            board_id, sprint_id, jql=jql, start=start, limit=limit
         )
         issues = result.get("issues") or []
         all_issues.extend(issues)
@@ -83,15 +94,17 @@ def get_issues_with_changelog(
 def fetch_sprint_data(jira: Jira) -> tuple[list[dict[str, Any]], dict[int, list[dict[str, Any]]]]:
     """
     Fetch sprints and their issues for the configured board.
+    If JIRA_FILTER_ID is set, only issues matching that filter's JQL are included.
     Returns (sprints_list, sprint_id -> list of issue dicts).
     """
     board_id = get_board_id(jira)
     sprints = get_sprints(jira, board_id)
+    filter_jql = get_filter_jql(jira)
     sprint_issues: dict[int, list[dict[str, Any]]] = {}
     for sprint in sprints:
         sid = sprint.get("id")
         if sid is None:
             continue
-        issues = get_issues_for_sprint(jira, board_id, sid)
+        issues = get_issues_for_sprint(jira, board_id, sid, jql=filter_jql)
         sprint_issues[sid] = issues
     return sprints, sprint_issues

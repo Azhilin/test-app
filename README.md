@@ -29,4 +29,4 @@ To remove all generated reports:
 python remove_reports.py
 ```
 
-Optional env vars: `JIRA_BOARD_ID`, `JIRA_SPRINT_COUNT`, `JIRA_STORY_POINTS_FIELD` (see `.env.example`).
+Optional env vars: `JIRA_BOARD_ID`, `JIRA_SPRINT_COUNT`, `JIRA_STORY_POINTS_FIELD`, `JIRA_FILTER_ID` (see `.env.example`).
