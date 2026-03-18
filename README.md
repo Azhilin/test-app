@@ -1,4 +1,4 @@
-# Jira Metrics Report
+# AI Adoption Metrics Report
 
 Fetches data from Jira Cloud and generates metrics trend reports in HTML and Markdown (in parallel).
 

@@ -17,7 +17,7 @@ def _md_table(headers: list[str], rows: list[list[str]]) -> str:
 def generate_md(metrics: dict, output_path: Path = DEFAULT_OUTPUT) -> None:
     """Build Markdown from metrics dict and write to output_path."""
     parts = [
-        "# Jira Metrics Report",
+        "# AI Adoption Metrics Report",
         "",
         f"Generated at {metrics.get('generated_at', '')}",
         "",
