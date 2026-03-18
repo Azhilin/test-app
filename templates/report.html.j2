@@ -43,8 +43,8 @@
         {% for row in metrics.velocity %}
         <tr>
           <td>{{ row.sprint_name }}</td>
-          <td>{{ row.start_date or '—' }}</td>
-          <td>{{ row.end_date or '—' }}</td>
+          <td>{{ (row.start_date or '')[:10] or '—' }}</td>
+          <td>{{ (row.end_date or '')[:10] or '—' }}</td>
           <td class="number">{{ row.velocity }}</td>
           <td class="number">{{ row.issue_count }}</td>
         </tr>
@@ -103,14 +103,61 @@
   {% if metrics.velocity %}
   <script>
     (function() {
+      Chart.register({
+        id: 'avgVelocityLabels',
+        afterDatasetsDraw: function(chart) {
+          var lineIdx = 1;
+          if (!chart.data.datasets[lineIdx] || chart.data.datasets[lineIdx].type !== 'line') return;
+          var meta = chart.getDatasetMeta(lineIdx);
+          if (!meta || !meta.data.length) return;
+          var ctx = chart.ctx;
+          var dataset = chart.data.datasets[lineIdx];
+          var padding = 4;
+          var fontSize = 11;
+          var labelOffset = 16;
+          ctx.save();
+          ctx.font = fontSize + 'px system-ui, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          for (var i = 0; i < meta.data.length; i++) {
+            var point = meta.data[i];
+            var value = dataset.data[i];
+            var text = String(value);
+            var w = ctx.measureText(text).width + padding * 2;
+            var h = fontSize + padding;
+            var x = point.x;
+            var y = point.y - labelOffset;
+            if (y - h < chart.chartArea.top) y = chart.chartArea.top + h + 2;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
+            ctx.strokeStyle = 'rgb(0, 82, 204)';
+            ctx.lineWidth = 1;
+            if (ctx.roundRect) {
+              ctx.beginPath();
+              ctx.roundRect(x - w / 2, y - h, w, h, 3);
+              ctx.fill();
+              ctx.stroke();
+            } else {
+              ctx.fillRect(x - w / 2, y - h, w, h);
+              ctx.strokeRect(x - w / 2, y - h, w, h);
+            }
+            ctx.fillStyle = 'rgb(0, 82, 204)';
+            ctx.fillText(text, x, y - padding / 2);
+          }
+          ctx.restore();
+        }
+      });
       var ctx = document.getElementById('velocityChart').getContext('2d');
       var velocityData = {{ metrics.velocity | tojson }};
       velocityData = velocityData.slice().reverse();
       var labels = velocityData.map(function(r) { return r.sprint_name; });
       var values = velocityData.map(function(r) { return r.velocity; });
       var maxVal = Math.max.apply(null, values) || 1;
-      var avg = values.length ? values.reduce(function(a, b) { return a + b; }, 0) / values.length : 0;
-      var avgLine = values.map(function() { return Math.round(avg * 10) / 10; });
+      var runningAvg = [];
+      var sum = 0;
+      for (var i = 0; i < values.length; i++) {
+        sum += values[i];
+        runningAvg.push(Math.round((sum / (i + 1)) * 10) / 10);
+      }
       new Chart(ctx, {
         type: 'bar',
         data: {
@@ -120,19 +167,25 @@
               type: 'bar',
               label: 'Velocity (points)',
               data: values,
-              backgroundColor: 'rgba(54, 162, 235, 0.7)',
-              borderColor: 'rgb(54, 162, 235)',
-              borderWidth: 1
+              backgroundColor: 'rgba(0, 255, 127, 0.85)',
+              borderColor: 'rgb(0, 255, 127)',
+              borderWidth: 1,
+              barPercentage: 0.45,
+              categoryPercentage: 0.8,
+              order: 2
             },
             {
               type: 'line',
               label: 'Average Velocity',
-              data: avgLine,
-              borderColor: 'rgb(34, 139, 34)',
+              data: runningAvg,
+              borderColor: 'rgb(0, 82, 204)',
               backgroundColor: 'transparent',
-              borderWidth: 2,
-              pointRadius: 0,
-              fill: false
+              borderWidth: 2.5,
+              pointRadius: 3,
+              pointBackgroundColor: 'rgb(0, 82, 204)',
+              fill: false,
+              tension: 0.1,
+              order: 1
             }
           ]
         },
@@ -143,9 +196,13 @@
             legend: { display: true }
           },
           scales: {
+            x: {
+              grid: { display: false }
+            },
             y: {
               beginAtZero: true,
-              ticks: { stepSize: maxVal <= 10 ? 1 : Math.ceil(maxVal / 10) }
+              ticks: { stepSize: maxVal <= 10 ? 1 : Math.ceil(maxVal / 10) },
+              grid: { borderDash: [4, 4] }
             }
           }
         }

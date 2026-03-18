@@ -5,12 +5,23 @@ from __future__ import annotations
 
 import sys
 from concurrent.futures import ThreadPoolExecutor, wait
+from pathlib import Path
 
 import config
 import jira_client
 import metrics
 import report_html
 import report_md
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+REPORTS_DIR = PROJECT_ROOT / "reports"
+
+
+def _timestamp_folder_name(iso_timestamp: str) -> str:
+    """Build a filesystem-safe folder name from ISO timestamp (e.g. 2026-03-18T17-27-30)."""
+    # Use date and time up to seconds: YYYY-MM-DDTHH:MM:SS -> replace : with -
+    prefix = (iso_timestamp or "")[:19]
+    return prefix.replace(":", "-") if prefix else "report"
 
 
 def main() -> int:
@@ -32,14 +43,21 @@ def main() -> int:
     issues_with_changelog = jira_client.get_issues_with_changelog(jira, issue_keys) if issue_keys else []
     metrics_dict = metrics.build_metrics_dict(sprints, sprint_issues, issues_with_changelog)
 
+    folder_name = _timestamp_folder_name(metrics_dict["generated_at"])
+    report_dir = REPORTS_DIR / folder_name
+    report_dir.mkdir(parents=True, exist_ok=True)
+
+    path_html = report_dir / "report.html"
+    path_md = report_dir / "report.md"
+
     with ThreadPoolExecutor(max_workers=2) as executor:
-        f_html = executor.submit(report_html.generate_html, metrics_dict)
-        f_md = executor.submit(report_md.generate_md, metrics_dict)
+        f_html = executor.submit(report_html.generate_html, metrics_dict, path_html)
+        f_md = executor.submit(report_md.generate_md, metrics_dict, path_md)
         wait([f_html, f_md])
         f_html.result()
         f_md.result()
 
-    print("Reports written: report.html, report.md")
+    print(f"Reports written: {path_html}, {path_md}")
     return 0
 
 

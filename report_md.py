@@ -35,12 +35,15 @@ def generate_md(metrics: dict, output_path: Path = DEFAULT_OUTPUT) -> None:
             bar = "█" * bar_len
             parts.append(f"- **{row.get('sprint_name', '')}**: {bar} {v}")
         parts.append("")
+        def _date_fmt(s: str | None) -> str:
+            return ((s or "")[:10] or "—").strip() or "—"
+
         headers = ["Sprint", "Start", "End", "Velocity (points)", "Issues done"]
         rows = [
             [
                 row.get("sprint_name", ""),
-                row.get("start_date") or "—",
-                row.get("end_date") or "—",
+                _date_fmt(row.get("start_date")),
+                _date_fmt(row.get("end_date")),
                 row.get("velocity", 0),
                 row.get("issue_count", 0),
             ]

@@ -21,6 +21,12 @@ Fetches data from Jira Cloud and generates metrics trend reports in HTML and Mar
 python main.py
 ```
 
-Outputs: `report.html` and `report.md`.
+Reports are written to `reports/<timestamp>/` (e.g. `reports/2026-03-18T17-27-30/report.html` and `report.md`). Each run creates a new timestamped folder.
+
+To remove all generated reports:
+
+```bash
+python remove_reports.py
+```
 
 Optional env vars: `JIRA_BOARD_ID`, `JIRA_SPRINT_COUNT`, `JIRA_STORY_POINTS_FIELD` (see `.env.example`).
