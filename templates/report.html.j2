@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jira Metrics Report</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 1.5rem; color: #1a1a1a; background: #fafafa; }
+    h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .meta { color: #666; font-size: 0.875rem; margin-bottom: 1.5rem; }
+    section { background: #fff; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    h2 { font-size: 1.1rem; margin: 0 0 0.75rem 0; color: #333; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+    th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid #eee; }
+    th { font-weight: 600; color: #555; }
+    .number { text-align: right; }
+    .empty { color: #999; font-style: italic; }
+  </style>
+</head>
+<body>
+  <h1>Jira Metrics Report</h1>
+  <p class="meta">Generated at {{ metrics.generated_at }}</p>
+
+  <section>
+    <h2>Velocity trend</h2>
+    {% if metrics.velocity %}
+    <table>
+      <thead>
+        <tr>
+          <th>Sprint</th>
+          <th>Start</th>
+          <th>End</th>
+          <th class="number">Velocity (points)</th>
+          <th class="number">Issues done</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in metrics.velocity %}
+        <tr>
+          <td>{{ row.sprint_name }}</td>
+          <td>{{ row.start_date or '—' }}</td>
+          <td>{{ row.end_date or '—' }}</td>
+          <td class="number">{{ row.velocity }}</td>
+          <td class="number">{{ row.issue_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty">No velocity data.</p>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2>Cycle time</h2>
+    {% if metrics.cycle_time and metrics.cycle_time.sample_size > 0 %}
+    <table>
+      <tr><th>Mean (days)</th><td class="number">{{ metrics.cycle_time.mean_days }}</td></tr>
+      <tr><th>Median (days)</th><td class="number">{{ metrics.cycle_time.median_days }}</td></tr>
+      <tr><th>Min (days)</th><td class="number">{{ metrics.cycle_time.min_days }}</td></tr>
+      <tr><th>Max (days)</th><td class="number">{{ metrics.cycle_time.max_days }}</td></tr>
+      <tr><th>Sample size</th><td class="number">{{ metrics.cycle_time.sample_size }}</td></tr>
+    </table>
+    {% else %}
+    <p class="empty">No cycle time data (need issues with changelog).</p>
+    {% endif %}
+  </section>
+
+  {% if metrics.custom_trends %}
+  <section>
+    <h2>Custom trends</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Sprint</th>
+          {% for key in metrics.custom_trends[0] %}
+          {% if key != 'sprint_id' and key != 'sprint_name' %}
+          <th class="number">{{ key }}</th>
+          {% endif %}
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in metrics.custom_trends %}
+        <tr>
+          <td>{{ row.sprint_name }}</td>
+          {% for key, val in row.items() %}
+          {% if key != 'sprint_id' and key != 'sprint_name' %}
+          <td class="number">{{ val }}</td>
+          {% endif %}
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+</body>
+</html>
