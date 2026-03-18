@@ -1,20 +1,7 @@
-# Secrets
 .env
-
-# Python
 __pycache__/
 *.pyc
-*.pyo
-
-# Virtual environments
-venv/
 .venv/
-
-# Packaging
-*.egg-info/
-dist/
-build/
-
-# IDE
-.idea/
-.vscode/
+venv/
+report.html
+report.md

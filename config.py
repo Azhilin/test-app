@@ -20,6 +20,9 @@ JIRA_BOARD_ID = int(_board_id) if _board_id.isdigit() else None
 _sprint_count = os.getenv("JIRA_SPRINT_COUNT", "10").strip()
 JIRA_SPRINT_COUNT = int(_sprint_count) if _sprint_count.isdigit() else 10
 
+# Story points field key (varies by instance; common: customfield_10016)
+JIRA_STORY_POINTS_FIELD = os.getenv("JIRA_STORY_POINTS_FIELD", "customfield_10016").strip() or "customfield_10016"
+
 
 def validate_config() -> list[str]:
     """Return list of validation errors; empty if config is valid."""

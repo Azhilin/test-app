@@ -21,33 +21,50 @@ def get_board_id(jira: Jira) -> int:
     """Return the board ID to use (config or first available board)."""
     if config.JIRA_BOARD_ID is not None:
         return config.JIRA_BOARD_ID
-    boards = jira.boards()
-    if not boards.get("values"):
+    result = jira.get_all_agile_boards(start=0, limit=1)
+    values = result.get("values") or []
+    if not values:
         raise ValueError("No boards found. Set JIRA_BOARD_ID or use an account with board access.")
-    return int(boards["values"][0]["id"])
+    return int(values[0]["id"])
 
 
 def get_sprints(jira: Jira, board_id: int) -> list[dict[str, Any]]:
-    """Return recent sprints for the board (closed + open), limited by JIRA_SPRINT_COUNT."""
-    result = jira.sprints(board_id, extended=True)
-    sprints = result.get("values") or []
-    # Prefer closed sprints for velocity; include open for current
-    closed = [s for s in sprints if s.get("state") == "closed"]
-    open_sprints = [s for s in sprints if s.get("state") != "closed"]
+    """Return recent sprints for the board (closed + active), limited by JIRA_SPRINT_COUNT."""
+    # Fetch closed first, then active
+    result_closed = jira.get_all_sprints_from_board(
+        board_id, state="closed", start=0, limit=config.JIRA_SPRINT_COUNT
+    )
+    result_active = jira.get_all_sprints_from_board(
+        board_id, state="active", start=0, limit=10
+    )
+    closed = result_closed.get("values") or []
+    active = result_active.get("values") or []
     ordered = sorted(closed, key=lambda s: s.get("startDate") or "", reverse=True)
-    ordered = (ordered + open_sprints)[: config.JIRA_SPRINT_COUNT]
+    ordered = (ordered + active)[: config.JIRA_SPRINT_COUNT]
     return ordered
 
 
 def get_issues_for_sprint(jira: Jira, board_id: int, sprint_id: int) -> list[dict[str, Any]]:
-    """Return issues in the sprint (backlog + completed). Includes basic fields."""
-    result = jira.get_sprint_issues(board_id, sprint_id)
-    return result.get("issues") or []
+    """Return all issues in the sprint (paginated). Includes basic fields."""
+    all_issues: list[dict[str, Any]] = []
+    start = 0
+    limit = 50
+    while True:
+        result = jira.get_all_issues_for_sprint_in_board(
+            board_id, sprint_id, start=start, limit=limit
+        )
+        issues = result.get("issues") or []
+        all_issues.extend(issues)
+        total = result.get("total", 0)
+        if start + len(issues) >= total or len(issues) == 0:
+            break
+        start += len(issues)
+    return all_issues
 
 
 def get_issue_with_changelog(jira: Jira, issue_key: str) -> dict[str, Any]:
     """Fetch a single issue with changelog for cycle time calculation."""
-    return jira.issue(issue_key, expand="changelog")
+    return jira.get_issue(issue_key, expand="changelog")
 
 
 def get_issues_with_changelog(
