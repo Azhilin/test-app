@@ -1,0 +1,1300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Adoption Metrics Report</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent:       #0052CC;
+      --accent-hover: #0747A6;
+      --accent-light: #DEEBFF;
+      --bg:           #F4F5F7;
+      --surface:      #FFFFFF;
+      --border:       #DFE1E6;
+      --text:         #172B4D;
+      --text-muted:   #6B778C;
+      --text-subtle:  #97A0AF;
+      --success:      #006644;
+      --success-bg:   #E3FCEF;
+      --error:        #BF2600;
+      --error-bg:     #FFEBE6;
+      --warn-bg:      #FFFAE6;
+      --warn:         #172B4D;
+      --log-bg:       #1B2537;
+      --log-text:     #A8D8A8;
+      --log-info:     #79C0FF;
+      --log-err:      #FF7B72;
+      --radius:       6px;
+      --shadow:       0 1px 3px rgba(9,30,66,.12), 0 0 0 1px rgba(9,30,66,.06);
+      --font:         -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    }
+
+    html { font-size: 15px; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 16px 48px;
+    }
+
+    /* ── Header ── */
+    .app-header {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 28px 0 20px;
+      border-bottom: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .app-header-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--accent);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .app-header-icon svg { display: block; }
+    .app-header h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--text);
+      line-height: 1.2;
+    }
+    .app-header p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ── Wrapper ── */
+    .app-body {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    /* ── Tabs ── */
+    .tab-bar {
+      display: flex;
+      gap: 0;
+      border-bottom: 2px solid var(--border);
+      margin-top: 6px;
+    }
+    .tab-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      padding: 14px 20px 12px;
+      position: relative;
+      outline: none;
+      transition: color 0.15s;
+      white-space: nowrap;
+      border-bottom: 2px solid transparent;
+      margin-bottom: -2px;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn[aria-selected="true"] {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+    .tab-btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+      border-radius: 3px 3px 0 0;
+    }
+
+    /* ── Tab panels ── */
+    .tab-panel { padding: 28px 0; }
+    .tab-panel[hidden] { display: none; }
+
+    /* ── Cards / sections ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .card-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+
+    /* ── Description block ── */
+    .report-desc {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      background: var(--accent-light);
+      border: 1px solid #B3D4FF;
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      margin-bottom: 24px;
+    }
+    .report-desc-icon { flex-shrink: 0; margin-top: 1px; }
+    .report-desc p {
+      font-size: 0.85rem;
+      color: #0747A6;
+      line-height: 1.6;
+    }
+    .report-desc strong { font-weight: 600; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-family: var(--font);
+      font-size: 0.875rem;
+      font-weight: 500;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      padding: 9px 18px;
+      transition: background 0.15s, box-shadow 0.15s, opacity 0.15s;
+      outline: none;
+      line-height: 1;
+    }
+    .btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-primary:active { background: #03358A; }
+    .btn-primary:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { background: var(--bg); }
+    .btn-secondary:active { background: #EBECF0; }
+    .btn-danger {
+      background: #FFEBE6;
+      color: var(--error);
+      border: 1px solid #FFBDAD;
+    }
+    .btn-danger:hover { background: #FFBDAD; }
+
+    .btn-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    .save-confirm {
+      font-size: 0.8rem;
+      color: var(--success);
+      font-weight: 500;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .save-confirm.visible { opacity: 1; }
+
+    /* ── Log area ── */
+    .log-wrap {
+      background: var(--log-bg);
+      border-radius: var(--radius);
+      overflow: hidden;
+      margin-top: 16px;
+    }
+    .log-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 14px;
+      background: rgba(255,255,255,0.05);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .log-toolbar-label {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: rgba(255,255,255,0.4);
+    }
+    .log-clear-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font);
+      font-size: 0.72rem;
+      color: rgba(255,255,255,0.35);
+      padding: 2px 4px;
+      border-radius: 3px;
+      transition: color 0.12s;
+    }
+    .log-clear-btn:hover { color: rgba(255,255,255,0.7); }
+    .log-output {
+      font-family: 'Cascadia Code', 'Fira Code', 'Consolas', 'SF Mono', monospace;
+      font-size: 0.78rem;
+      line-height: 1.7;
+      color: var(--log-text);
+      padding: 14px 16px;
+      height: 210px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .log-output:empty::before {
+      content: 'Output will appear here…';
+      color: rgba(255,255,255,0.2);
+    }
+    .log-info  { color: var(--log-info); }
+    .log-error { color: var(--log-err); }
+    .log-ok    { color: #3FB950; }
+    .log-muted { color: rgba(255,255,255,0.3); }
+
+    /* ── Reports list ── */
+    .reports-list {
+      list-style: none;
+      margin-top: 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .reports-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.83rem;
+    }
+    .reports-list li .report-ts {
+      font-weight: 600;
+      color: var(--text);
+      min-width: 160px;
+    }
+    .reports-list li .report-links {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .reports-list a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.8rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .reports-list a:hover { text-decoration: underline; }
+    .reports-empty {
+      font-size: 0.83rem;
+      color: var(--text-subtle);
+      font-style: italic;
+      padding: 6px 0;
+    }
+
+    /* ── Forms ── */
+    .form-group { margin-bottom: 18px; }
+    .form-group:last-of-type { margin-bottom: 0; }
+    .form-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 5px;
+    }
+    .form-label .optional {
+      font-weight: 400;
+      color: var(--text-subtle);
+      font-size: 0.75rem;
+      margin-left: 5px;
+    }
+    .form-input {
+      width: 100%;
+      font-family: var(--font);
+      font-size: 0.875rem;
+      color: var(--text);
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    .form-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-light);
+    }
+    .form-input::placeholder { color: var(--text-subtle); }
+    .form-input.invalid {
+      border-color: var(--error);
+      box-shadow: 0 0 0 2px var(--error-bg);
+    }
+    .form-helper {
+      margin-top: 5px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.5;
+    }
+    .form-error {
+      margin-top: 5px;
+      font-size: 0.78rem;
+      color: var(--error);
+      display: none;
+    }
+    .form-error.visible { display: block; }
+
+    /* ── Password field ── */
+    .input-with-toggle {
+      position: relative;
+      display: flex;
+    }
+    .input-with-toggle .form-input {
+      padding-right: 44px;
+    }
+    .toggle-visibility {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 4px;
+      line-height: 1;
+      border-radius: 3px;
+      transition: color 0.12s;
+    }
+    .toggle-visibility:hover { color: var(--text); }
+    .toggle-visibility:focus-visible {
+      outline: 2px solid var(--accent);
+    }
+
+    /* ── Status badge ── */
+    .status-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      line-height: 1;
+    }
+    .status-badge::before {
+      content: '';
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
+    .badge-neutral {
+      background: #EBECF0;
+      color: var(--text-muted);
+    }
+    .badge-neutral::before { background: var(--text-subtle); }
+    .badge-success {
+      background: var(--success-bg);
+      color: var(--success);
+    }
+    .badge-success::before { background: #57D9A3; }
+    .badge-error {
+      background: var(--error-bg);
+      color: var(--error);
+    }
+    .badge-error::before { background: #FF7452; }
+    .badge-testing {
+      background: var(--warn-bg);
+      color: #974F0C;
+    }
+    .badge-testing::before {
+      background: #FFAB00;
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.35; }
+    }
+
+    /* ── Token note ── */
+    .token-note {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      background: var(--warn-bg);
+      border: 1px solid #FFE380;
+      border-radius: var(--radius);
+      padding: 12px 14px;
+      margin-top: 20px;
+    }
+    .token-note p {
+      font-size: 0.8rem;
+      color: #172B4D;
+      line-height: 1.6;
+    }
+    .token-note a {
+      color: var(--accent);
+      font-weight: 500;
+      text-decoration: none;
+    }
+    .token-note a:hover { text-decoration: underline; }
+
+    /* ── Divider ── */
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 22px 0;
+    }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.65s linear infinite;
+      flex-shrink: 0;
+    }
+    .spinner-accent {
+      border-color: rgba(0,82,204,0.2);
+      border-top-color: var(--accent);
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .app-header { padding: 20px 0 16px; }
+      .app-header h1 { font-size: 1.1rem; }
+      .tab-btn { padding: 12px 14px 10px; font-size: 0.82rem; }
+      .card { padding: 18px; }
+      .reports-list li { flex-direction: column; align-items: flex-start; gap: 6px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ═══ Header ═══ -->
+  <header class="app-header" role="banner">
+    <div class="app-header-icon" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 3v18h18"/>
+        <polyline points="7 16 11 12 15 15 21 9"/>
+      </svg>
+    </div>
+    <div>
+      <h1>AI Adoption Metrics Report</h1>
+      <p>Jira Cloud sprint data · HTML &amp; Markdown output</p>
+    </div>
+  </header>
+
+  <!-- ═══ App body ═══ -->
+  <div class="app-body">
+
+    <!-- Tab bar -->
+    <div role="tablist" aria-label="Application sections" class="tab-bar">
+      <button
+        role="tab"
+        id="tab-generate"
+        aria-controls="panel-generate"
+        aria-selected="true"
+        tabindex="0"
+        class="tab-btn"
+      >Generate Report</button>
+      <button
+        role="tab"
+        id="tab-filter"
+        aria-controls="panel-filter"
+        aria-selected="false"
+        tabindex="-1"
+        class="tab-btn"
+      >Jira Filter</button>
+      <button
+        role="tab"
+        id="tab-connection"
+        aria-controls="panel-connection"
+        aria-selected="false"
+        tabindex="-1"
+        class="tab-btn"
+      >Jira Connection</button>
+    </div>
+
+    <!-- ── Tab 1: Generate Report ── -->
+    <div role="tabpanel" id="panel-generate" aria-labelledby="tab-generate" class="tab-panel">
+
+      <!-- Description -->
+      <div class="report-desc" role="note">
+        <span class="report-desc-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0747A6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </span>
+        <p>
+          Generates an <strong>AI adoption metrics trend report</strong> from your Jira sprint data.
+          The report tracks velocity, story-point completion, ticket throughput, and AI-assisted issue
+          ratios across your configured sprint history. Output is written to
+          <code>reports/&lt;timestamp&gt;/</code> as both <code>report.html</code> and <code>report.md</code>.
+        </p>
+      </div>
+
+      <!-- Generate card -->
+      <div class="card">
+        <div class="card-title">Run Report Generation</div>
+        <div class="card-subtitle">
+          Invokes <code>python main.py</code> on the server and streams the output below.
+          Configure credentials in the <em>Jira Connection</em> tab before running.
+        </div>
+
+        <button class="btn btn-primary" id="btn-generate" type="button" style="font-size:0.95rem; padding:11px 24px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          Generate Report
+        </button>
+
+        <div class="log-wrap" aria-live="polite" aria-label="Report generation output">
+          <div class="log-toolbar">
+            <span class="log-toolbar-label">Output</span>
+            <button class="log-clear-btn" id="btn-clear-log" type="button" title="Clear log">Clear</button>
+          </div>
+          <div class="log-output" id="log-output" role="log" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <!-- Last generated reports -->
+      <div class="card">
+        <div class="card-title">Last Generated Reports</div>
+        <div class="card-subtitle">Previously generated reports in the <code>reports/</code> folder.</div>
+
+        <ul class="reports-list" id="reports-list" aria-label="Previously generated reports">
+          <!-- Populated by JS; placeholder entries shown below as fallback -->
+        </ul>
+        <p class="reports-empty" id="reports-empty" hidden>
+          No reports generated yet. Click "Generate Report" to create the first one.
+        </p>
+      </div>
+
+    </div><!-- /panel-generate -->
+
+    <!-- ── Tab 2: Jira Filter ── -->
+    <div role="tabpanel" id="panel-filter" aria-labelledby="tab-filter" class="tab-panel" hidden>
+
+      <div class="card">
+        <div class="card-title">Jira Filter &amp; Query Options</div>
+        <div class="card-subtitle">
+          These optional settings refine which sprints and issues are included in the report.
+          Values are saved to your browser's local storage and applied on the next run.
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="filter-id">
+            Filter ID <span class="optional">optional</span>
+          </label>
+          <input
+            class="form-input"
+            type="number"
+            id="filter-id"
+            name="JIRA_FILTER_ID"
+            min="1"
+            placeholder="e.g. 10042"
+            autocomplete="off"
+          />
+          <p class="form-helper">ID of a saved Jira filter. Only issues matching this filter will be included in the report.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="board-id">
+            Board ID <span class="optional">optional</span>
+          </label>
+          <input
+            class="form-input"
+            type="number"
+            id="board-id"
+            name="JIRA_BOARD_ID"
+            min="1"
+            placeholder="e.g. 7"
+            autocomplete="off"
+          />
+          <p class="form-helper">Agile board ID (numeric). Leave blank to use the first available board.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="sprint-count">Sprint Count</label>
+          <input
+            class="form-input"
+            type="number"
+            id="sprint-count"
+            name="JIRA_SPRINT_COUNT"
+            min="1"
+            max="50"
+            placeholder="10"
+            autocomplete="off"
+          />
+          <p class="form-helper">Number of past sprints to include in the report. Default: <strong>10</strong>.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="story-points-field">Story Points Field</label>
+          <input
+            class="form-input"
+            type="text"
+            id="story-points-field"
+            name="JIRA_STORY_POINTS_FIELD"
+            placeholder="customfield_10016"
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <p class="form-helper">Custom field key used for story points. This varies by Jira instance; the most common value is <code>customfield_10016</code>.</p>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-save-filter" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            Save
+          </button>
+          <span class="save-confirm" id="save-confirm-filter" aria-live="polite">Settings saved</span>
+        </div>
+      </div>
+
+    </div><!-- /panel-filter -->
+
+    <!-- ── Tab 3: Jira Connection ── -->
+    <div role="tabpanel" id="panel-connection" aria-labelledby="tab-connection" class="tab-panel" hidden>
+
+      <div class="card">
+        <div class="card-title">Jira Connection</div>
+        <div class="card-subtitle">
+          Required credentials to connect to your Jira Cloud instance.
+          These are stored in your browser's local storage only.
+        </div>
+
+        <!-- Status badge -->
+        <div class="status-row">
+          <span class="status-badge badge-neutral" id="conn-status-badge" role="status" aria-live="polite">Not configured</span>
+          <button class="btn btn-secondary" id="btn-test-conn" type="button" style="font-size:0.82rem; padding:7px 14px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="23 4 23 10 17 10"/>
+              <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+            </svg>
+            Test Connection
+          </button>
+        </div>
+        <p class="form-helper" id="conn-status-detail" style="margin-bottom:18px;"></p>
+
+        <div class="form-group">
+          <label class="form-label" for="jira-url">Jira URL</label>
+          <input
+            class="form-input"
+            type="url"
+            id="jira-url"
+            name="JIRA_URL"
+            placeholder="https://your-domain.atlassian.net"
+            autocomplete="url"
+            spellcheck="false"
+          />
+          <p class="form-helper">Your Jira Cloud base URL, without a trailing slash.</p>
+          <p class="form-error" id="err-jira-url">Please enter a valid URL (e.g. https://your-domain.atlassian.net)</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="jira-email">User Email</label>
+          <input
+            class="form-input"
+            type="email"
+            id="jira-email"
+            name="JIRA_EMAIL"
+            placeholder="you@example.com"
+            autocomplete="email"
+            spellcheck="false"
+          />
+          <p class="form-helper">Atlassian account email address associated with the API token.</p>
+          <p class="form-error" id="err-jira-email">Please enter a valid email address.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="jira-token">API Token</label>
+          <div class="input-with-toggle">
+            <input
+              class="form-input"
+              type="password"
+              id="jira-token"
+              name="JIRA_API_TOKEN"
+              placeholder="••••••••••••••••••••••"
+              autocomplete="current-password"
+              spellcheck="false"
+            />
+            <button
+              class="toggle-visibility"
+              id="btn-toggle-token"
+              type="button"
+              aria-label="Show API token"
+              title="Toggle token visibility"
+            >
+              <!-- Eye icon (hidden → show) -->
+              <svg id="icon-eye" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+              <!-- Eye-off icon (visible → hide) -->
+              <svg id="icon-eye-off" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+                <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            </button>
+          </div>
+          <p class="form-helper">
+            API token from your Atlassian account. Never your account password.
+          </p>
+          <p class="form-error" id="err-jira-token">API token is required.</p>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-save-conn" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            Save
+          </button>
+          <span class="save-confirm" id="save-confirm-conn" aria-live="polite">Settings saved</span>
+        </div>
+
+        <hr class="section-divider" />
+
+        <div class="token-note" role="note">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#974F0C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;margin-top:1px">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <p>
+            Your credentials are stored locally in this browser only and are never sent to any third party.
+            Generate or revoke your API token at
+            <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank" rel="noopener noreferrer">
+              Atlassian API tokens
+            </a>.
+            "Test Connection" proxies via <code>server.py</code> to avoid browser CORS restrictions —
+            run <code>python server.py</code> and open <code>http://localhost:8080</code> to enable it.
+          </p>
+        </div>
+
+      </div>
+
+    </div><!-- /panel-connection -->
+
+  </div><!-- /app-body -->
+
+  <script>
+    (() => {
+      'use strict';
+
+      /* ═══════════════════════════════════════════════
+         Storage helpers
+      ═══════════════════════════════════════════════ */
+      const STORE_KEYS = {
+        JIRA_URL:                'jira_url',
+        JIRA_EMAIL:              'jira_email',
+        JIRA_API_TOKEN:          'jira_api_token',
+        JIRA_FILTER_ID:          'jira_filter_id',
+        JIRA_BOARD_ID:           'jira_board_id',
+        JIRA_SPRINT_COUNT:       'jira_sprint_count',
+        JIRA_STORY_POINTS_FIELD: 'jira_sp_field',
+        REPORTS:                 'jira_reports_list',
+      };
+
+      const store = {
+        get: (k) => {
+          try { return localStorage.getItem(k) ?? ''; } catch { return ''; }
+        },
+        set: (k, v) => {
+          try { localStorage.setItem(k, v); } catch {}
+        },
+        getJSON: (k) => {
+          try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; }
+        },
+        setJSON: (k, v) => {
+          try { localStorage.setItem(k, JSON.stringify(v)); } catch {}
+        },
+      };
+
+      /* ═══════════════════════════════════════════════
+         Tab navigation
+      ═══════════════════════════════════════════════ */
+      const tabs    = Array.from(document.querySelectorAll('[role="tab"]'));
+      const panels  = Array.from(document.querySelectorAll('[role="tabpanel"]'));
+
+      function activateTab(tab) {
+        tabs.forEach((t) => {
+          const active = t === tab;
+          t.setAttribute('aria-selected', String(active));
+          t.tabIndex = active ? 0 : -1;
+        });
+        panels.forEach((p) => {
+          p.hidden = p.id !== tab.getAttribute('aria-controls');
+        });
+        tab.focus();
+      }
+
+      tabs.forEach((tab) => {
+        tab.addEventListener('click', () => activateTab(tab));
+        tab.addEventListener('keydown', (e) => {
+          let idx = tabs.indexOf(e.currentTarget);
+          if (e.key === 'ArrowRight') { idx = (idx + 1) % tabs.length; activateTab(tabs[idx]); }
+          else if (e.key === 'ArrowLeft') { idx = (idx - 1 + tabs.length) % tabs.length; activateTab(tabs[idx]); }
+          else if (e.key === 'Home') { activateTab(tabs[0]); }
+          else if (e.key === 'End')  { activateTab(tabs[tabs.length - 1]); }
+        });
+      });
+
+      /* ═══════════════════════════════════════════════
+         Log output helpers
+      ═══════════════════════════════════════════════ */
+      const logEl = document.getElementById('log-output');
+
+      function logLine(text, cls = '') {
+        const line = document.createElement('span');
+        if (cls) line.className = cls;
+        line.textContent = text;
+        logEl.appendChild(line);
+        logEl.appendChild(document.createTextNode('\n'));
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+
+      function logClear() { logEl.innerHTML = ''; }
+
+      document.getElementById('btn-clear-log').addEventListener('click', logClear);
+
+      /* ═══════════════════════════════════════════════
+         Reports list
+      ═══════════════════════════════════════════════ */
+      const reportsList  = document.getElementById('reports-list');
+      const reportsEmpty = document.getElementById('reports-empty');
+
+      // Placeholder reports shown on first load to demonstrate the UI
+      const PLACEHOLDER_REPORTS = [
+        { ts: '2026-03-18T17-27-30' },
+        { ts: '2026-03-11T09-15-04' },
+      ];
+
+      function renderReports(entries) {
+        reportsList.innerHTML = '';
+        if (!entries || entries.length === 0) {
+          reportsEmpty.hidden = false;
+          return;
+        }
+        reportsEmpty.hidden = true;
+        entries.forEach(({ ts }) => {
+          const li = document.createElement('li');
+          const tsSpan = document.createElement('span');
+          tsSpan.className = 'report-ts';
+          tsSpan.textContent = ts;
+
+          const linksDiv = document.createElement('div');
+          linksDiv.className = 'report-links';
+
+          const htmlLink = document.createElement('a');
+          htmlLink.href = `reports/${ts}/report.html`;
+          htmlLink.target = '_blank';
+          htmlLink.rel = 'noopener';
+          htmlLink.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg> report.html`;
+
+          const mdLink = document.createElement('a');
+          mdLink.href = `reports/${ts}/report.md`;
+          mdLink.target = '_blank';
+          mdLink.rel = 'noopener';
+          mdLink.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> report.md`;
+
+          linksDiv.appendChild(htmlLink);
+          linksDiv.appendChild(mdLink);
+          li.appendChild(tsSpan);
+          li.appendChild(linksDiv);
+          reportsList.appendChild(li);
+        });
+      }
+
+      function loadReports() {
+        const saved = store.getJSON(STORE_KEYS.REPORTS);
+        renderReports(saved || PLACEHOLDER_REPORTS);
+      }
+
+      function addReport(ts) {
+        const saved = store.getJSON(STORE_KEYS.REPORTS) || [];
+        saved.unshift({ ts });
+        store.setJSON(STORE_KEYS.REPORTS, saved);
+        renderReports(saved);
+      }
+
+      /* ═══════════════════════════════════════════════
+         Detect served vs file:// context
+      ═══════════════════════════════════════════════ */
+      const IS_SERVED = location.protocol !== 'file:';
+
+      /* ═══════════════════════════════════════════════
+         Generate Report button
+      ═══════════════════════════════════════════════ */
+      const btnGenerate  = document.getElementById('btn-generate');
+      const GENERATE_BTN_IDLE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg> Generate Report`;
+
+      function resetGenerateBtn() {
+        btnGenerate.disabled = false;
+        btnGenerate.innerHTML = GENERATE_BTN_IDLE;
+      }
+
+      function setGenerateBusy() {
+        btnGenerate.disabled = true;
+        btnGenerate.innerHTML = `<span class="spinner" aria-hidden="true"></span> Generating…`;
+      }
+
+      btnGenerate.addEventListener('click', () => {
+        // TODO: call backend API — GET /api/generate (served by server.py) via EventSource
+        if (!IS_SERVED) {
+          runGenerateSimulation();
+        } else {
+          runGenerateSSE();
+        }
+      });
+
+      function runGenerateSSE() {
+        setGenerateBusy();
+        logClear();
+        logLine(`[${new Date().toLocaleTimeString()}] Starting report generation…`, 'log-info');
+
+        let lastReportTs = null;
+        const evtSource  = new EventSource('/api/generate');
+
+        evtSource.onmessage = (e) => {
+          const data = e.data;
+          const tsMatch = data.match(/reports\/([\dT:-]+)\//);
+          if (tsMatch) lastReportTs = tsMatch[1];
+
+          const cls = /error|exception|traceback/i.test(data) ? 'log-error'
+                    : /done|written|✓/i.test(data)            ? 'log-ok'
+                    : '';
+          logLine(data, cls);
+        };
+
+        evtSource.addEventListener('done', () => {
+          evtSource.close();
+          if (lastReportTs) addReport(lastReportTs);
+          resetGenerateBtn();
+        });
+
+        evtSource.addEventListener('error', (e) => {
+          evtSource.close();
+          const msg = (e.data || '').replace(/^__error__:/, '');
+          if (msg) logLine(msg, 'log-error');
+          resetGenerateBtn();
+        });
+
+        evtSource.onerror = () => {
+          if (evtSource.readyState === EventSource.CLOSED) return;
+          evtSource.close();
+          logLine('Connection to server lost. Is server.py still running?', 'log-error');
+          resetGenerateBtn();
+        };
+      }
+
+      async function runGenerateSimulation() {
+        setGenerateBusy();
+        logClear();
+        logLine('⚠ File:// mode — output is simulated. Run python server.py for live generation.', 'log-error');
+        await sleep(200);
+
+        const ts      = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const outPath = `reports/${ts}/`;
+
+        logLine(`[${new Date().toLocaleTimeString()}] Starting report generation…`, 'log-info');
+        logLine('Reading Jira configuration…', 'log-muted');
+        await sleep(420);
+        logLine('Connecting to Jira Cloud…', 'log-muted');
+        await sleep(600);
+        logLine('Fetching board and sprint list…', 'log-muted');
+        await sleep(500);
+        logLine('Processing sprint data…', 'log-muted');
+        await sleep(700);
+        logLine('Computing metrics…', 'log-muted');
+        await sleep(400);
+        logLine(`Rendering HTML report → ${outPath}report.html`, 'log-ok');
+        await sleep(200);
+        logLine(`Rendering Markdown report → ${outPath}report.md`, 'log-ok');
+        await sleep(150);
+        logLine(`Done. ✓  Output written to ${outPath}`, 'log-ok');
+        addReport(ts);
+        resetGenerateBtn();
+      }
+
+      function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
+
+      /* ═══════════════════════════════════════════════
+         Filter tab — save
+      ═══════════════════════════════════════════════ */
+      document.getElementById('btn-save-filter').addEventListener('click', () => {
+        store.set(STORE_KEYS.JIRA_FILTER_ID,          document.getElementById('filter-id').value.trim());
+        store.set(STORE_KEYS.JIRA_BOARD_ID,            document.getElementById('board-id').value.trim());
+        store.set(STORE_KEYS.JIRA_SPRINT_COUNT,        document.getElementById('sprint-count').value.trim());
+        store.set(STORE_KEYS.JIRA_STORY_POINTS_FIELD,  document.getElementById('story-points-field').value.trim());
+        flashConfirm('save-confirm-filter');
+      });
+
+      /* ═══════════════════════════════════════════════
+         Connection tab — save + test
+      ═══════════════════════════════════════════════ */
+      const jiraUrlInput   = document.getElementById('jira-url');
+      const jiraEmailInput = document.getElementById('jira-email');
+      const jiraTokenInput = document.getElementById('jira-token');
+
+      document.getElementById('btn-save-conn').addEventListener('click', () => {
+        const valid = validateConnFields();
+        if (!valid) return;
+        store.set(STORE_KEYS.JIRA_URL,       jiraUrlInput.value.trim());
+        store.set(STORE_KEYS.JIRA_EMAIL,     jiraEmailInput.value.trim());
+        store.set(STORE_KEYS.JIRA_API_TOKEN, jiraTokenInput.value);
+        updateBadgeFromSaved();
+        flashConfirm('save-confirm-conn');
+      });
+
+      document.getElementById('btn-test-conn').addEventListener('click', async () => {
+        // TODO: call backend API — proxied via server.py POST /api/test-connection to avoid browser CORS
+        const url   = jiraUrlInput.value.trim();
+        const email = jiraEmailInput.value.trim();
+        const token = jiraTokenInput.value;
+
+        if (!url || !email || !token) {
+          setStatus('error', 'Fill in URL, email, and token before testing.');
+          return;
+        }
+
+        if (!IS_SERVED) {
+          setStatus('error', 'Cannot test from file:// — run python server.py then open http://localhost:8080');
+          return;
+        }
+
+        setStatus('testing', 'Testing connection…');
+
+        try {
+          const res  = await fetch('/api/test-connection', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ url, email, token }),
+          });
+          const data = await res.json();
+
+          if (data.ok) {
+            setStatus('success', `Connected as ${data.displayName || data.emailAddress || email}`);
+          } else if (data.httpStatus === 401) {
+            setStatus('error', 'Authentication failed — check your email and API token.');
+          } else if (data.httpStatus === 403) {
+            setStatus('error', 'Access denied (HTTP 403). Verify your account permissions.');
+          } else {
+            setStatus('error', data.error || `HTTP error ${data.httpStatus ?? res.status}`);
+          }
+        } catch (err) {
+          setStatus('error', `Request failed: ${err.message}`);
+        }
+      });
+
+      /* ── Token show/hide ── */
+      const btnToggleToken = document.getElementById('btn-toggle-token');
+      const iconEye        = document.getElementById('icon-eye');
+      const iconEyeOff     = document.getElementById('icon-eye-off');
+
+      btnToggleToken.addEventListener('click', () => {
+        const isPassword = jiraTokenInput.type === 'password';
+        jiraTokenInput.type = isPassword ? 'text' : 'password';
+        iconEye.style.display    = isPassword ? 'none'  : '';
+        iconEyeOff.style.display = isPassword ? ''      : 'none';
+        btnToggleToken.setAttribute('aria-label', isPassword ? 'Hide API token' : 'Show API token');
+      });
+
+      /* ═══════════════════════════════════════════════
+         Status badge helpers
+      ═══════════════════════════════════════════════ */
+      const badge       = document.getElementById('conn-status-badge');
+      const badgeDetail = document.getElementById('conn-status-detail');
+
+      const BADGE_CLASSES = ['badge-neutral', 'badge-success', 'badge-error', 'badge-testing'];
+      const BADGE_LABELS  = {
+        neutral: 'Not configured',
+        success: 'Connected',
+        error:   'Error',
+        testing: 'Testing…',
+      };
+
+      function setStatus(state, detail = '') {
+        BADGE_CLASSES.forEach((c) => badge.classList.remove(c));
+        badge.classList.add(`badge-${state === 'success' ? 'success' : state === 'error' ? 'error' : state === 'testing' ? 'testing' : 'neutral'}`);
+        badge.textContent = BADGE_LABELS[state] ?? state;
+        badgeDetail.textContent = detail;
+        badgeDetail.style.color = state === 'error' ? 'var(--error)' : state === 'success' ? 'var(--success)' : 'var(--text-muted)';
+      }
+
+      function updateBadgeFromSaved() {
+        const url   = store.get(STORE_KEYS.JIRA_URL);
+        const email = store.get(STORE_KEYS.JIRA_EMAIL);
+        const token = store.get(STORE_KEYS.JIRA_API_TOKEN);
+        if (!url || !email || !token) {
+          setStatus('neutral', 'Enter your Jira URL, email, and API token to get started.');
+        } else {
+          setStatus('neutral', 'Credentials saved. Click "Test Connection" to verify.');
+          badge.textContent = 'Configured';
+        }
+      }
+
+      /* ═══════════════════════════════════════════════
+         Validation
+      ═══════════════════════════════════════════════ */
+      function validateConnFields() {
+        let ok = true;
+
+        const urlVal = jiraUrlInput.value.trim();
+        const urlErr = document.getElementById('err-jira-url');
+        if (!urlVal || !/^https?:\/\/.+/.test(urlVal)) {
+          jiraUrlInput.classList.add('invalid');
+          urlErr.classList.add('visible');
+          ok = false;
+        } else {
+          jiraUrlInput.classList.remove('invalid');
+          urlErr.classList.remove('visible');
+        }
+
+        const emailVal = jiraEmailInput.value.trim();
+        const emailErr = document.getElementById('err-jira-email');
+        if (!emailVal || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailVal)) {
+          jiraEmailInput.classList.add('invalid');
+          emailErr.classList.add('visible');
+          ok = false;
+        } else {
+          jiraEmailInput.classList.remove('invalid');
+          emailErr.classList.remove('visible');
+        }
+
+        const tokenVal = jiraTokenInput.value;
+        const tokenErr = document.getElementById('err-jira-token');
+        if (!tokenVal) {
+          jiraTokenInput.classList.add('invalid');
+          tokenErr.classList.add('visible');
+          ok = false;
+        } else {
+          jiraTokenInput.classList.remove('invalid');
+          tokenErr.classList.remove('visible');
+        }
+
+        return ok;
+      }
+
+      /* ═══════════════════════════════════════════════
+         Flash "Saved" confirm
+      ═══════════════════════════════════════════════ */
+      const flashTimers = {};
+      function flashConfirm(id) {
+        const el = document.getElementById(id);
+        el.classList.add('visible');
+        clearTimeout(flashTimers[id]);
+        flashTimers[id] = setTimeout(() => el.classList.remove('visible'), 2500);
+      }
+
+      /* ═══════════════════════════════════════════════
+         Restore saved values on load
+      ═══════════════════════════════════════════════ */
+      function restoreValues() {
+        // Connection
+        jiraUrlInput.value   = store.get(STORE_KEYS.JIRA_URL);
+        jiraEmailInput.value = store.get(STORE_KEYS.JIRA_EMAIL);
+        jiraTokenInput.value = store.get(STORE_KEYS.JIRA_API_TOKEN);
+
+        // Filter
+        document.getElementById('filter-id').value           = store.get(STORE_KEYS.JIRA_FILTER_ID);
+        document.getElementById('board-id').value             = store.get(STORE_KEYS.JIRA_BOARD_ID);
+        document.getElementById('sprint-count').value         = store.get(STORE_KEYS.JIRA_SPRINT_COUNT) || '10';
+        document.getElementById('story-points-field').value   = store.get(STORE_KEYS.JIRA_STORY_POINTS_FIELD) || 'customfield_10016';
+
+        // Status badge
+        updateBadgeFromSaved();
+
+        // Reports list
+        loadReports();
+      }
+
+      /* ═══════════════════════════════════════════════
+         Inline validation on blur
+      ═══════════════════════════════════════════════ */
+      [jiraUrlInput, jiraEmailInput, jiraTokenInput].forEach((input) => {
+        input.addEventListener('blur', () => {
+          // Re-validate only if previously marked invalid
+          if (input.classList.contains('invalid')) validateConnFields();
+        });
+        input.addEventListener('input', () => {
+          if (input.classList.contains('invalid')) validateConnFields();
+        });
+      });
+
+      /* ═══════════════════════════════════════════════
+         File:// mode banner
+      ═══════════════════════════════════════════════ */
+      if (!IS_SERVED) {
+        const banner = document.createElement('div');
+        banner.setAttribute('role', 'alert');
+        banner.style.cssText = [
+          'max-width:860px', 'margin:10px auto 0', 'padding:10px 16px',
+          'background:#FFFAE6', 'border:1px solid #FFE380', 'border-radius:6px',
+          'font-size:0.82rem', 'color:#172B4D', 'line-height:1.6',
+          "font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+        ].join(';');
+        banner.innerHTML = '<strong>⚠ Running in file:// mode.</strong> '
+          + 'Test Connection and live report generation require the local server. '
+          + 'Run <code style="background:#EEE;padding:1px 5px;border-radius:3px">python server.py</code> '
+          + 'then open <a href="http://localhost:8080" style="color:#0052CC">http://localhost:8080</a>.';
+        document.body.insertBefore(banner, document.body.firstChild);
+      }
+
+      /* ── Boot ── */
+      restoreValues();
+    })();
+  </script>
+</body>
+</html>
