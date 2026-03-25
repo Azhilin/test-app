@@ -12,13 +12,13 @@ from pathlib import Path
 from app import config, jira_client, metrics, report_html, report_md
 
 PROJECT_ROOT = Path(__file__).resolve().parent
-REPORTS_DIR = PROJECT_ROOT / "reports"
+REPORTS_DIR = PROJECT_ROOT / "generated" / "reports"
 
 
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--clean", action="store_true",
-                   help="Delete the reports/ directory and exit")
+                   help="Delete the generated/reports/ directory and exit")
     return p.parse_args()
 
 
@@ -34,9 +34,9 @@ def main() -> int:
     if args.clean:
         if REPORTS_DIR.exists():
             shutil.rmtree(REPORTS_DIR)
-            print("reports folder removed.")
+            print("generated/reports folder removed.")
         else:
-            print("reports folder does not exist.")
+            print("generated/reports folder does not exist.")
         return 0
 
     errors = config.validate_config()

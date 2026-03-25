@@ -115,7 +115,7 @@ class Handler(BaseHTTPRequestHandler):
             self._serve_file(ROOT / "ui" / "index.html")
         elif path == "/api/generate":
             self._handle_generate()
-        elif path.startswith("/reports/"):
+        elif path.startswith("/generated/reports/"):
             rel = path.lstrip("/")
             self._serve_file(ROOT / rel)
         else:

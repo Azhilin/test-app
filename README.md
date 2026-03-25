@@ -39,7 +39,7 @@ Use the UI to configure your Jira connection, select a filter, and generate repo
 .venv\Scripts\python main.py
 ```
 
-Reports are written to `reports/<timestamp>/` — each run creates a new timestamped folder containing `report.html` and `report.md`.
+Reports are written to `generated/reports/<timestamp>/` — each run creates a new timestamped folder containing `report.html` and `report.md`.
 
 To delete all generated reports:
 

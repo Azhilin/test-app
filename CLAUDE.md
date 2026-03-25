@@ -14,7 +14,7 @@ pip install -r requirements.txt        # install into .venv
 pip install -r requirements-dev.txt    # install + pytest for testing
 
 # Generate reports (requires .env with Jira credentials)
-python main.py                    # outputs to reports/<timestamp>/
+python main.py                    # outputs to generated/reports/<timestamp>/
 python main.py --clean            # delete all generated reports and exit
 
 # Dev server (serves UI + proxies Jira API to avoid CORS)
@@ -41,7 +41,7 @@ Key modules (all under `app/`):
 - `app/report_md.py` — builds Markdown report with tables and bar chart visualization
 - `server.py` — stdlib HTTP server serving `ui/index.html`, with `/api/test-connection` (POST) and `/api/generate` (SSE stream that runs `main.py` as subprocess)
 
-**Reports output:** `reports/<ISO-timestamp>/report.html` and `report.md`
+**Reports output:** `generated/reports/<ISO-timestamp>/report.html` and `report.md`
 
 ## Configuration
 
