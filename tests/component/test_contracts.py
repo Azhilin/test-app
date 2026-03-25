@@ -14,6 +14,8 @@ from tests.conftest import (
     make_issue_with_changelog,
 )
 
+pytestmark = pytest.mark.component
+
 
 # ---------------------------------------------------------------------------
 # Sprint dict shape

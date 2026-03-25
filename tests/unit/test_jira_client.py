@@ -9,6 +9,8 @@ from atlassian import Jira
 from app import jira_client
 from tests.conftest import make_sprint
 
+pytestmark = pytest.mark.unit
+
 
 # ---------------------------------------------------------------------------
 # create_client

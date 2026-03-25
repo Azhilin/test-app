@@ -5,6 +5,8 @@ import pytest
 
 from app.report_md import generate_md, _md_table
 
+pytestmark = pytest.mark.component
+
 
 def test_file_created(tmp_path, minimal_metrics_dict):
     out = tmp_path / "report.md"

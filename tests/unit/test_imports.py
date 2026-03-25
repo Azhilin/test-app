@@ -5,6 +5,10 @@ import importlib
 import importlib.util
 from pathlib import Path
 
+import pytest
+
+pytestmark = pytest.mark.unit
+
 
 def test_import_app_config():
     from app import config

@@ -6,6 +6,8 @@ import pytest
 from app import metrics
 from tests.conftest import make_sprint, make_issue, make_issue_with_changelog, make_issue_with_labels
 
+pytestmark = pytest.mark.unit
+
 
 # ---------------------------------------------------------------------------
 # _is_done

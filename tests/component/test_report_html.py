@@ -5,6 +5,8 @@ import pytest
 
 from app.report_html import generate_html, TEMPLATES_DIR
 
+pytestmark = pytest.mark.component
+
 
 def test_templates_dir_exists():
     assert TEMPLATES_DIR.is_dir()

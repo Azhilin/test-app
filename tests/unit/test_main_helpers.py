@@ -1,7 +1,11 @@
 """Tests for main.py helper functions."""
 from __future__ import annotations
 
+import pytest
+
 from main import _timestamp_folder_name
+
+pytestmark = pytest.mark.unit
 
 
 def test_timestamp_folder_name_valid_iso():

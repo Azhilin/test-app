@@ -1,4 +1,5 @@
 .env
+.tmplib/
 __pycache__/
 *.pyc
 .venv/

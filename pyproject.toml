@@ -2,6 +2,8 @@
 testpaths = ["tests"]
 addopts = "-v --tb=short"
 markers = [
+    "unit: pure-function tests with no I/O (deselect with -m 'not unit')",
+    "component: tests that exercise filesystem or HTTP but no inter-module orchestration (deselect with -m 'not component')",
     "integration: tests requiring module integration (skip with -m 'not integration')",
     "e2e: end-to-end tests (skip with -m 'not e2e')",
 ]

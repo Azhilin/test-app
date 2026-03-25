@@ -5,6 +5,10 @@ import importlib
 import os
 from unittest.mock import patch
 
+import pytest
+
+pytestmark = pytest.mark.unit
+
 
 def _reload_config(env: dict):
     """Reload app.config with a patched environment, return the module."""
