@@ -36,14 +36,14 @@ def test_main_pipeline_success(monkeypatch, tmp_path):
     monkeypatch.setattr("app.jira_client.get_issues_with_changelog", lambda j, keys: [cl_issue])
 
     # Redirect reports to tmp_path
-    monkeypatch.setattr("main.REPORTS_DIR", tmp_path / "reports")
+    monkeypatch.setattr("main.REPORTS_DIR", tmp_path / "generated" / "reports")
     monkeypatch.setattr("sys.argv", ["main.py"])
 
     from main import main
     rc = main()
     assert rc == 0
 
-    reports_dir = tmp_path / "reports"
+    reports_dir = tmp_path / "generated" / "reports"
     assert reports_dir.exists()
     subdirs = list(reports_dir.iterdir())
     assert len(subdirs) == 1
@@ -77,8 +77,8 @@ def test_main_pipeline_config_fail(monkeypatch):
 # ---------------------------------------------------------------------------
 
 def test_main_clean_removes_reports(monkeypatch, tmp_path):
-    reports_dir = tmp_path / "reports"
-    reports_dir.mkdir()
+    reports_dir = tmp_path / "generated" / "reports"
+    reports_dir.mkdir(parents=True)
     (reports_dir / "dummy.txt").write_text("x")
 
     monkeypatch.setattr("main.REPORTS_DIR", reports_dir)
@@ -115,14 +115,14 @@ def test_filter_metadata_in_html(monkeypatch, tmp_path):
     monkeypatch.setattr("app.jira_client.get_issues_with_changelog", lambda j, keys: [cl_issue])
     monkeypatch.setattr("app.jira_client.get_filter_jql", lambda j: "project = TEST")
 
-    monkeypatch.setattr("main.REPORTS_DIR", tmp_path / "reports")
+    monkeypatch.setattr("main.REPORTS_DIR", tmp_path / "generated" / "reports")
     monkeypatch.setattr("sys.argv", ["main.py"])
 
     from main import main
     rc = main()
     assert rc == 0
 
-    subdirs = list((tmp_path / "reports").iterdir())
+    subdirs = list((tmp_path / "generated" / "reports").iterdir())
     html = (subdirs[0] / "report.html").read_text(encoding="utf-8")
     assert "My Test Filter" in html
     assert "42" in html
