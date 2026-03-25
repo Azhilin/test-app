@@ -6,3 +6,7 @@ venv/
 report.html
 report.md
 reports/
+.pytest_cache/
+app/__pycache__/
+tests/__pycache__/
+generated/

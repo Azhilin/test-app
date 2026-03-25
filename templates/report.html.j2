@@ -16,13 +16,25 @@
     .number { text-align: right; }
     .empty { color: #999; font-style: italic; }
     .chart-container { position: relative; height: 280px; margin-bottom: 1.25rem; }
+    .usage-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .usage-card h3 { font-size: 0.95rem; margin: 0 0 0.5rem 0; color: #444; }
+    .usage-card .chart-container { height: 300px; margin-bottom: 0.5rem; }
+    @media (max-width: 820px) {
+      .usage-grid { grid-template-columns: 1fr; }
+    }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha256-0q+JdOlScWOHcunpUk21uab1jW7C1deBQARHtKMcaB4=" crossorigin="anonymous"></script>
 </head>
 <body>
   <h1>AI Adoption Metrics Report</h1>
-  <p class="meta">Reported Date:  {{ metrics.generated_at[:10] }}</p>
+  <p class="meta">
+    Reported Date: {{ metrics.generated_at[:10] }}
+    {%- if metrics.filter_name %} &nbsp;·&nbsp; Filter: <strong>{{ metrics.filter_name }}</strong>{% if metrics.filter_id %} <span style="opacity:0.6">(#{{ metrics.filter_id }})</span>{% endif %}{% endif %}
+    {%- if metrics.project_key %} &nbsp;·&nbsp; Project: <strong>{{ metrics.project_key }}</strong>{% endif %}
+    {%- if metrics.filter_jql %} &nbsp;·&nbsp; JQL: <code style="font-size:0.8em;opacity:0.85">{{ metrics.filter_jql }}</code>{% endif %}
+  </p>
 
+  {% if section_visibility.velocity_trend %}
   <section>
     <h2>Velocity trend</h2>
     {% if metrics.velocity %}
@@ -49,13 +61,118 @@
           <td class="number">{{ row.issue_count }}</td>
         </tr>
         {% endfor %}
+        {% set total_velocity = metrics.velocity | sum(attribute='velocity') %}
+        {% set total_issues = metrics.velocity | sum(attribute='issue_count') %}
+        <tr>
+          <td><strong>Total (selected period)</strong></td>
+          <td>—</td>
+          <td>—</td>
+          <td class="number"><strong>{{ '%.1f'|format(total_velocity) }}</strong></td>
+          <td class="number"><strong>{{ total_issues }}</strong></td>
+        </tr>
       </tbody>
     </table>
     {% else %}
     <p class="empty">No velocity data.</p>
     {% endif %}
   </section>
+  {% endif %}
 
+  {% if section_visibility.ai_assistance_trend %}
+  <section>
+    <h2>AI Assistance trend</h2>
+    <p style="color:#666;font-size:0.85rem;margin:0 0 0.75rem 0">
+      Percentage of Story Points (done issues) attributed to tickets labelled <code>{{ metrics.ai_assisted_label or 'AI_assistance' }}</code> per sprint.
+      {% if metrics.ai_exclude_labels %}
+      Tickets with any of these labels are excluded from the formula: <code>{{ metrics.ai_exclude_labels | join(', ') }}</code>.
+      {% endif %}
+    </p>
+    {% if metrics.ai_assistance_trend %}
+    <div class="chart-container">
+      <canvas id="aiAssistanceChart" aria-label="AI Assistance percentage per sprint line chart"></canvas>
+    </div>
+    {% if metrics.ai_exclude_labels %}
+    <p style="color:#666;font-size:0.8rem;margin:0 0 0.5rem 0">
+      <strong>Legend:</strong> <code>Total SP (done, excl. labels)</code> excludes issues with labels from <code>AI_EXCLUDE_LABELS</code>.
+    </p>
+    {% endif %}
+    <table>
+      <thead>
+        <tr>
+          <th>Sprint</th>
+          <th>Start</th>
+          <th>End</th>
+          <th class="number">{% if metrics.ai_exclude_labels %}Total SP (done, excl. labels){% else %}Total SP (done){% endif %}</th>
+          <th class="number">AI-labeled SP</th>
+          <th class="number">AI %</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in metrics.ai_assistance_trend %}
+        <tr>
+          <td>{{ row.sprint_name }}</td>
+          <td>{{ (row.start_date or '')[:10] or '—' }}</td>
+          <td>{{ (row.end_date or '')[:10] or '—' }}</td>
+          <td class="number">{{ row.total_sp }}</td>
+          <td class="number">{{ row.ai_sp }}</td>
+          <td class="number">{{ row.ai_pct }}%</td>
+        </tr>
+        {% endfor %}
+        {% set grand_total_sp = metrics.ai_assistance_trend | sum(attribute='total_sp') %}
+        {% set grand_ai_sp = metrics.ai_assistance_trend | sum(attribute='ai_sp') %}
+        {% set grand_pct = (grand_ai_sp / grand_total_sp * 100) | round(1) if grand_total_sp > 0 else 0 %}
+        <tr>
+          <td><strong>Total (selected period)</strong></td>
+          <td>—</td>
+          <td>—</td>
+          <td class="number"><strong>{{ '%.1f'|format(grand_total_sp) }}</strong></td>
+          <td class="number"><strong>{{ '%.1f'|format(grand_ai_sp) }}</strong></td>
+          <td class="number"><strong>{{ grand_pct }}%</strong></td>
+        </tr>
+      </tbody>
+    </table>
+    {% else %}
+    <p class="empty">No AI Assistance data.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  {% if section_visibility.ai_usage_details %}
+  <section>
+    <h2>AI Usage Details</h2>
+    {% set usage = metrics.ai_usage_details or {} %}
+    {% set ai_total = usage.ai_assisted_issue_count or 0 %}
+    <p style="color:#666;font-size:0.85rem;margin:0 0 0.75rem 0">
+      Distribution is calculated over <strong>{{ ai_total }}</strong> done ticket{% if ai_total != 1 %}s{% endif %} labelled
+      <code>{{ metrics.ai_assisted_label or 'AI_assistance' }}</code>.
+      Uncategorized tickets are intentionally excluded from tool/case slices.
+    </p>
+    <div class="usage-grid">
+      <div class="usage-card">
+        <h3>AI Usage Tools</h3>
+        {% if usage.tool_breakdown %}
+        <div class="chart-container">
+          <canvas id="aiUsageToolsChart" aria-label="AI usage tools pie chart"></canvas>
+        </div>
+        {% else %}
+        <p class="empty">No configured tool labels found on AI-assisted done tickets.</p>
+        {% endif %}
+      </div>
+      <div class="usage-card">
+        <h3>AI Usage Cases</h3>
+        {% if usage.action_breakdown %}
+        <div class="chart-container">
+          <canvas id="aiUsageCasesChart" aria-label="AI usage cases pie chart"></canvas>
+        </div>
+        {% else %}
+        <p class="empty">No configured action labels found on AI-assisted done tickets.</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  {% if section_visibility.cycle_time %}
   <section>
     <h2>Cycle time</h2>
     {% if metrics.cycle_time and metrics.cycle_time.sample_size > 0 %}
@@ -70,8 +187,9 @@
     <p class="empty">No cycle time data (need issues with changelog).</p>
     {% endif %}
   </section>
+  {% endif %}
 
-  {% if metrics.custom_trends %}
+  {% if section_visibility.custom_trends and metrics.custom_trends %}
   <section>
     <h2>Custom trends</h2>
     <table>
@@ -100,7 +218,188 @@
     </table>
   </section>
   {% endif %}
-  {% if metrics.velocity %}
+  {% if section_visibility.ai_assistance_trend and metrics.ai_assistance_trend %}
+  <script>
+    (function() {
+      var ctx = document.getElementById('aiAssistanceChart').getContext('2d');
+      var aiData = {{ metrics.ai_assistance_trend | tojson }};
+      aiData = aiData.slice().reverse();
+      var labels = aiData.map(function(r) { return r.sprint_name; });
+      var pctValues = aiData.map(function(r) { return r.ai_pct; });
+      new Chart(ctx, {
+        type: 'line',
+        plugins: [{
+          id: 'aiPointLabels',
+          afterDatasetsDraw: function(chart) {
+            var meta = chart.getDatasetMeta(0);
+            if (!meta || !meta.data || !meta.data.length) return;
+            var dataset = chart.data.datasets[0] || {};
+            var values = dataset.data || [];
+            var ctx = chart.ctx;
+            ctx.save();
+            ctx.font = '11px system-ui, sans-serif';
+            ctx.fillStyle = 'rgb(95, 47, 114)';
+            ctx.textAlign = 'left';
+            ctx.textBaseline = 'middle';
+            for (var i = 0; i < meta.data.length; i++) {
+              var point = meta.data[i];
+              var value = values[i];
+              if (typeof value !== 'number') continue;
+              ctx.fillText(value + '%', point.x + 8, point.y - 8);
+            }
+            ctx.restore();
+          }
+        }],
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'AI Assistance %',
+            data: pctValues,
+            borderColor: 'rgb(155, 89, 182)',
+            backgroundColor: 'rgba(155, 89, 182, 0.1)',
+            borderWidth: 2.5,
+            pointRadius: 5,
+            pointBackgroundColor: 'rgb(155, 89, 182)',
+            fill: true,
+            tension: 0.2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) { return ctx.dataset.label + ': ' + ctx.parsed.y + '%'; }
+              }
+            }
+          },
+          scales: {
+            x: { grid: { display: false } },
+            y: {
+              beginAtZero: true,
+              max: 100,
+              ticks: {
+                callback: function(v) { return v + '%'; },
+                stepSize: 20
+              },
+              grid: { borderDash: [4, 4] }
+            }
+          }
+        }
+      });
+    })();
+  </script>
+  {% endif %}
+
+  {% if section_visibility.ai_usage_details and metrics.ai_usage_details %}
+  <script>
+    (function() {
+      var usage = {{ metrics.ai_usage_details | tojson }};
+      var TOOL_COLORS = ['#2D7FF9', '#27AE60', '#F39C12', '#8E44AD', '#E84393', '#16A085', '#5DADE2', '#A569BD'];
+      var CASE_COLORS = ['#16A085', '#2E86DE', '#F39C12', '#8E44AD', '#E84393', '#27AE60', '#48C9B0', '#AF7AC5'];
+
+      function drawPiePercentageLabels(chart) {
+        var meta = chart.getDatasetMeta(0);
+        if (!meta || !meta.data || !meta.data.length) return;
+        var dataset = chart.data.datasets[0] || {};
+        var values = dataset.data || [];
+        var ctx = chart.ctx;
+        ctx.save();
+        ctx.font = '600 11px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (var i = 0; i < meta.data.length; i++) {
+          var arc = meta.data[i];
+          var v = values[i];
+          if (typeof v !== 'number' || v <= 0) continue;
+          var angle = (arc.startAngle + arc.endAngle) / 2;
+          var r = (arc.outerRadius + arc.innerRadius) / 2;
+          var x = arc.x + Math.cos(angle) * r;
+          var y = arc.y + Math.sin(angle) * r;
+          ctx.fillStyle = '#1f2937';
+          ctx.fillText(v.toFixed(1) + '%', x, y);
+        }
+        ctx.restore();
+      }
+
+      function syncUsagePieRadii(toolsChart, casesChart) {
+        if (!toolsChart || !casesChart) return;
+        var metaT = toolsChart.getDatasetMeta(0);
+        var metaC = casesChart.getDatasetMeta(0);
+        if (!metaT || !metaT.data || !metaT.data.length) return;
+        if (!metaC || !metaC.data || !metaC.data.length) return;
+        var rT = metaT.data[0].outerRadius;
+        var rC = metaC.data[0].outerRadius;
+        var minR = Math.min(rT, rC) * 1.1;
+        if (minR <= 0 || !isFinite(minR)) return;
+        if (toolsChart.data.datasets[0].radius === minR && casesChart.data.datasets[0].radius === minR) return;
+        toolsChart.data.datasets[0].radius = minR;
+        casesChart.data.datasets[0].radius = minR;
+        toolsChart.update('none');
+        casesChart.update('none');
+      }
+
+      function createUsagePie(canvasId, rows, palette, titleText) {
+        var canvas = document.getElementById(canvasId);
+        if (!canvas || !rows || !rows.length) return null;
+        var labels = rows.map(function(row) { return row.label; });
+        var values = rows.map(function(row) { return row.pct; });
+        var bg = values.map(function(_, idx) { return palette[idx % palette.length]; });
+        var border = bg.map(function(color) { return color; });
+        return new Chart(canvas.getContext('2d'), {
+          type: 'pie',
+          plugins: [{ id: 'usagePieLabels', afterDatasetsDraw: drawPiePercentageLabels }],
+          data: {
+            labels: labels,
+            datasets: [{
+              label: titleText,
+              data: values,
+              backgroundColor: bg,
+              borderColor: border,
+              borderWidth: 1,
+              hoverOffset: 8,
+              radius: '88%'
+            }]
+          },
+          options: {
+            animation: false,
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: true,
+                position: 'bottom'
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(ctx) {
+                    var row = rows[ctx.dataIndex] || {};
+                    var count = row.count || 0;
+                    return ctx.label + ': ' + ctx.parsed.toFixed(1) + '% (' + count + ')';
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+
+      var toolsChart = createUsagePie('aiUsageToolsChart', usage.tool_breakdown || [], TOOL_COLORS, 'AI Usage Tools');
+      var casesChart = createUsagePie('aiUsageCasesChart', usage.action_breakdown || [], CASE_COLORS, 'AI Usage Cases');
+      syncUsagePieRadii(toolsChart, casesChart);
+
+      var _syncResizeTimer;
+      window.addEventListener('resize', function() {
+        clearTimeout(_syncResizeTimer);
+        _syncResizeTimer = setTimeout(function() { syncUsagePieRadii(toolsChart, casesChart); }, 150);
+      });
+    })();
+  </script>
+  {% endif %}
+
+  {% if section_visibility.velocity_trend and metrics.velocity %}
   <script>
     (function() {
       Chart.register({

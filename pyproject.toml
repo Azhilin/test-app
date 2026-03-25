@@ -1,0 +1,10 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+markers = [
+    "integration: tests requiring module integration (skip with -m 'not integration')",
+    "e2e: end-to-end tests (skip with -m 'not e2e')",
+]
+
+[tool.playwright]
+browser = "chromium"

@@ -5,7 +5,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 # Load .env from project root
-_env_path = Path(__file__).resolve().parent / ".env"
+_env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(_env_path)
 
 JIRA_URL = os.getenv("JIRA_URL", "").rstrip("/")
@@ -26,6 +26,16 @@ JIRA_STORY_POINTS_FIELD = os.getenv("JIRA_STORY_POINTS_FIELD", "customfield_1001
 # Optional: Jira saved filter ID. When set, only issues matching this filter are included (filter's JQL is applied to sprint issues).
 _filter_id = os.getenv("JIRA_FILTER_ID", "").strip()
 JIRA_FILTER_ID = int(_filter_id) if _filter_id.isdigit() else None
+
+# AI Adoption metrics labels
+# Label that marks an issue as AI-assisted (default: AI_assistance)
+AI_ASSISTED_LABEL = os.getenv("AI_ASSISTED_LABEL", "AI_assistance").strip() or "AI_assistance"
+# Comma-separated labels whose issues are excluded from the AI% denominator
+AI_EXCLUDE_LABELS = [lbl.strip() for lbl in os.getenv("AI_EXCLUDE_LABELS", "").split(",") if lbl.strip()]
+# Comma-separated labels identifying AI tools (e.g. AI_Tool_Copilot,AI_Tool_ChatGPT)
+AI_TOOL_LABELS = [lbl.strip() for lbl in os.getenv("AI_TOOL_LABELS", "").split(",") if lbl.strip()]
+# Comma-separated labels identifying AI use-cases (e.g. AI_Case_CodeGen,AI_Case_Review)
+AI_ACTION_LABELS = [lbl.strip() for lbl in os.getenv("AI_ACTION_LABELS", "").split(",") if lbl.strip()]
 
 
 def validate_config() -> list[str]:

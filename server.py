@@ -17,11 +17,16 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
+import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 ROOT = Path(__file__).resolve().parent
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
+PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("PORT", 8080))
 
 MIME = {
     "html": "text/html; charset=utf-8",
@@ -40,6 +45,16 @@ MIME = {
 def guess_mime(path: str) -> str:
     ext = path.rsplit(".", 1)[-1].lower() if "." in path else ""
     return MIME.get(ext, "application/octet-stream")
+
+
+_CLIENT_DISCONNECT = (BrokenPipeError, ConnectionAbortedError, ConnectionResetError)
+
+
+class Server(HTTPServer):
+    def handle_error(self, request, client_address):
+        if isinstance(sys.exc_info()[1], _CLIENT_DISCONNECT):
+            return
+        super().handle_error(request, client_address)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -67,7 +82,10 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Content-Type", guess_mime(path.name))
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
-        self.wfile.write(data)
+        try:
+            self.wfile.write(data)
+        except _CLIENT_DISCONNECT:
+            pass
 
     def _cors_headers(self) -> None:
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -94,7 +112,7 @@ class Handler(BaseHTTPRequestHandler):
         path = self.path.split("?")[0].rstrip("/") or "/"
 
         if path in ("/", "/index.html"):
-            self._serve_file(ROOT / "index.html")
+            self._serve_file(ROOT / "ui" / "index.html")
         elif path == "/api/generate":
             self._handle_generate()
         elif path.startswith("/reports/"):
@@ -209,11 +227,12 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    server = HTTPServer(("", PORT), Handler)
+    server = Server(("", PORT), Handler)
     url = f"http://localhost:{PORT}"
     print(f"  AI Adoption Metrics — dev server")
     print(f"  Listening on {url}")
     print(f"  Press Ctrl+C to stop.\n")
+    webbrowser.open(url)
     try:
         server.serve_forever()
     except KeyboardInterrupt:

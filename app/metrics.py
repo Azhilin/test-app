@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-import config
+from app import config
 
 
 def _parse_iso(s: str | None) -> datetime | None:
@@ -158,6 +158,123 @@ def get_done_issue_keys_for_changelog(
     return keys
 
 
+def _get_labels(issue: dict[str, Any]) -> list[str]:
+    """Return the list of label strings on an issue (empty if absent)."""
+    fields = issue.get("fields") or {}
+    labels = fields.get("labels") or []
+    return [str(lbl) for lbl in labels if lbl]
+
+
+def compute_ai_assistance_trend(
+    sprints: list[dict[str, Any]],
+    sprint_issues: dict[int, list[dict[str, Any]]],
+    ai_assisted_label: str | None = None,
+    ai_exclude_labels: list[str] | None = None,
+) -> list[dict[str, Any]]:
+    """
+    Per-sprint AI assistance percentage.
+
+    For each sprint counts done-issue story points:
+    - total_sp: all done issues excluding those with any ai_exclude_labels
+    - ai_sp: done issues that carry ai_assisted_label (and are not excluded)
+    - ai_pct: ai_sp / total_sp * 100, rounded to 1 dp
+
+    Returns list of {sprint_id, sprint_name, start_date, end_date, total_sp, ai_sp, ai_pct}.
+    """
+    if ai_assisted_label is None:
+        ai_assisted_label = config.AI_ASSISTED_LABEL
+    if ai_exclude_labels is None:
+        ai_exclude_labels = config.AI_EXCLUDE_LABELS
+
+    exclude_set = set(ai_exclude_labels or [])
+    rows = []
+    for sprint in sprints:
+        sid = sprint.get("id")
+        if sid is None:
+            continue
+        issues = sprint_issues.get(sid) or []
+        total_sp = 0.0
+        ai_sp = 0.0
+        for iss in issues:
+            if not _is_done(iss):
+                continue
+            labels = _get_labels(iss)
+            if exclude_set and exclude_set.intersection(labels):
+                continue
+            pts = _get_story_points(iss)
+            total_sp += pts
+            if ai_assisted_label in labels:
+                ai_sp += pts
+        ai_pct = round(ai_sp / total_sp * 100, 1) if total_sp > 0 else 0.0
+        rows.append({
+            "sprint_id": sid,
+            "sprint_name": sprint.get("name") or f"Sprint {sid}",
+            "start_date": sprint.get("startDate"),
+            "end_date": sprint.get("endDate"),
+            "total_sp": round(total_sp, 1),
+            "ai_sp": round(ai_sp, 1),
+            "ai_pct": ai_pct,
+        })
+    return rows
+
+
+def compute_ai_usage_details(
+    sprints: list[dict[str, Any]],
+    sprint_issues: dict[int, list[dict[str, Any]]],
+    ai_assisted_label: str | None = None,
+    ai_tool_labels: list[str] | None = None,
+    ai_action_labels: list[str] | None = None,
+) -> dict[str, Any]:
+    """
+    Aggregate AI tool and use-case breakdown across all done AI-assisted issues.
+
+    Returns {ai_assisted_issue_count, tool_breakdown: [{label, count, pct}], action_breakdown: [...]}.
+    Slices are sorted descending by count. Issues not matching any configured label are excluded
+    from the respective breakdown (intentionally — keeps pie charts clean).
+    """
+    if ai_assisted_label is None:
+        ai_assisted_label = config.AI_ASSISTED_LABEL
+    if ai_tool_labels is None:
+        ai_tool_labels = config.AI_TOOL_LABELS
+    if ai_action_labels is None:
+        ai_action_labels = config.AI_ACTION_LABELS
+
+    seen_keys: set[str] = set()
+    ai_issues: list[dict[str, Any]] = []
+    for sprint in sprints:
+        sid = sprint.get("id")
+        if sid is None:
+            continue
+        for iss in sprint_issues.get(sid) or []:
+            key = iss.get("key") or ""
+            if not _is_done(iss) or key in seen_keys:
+                continue
+            if ai_assisted_label in _get_labels(iss):
+                seen_keys.add(key)
+                ai_issues.append(iss)
+
+    total = len(ai_issues)
+
+    def _breakdown(label_list: list[str]) -> list[dict[str, Any]]:
+        counts: dict[str, int] = {lbl: 0 for lbl in label_list}
+        for iss in ai_issues:
+            for lbl in _get_labels(iss):
+                if lbl in counts:
+                    counts[lbl] += 1
+        rows = [
+            {"label": lbl, "count": cnt, "pct": round(cnt / total * 100, 1) if total else 0.0}
+            for lbl, cnt in counts.items()
+            if cnt > 0
+        ]
+        return sorted(rows, key=lambda r: r["count"], reverse=True)
+
+    return {
+        "ai_assisted_issue_count": total,
+        "tool_breakdown": _breakdown(ai_tool_labels) if ai_tool_labels else [],
+        "action_breakdown": _breakdown(ai_action_labels) if ai_action_labels else [],
+    }
+
+
 def compute_custom_trends(
     _sprints: list[dict[str, Any]],
     _sprint_issues: dict[int, list[dict[str, Any]]],
@@ -178,9 +295,20 @@ def build_metrics_dict(
     velocity = compute_velocity(sprints, sprint_issues)
     cycle_time = compute_cycle_time(issues_with_changelog)
     custom = compute_custom_trends(sprints, sprint_issues)
+    ai_trend = compute_ai_assistance_trend(sprints, sprint_issues)
+    ai_usage = compute_ai_usage_details(sprints, sprint_issues)
     return {
         "velocity": velocity,
         "cycle_time": cycle_time,
         "custom_trends": custom,
+        "ai_assistance_trend": ai_trend,
+        "ai_usage_details": ai_usage,
+        "ai_assisted_label": config.AI_ASSISTED_LABEL,
+        "ai_exclude_labels": config.AI_EXCLUDE_LABELS,
+        # Metadata fields enriched by main.py after Jira fetch
+        "filter_name": None,
+        "filter_id": None,
+        "filter_jql": None,
+        "project_key": None,
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }

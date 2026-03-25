@@ -5,7 +5,7 @@ from typing import Any
 
 from atlassian import Jira
 
-import config
+from app import config
 
 
 def create_client() -> Jira:
