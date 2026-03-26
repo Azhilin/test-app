@@ -8,6 +8,10 @@ from dotenv import load_dotenv
 _env_path = Path(__file__).resolve().parent.parent / ".env"
 load_dotenv(_env_path)
 
+# SSL certificate: use local cert bundle when present, else fall back to default CA store
+_cert_file = Path(__file__).resolve().parent.parent / "certs" / "jira_ca_bundle.pem"
+JIRA_SSL_CERT: str | bool = str(_cert_file) if _cert_file.is_file() else True
+
 JIRA_URL = os.getenv("JIRA_URL", "").rstrip("/")
 JIRA_EMAIL = os.getenv("JIRA_EMAIL", "")
 JIRA_API_TOKEN = os.getenv("JIRA_API_TOKEN", "")

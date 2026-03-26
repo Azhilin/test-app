@@ -10,3 +10,4 @@ report.md
 app/__pycache__/
 tests/__pycache__/
 generated/
+certs/*.pem

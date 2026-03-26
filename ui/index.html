@@ -445,6 +445,11 @@
       color: var(--error);
     }
     .badge-error::before { background: #FF7452; }
+    .badge-warning {
+      background: #FFF0B3;
+      color: #974F0C;
+    }
+    .badge-warning::before { background: #FF991F; }
     .badge-testing {
       background: var(--warn-bg);
       color: #974F0C;
@@ -904,6 +909,52 @@
         </div>
         <p class="form-helper" id="conn-status-detail" style="margin-bottom:18px;"></p>
 
+        <hr class="section-divider" />
+
+        <!-- ── SSL Certificate section ── -->
+        <div class="card-title" style="margin-bottom:4px;">SSL / TLS Certificate</div>
+        <div class="card-subtitle">
+          Cache the Jira host&rsquo;s TLS certificate for secure API connections.
+          Required when your network uses a custom CA or self-signed certificate.
+        </div>
+
+        <!-- Status row (hidden in file:// mode) -->
+        <div class="status-row" id="cert-status-row">
+          <span class="status-badge badge-neutral" id="cert-status-badge" role="status" aria-live="polite">Checking&hellip;</span>
+          <span id="cert-status-path" style="font-size:0.8rem;color:var(--text-muted);font-family:monospace;"></span>
+        </div>
+
+        <!-- file:// mode note (no server available) -->
+        <p id="cert-file-mode-note" hidden style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">
+          Certificate fetching requires the local server.
+          Run <code style="background:#EEE;padding:1px 5px;border-radius:3px">python tools/fetch_ssl_cert.py</code>
+          manually and restart <code style="background:#EEE;padding:1px 5px;border-radius:3px">python server.py</code>.
+        </p>
+
+        <!-- Fetch button + helper (hidden in file:// mode) -->
+        <div id="cert-server-controls">
+          <button class="btn btn-primary" id="btn-fetch-cert" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            Fetch Certificate
+          </button>
+          <p class="form-helper" style="margin-top:8px;">
+            Retrieves the TLS certificate from the Jira URL above and saves it to
+            <code>certs/jira_ca_bundle.pem</code>. The Jira client uses it automatically on the next run.
+          </p>
+        </div>
+
+        <div class="log-wrap" aria-live="polite" aria-label="Certificate fetch output" style="margin-top:14px;">
+          <div class="log-toolbar">
+            <span class="log-toolbar-label">Output</span>
+            <button class="log-clear-btn" id="btn-clear-cert-log" type="button" aria-label="Clear certificate log">Clear</button>
+          </div>
+          <div class="log-output" id="cert-log-output"></div>
+        </div>
+
+        <hr class="section-divider" />
+
         <div class="form-group">
           <label class="form-label" for="jira-url">Jira URL<span class="required-star" aria-hidden="true">*</span></label>
           <input
@@ -987,8 +1038,6 @@
           <span class="save-confirm" id="save-confirm-conn" aria-live="polite">Settings saved</span>
         </div>
 
-        <hr class="section-divider" />
-
         <div class="token-note" role="note">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#974F0C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0;margin-top:1px">
             <circle cx="12" cy="12" r="10"/>
@@ -1005,8 +1054,6 @@
             Connection testing proxies through the local server to avoid browser CORS restrictions.
           </p>
         </div>
-
-      </div>
 
     </div><!-- /panel-connection -->
 
@@ -1722,6 +1769,114 @@
       });
 
       /* ═══════════════════════════════════════════════
+         SSL Certificate card
+      ═══════════════════════════════════════════════ */
+      const certBadge      = document.getElementById('cert-status-badge');
+      const certStatusPath = document.getElementById('cert-status-path');
+      const certLogEl      = document.getElementById('cert-log-output');
+
+      function certLogLine(text, cls = '') {
+        const line = document.createElement('span');
+        if (cls) line.className = cls;
+        line.textContent = text;
+        certLogEl.appendChild(line);
+        certLogEl.appendChild(document.createTextNode('\n'));
+        certLogEl.scrollTop = certLogEl.scrollHeight;
+      }
+
+      function certLogClear() { certLogEl.innerHTML = ''; }
+
+      document.getElementById('btn-clear-cert-log').addEventListener('click', certLogClear);
+
+      async function loadCertStatus() {
+        if (!IS_SERVED) {
+          document.getElementById('cert-status-row').hidden    = true;
+          document.getElementById('cert-server-controls').hidden = true;
+          document.getElementById('cert-file-mode-note').hidden  = false;
+          return;
+        }
+        try {
+          const res  = await fetch('/api/cert-status');
+          const data = await res.json();
+          ['badge-neutral', 'badge-success', 'badge-warning', 'badge-error'].forEach((c) => certBadge.classList.remove(c));
+          if (!data.exists) {
+            certBadge.classList.add('badge-neutral');
+            certBadge.textContent      = 'No certificate';
+            certStatusPath.textContent = '';
+          } else if (data.error) {
+            certBadge.classList.add('badge-error');
+            certBadge.textContent      = 'Certificate unreadable';
+            certStatusPath.textContent = data.path || '';
+          } else if (!data.valid) {
+            certBadge.classList.add('badge-error');
+            certBadge.textContent      = 'Certificate expired';
+            certStatusPath.textContent = _certDetailLine(data);
+          } else if (data.days_remaining <= 7) {
+            certBadge.classList.add('badge-warning');
+            certBadge.textContent      = `Expiring soon \u00b7 ${data.days_remaining}d`;
+            certStatusPath.textContent = _certDetailLine(data);
+          } else {
+            certBadge.classList.add('badge-success');
+            certBadge.textContent      = 'Valid';
+            certStatusPath.textContent = _certDetailLine(data);
+          }
+          _updateCertButtonLabel(data);
+        } catch {
+          certBadge.textContent = 'Status unknown';
+        }
+      }
+
+      function _certDetailLine(data) {
+        const parts = [data.path];
+        if (data.subject)    parts.push(data.subject);
+        if (data.expires_at) parts.push(`expires ${data.expires_at}`);
+        return parts.join(' \u00b7 ');
+      }
+
+      const FETCH_CERT_BTN_IDLE   = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> Fetch Certificate`;
+      const REFRESH_CERT_BTN_IDLE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Refresh Certificate`;
+
+      function _updateCertButtonLabel(data) {
+        if (!btnFetchCert.disabled) {
+          btnFetchCert.innerHTML = (data.exists && data.valid)
+            ? REFRESH_CERT_BTN_IDLE
+            : FETCH_CERT_BTN_IDLE;
+        }
+      }
+
+      const btnFetchCert = document.getElementById('btn-fetch-cert');
+
+      btnFetchCert.addEventListener('click', async () => {
+        const url = jiraUrlInput.value.trim();
+        if (!url) {
+          certLogLine('\u26A0 Enter the Jira URL in the fields above before fetching the certificate.', 'log-error');
+          return;
+        }
+        btnFetchCert.disabled  = true;
+        btnFetchCert.innerHTML = '<span class="spinner" aria-hidden="true"></span> Fetching\u2026';
+        certLogClear();
+        certLogLine(`[ ${new Date().toLocaleTimeString()} ] Connecting to ${url} \u2026`, 'log-info');
+        try {
+          const res  = await fetch('/api/fetch-cert', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ url }),
+          });
+          const data = await res.json();
+          if (data.ok) {
+            certLogLine(`\u2713 Certificate saved \u2192 ${data.path}`, 'log-ok');
+          } else {
+            certLogLine(`\u2717 ${data.error || 'Unknown error'}`, 'log-error');
+          }
+        } catch (err) {
+          certLogLine(`\u2717 Request failed: ${err.message}`, 'log-error');
+        } finally {
+          btnFetchCert.disabled = false;
+          await loadCertStatus();  // re-evaluates badge + button label
+        }
+      });
+
+      /* ═══════════════════════════════════════════════
          Status badge helpers
       ═══════════════════════════════════════════════ */
       const badge       = document.getElementById('conn-status-badge');
@@ -1931,6 +2086,8 @@
         loadReports();
         // Filters list (async — fetches from /api/filters when served)
         loadFilters();
+        // SSL certificate status
+        loadCertStatus();
       }
 
       /* ── Boot ── */
