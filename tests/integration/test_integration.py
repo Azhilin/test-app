@@ -25,18 +25,18 @@ def test_main_pipeline_success(monkeypatch, tmp_path):
     issues = [make_issue("T-1", "Done", 5.0)]
     cl_issue = make_issue_with_changelog("T-1", "2026-01-02T10:00:00+00:00", "2026-01-05T10:00:00+00:00")
 
-    monkeypatch.setattr("app.config.JIRA_URL", "https://test.atlassian.net")
-    monkeypatch.setattr("app.config.JIRA_EMAIL", "u@t.com")
-    monkeypatch.setattr("app.config.JIRA_API_TOKEN", "tok")
-    monkeypatch.setattr("app.config.JIRA_FILTER_ID", None)
+    monkeypatch.setattr("app.core.config.JIRA_URL", "https://test.atlassian.net")
+    monkeypatch.setattr("app.core.config.JIRA_EMAIL", "u@t.com")
+    monkeypatch.setattr("app.core.config.JIRA_API_TOKEN", "tok")
+    monkeypatch.setattr("app.core.config.JIRA_FILTER_ID", None)
 
     mock_jira = MagicMock()
-    monkeypatch.setattr("app.jira_client.create_client", lambda: mock_jira)
-    monkeypatch.setattr("app.jira_client.fetch_sprint_data", lambda j: (sprints, {1: issues}))
-    monkeypatch.setattr("app.jira_client.get_issues_with_changelog", lambda j, keys: [cl_issue])
+    monkeypatch.setattr("app.core.jira_client.create_client", lambda: mock_jira)
+    monkeypatch.setattr("app.core.jira_client.fetch_sprint_data", lambda j: (sprints, {1: issues}))
+    monkeypatch.setattr("app.core.jira_client.get_issues_with_changelog", lambda j, keys: [cl_issue])
 
     # Redirect reports to tmp_path
-    monkeypatch.setattr("main.REPORTS_DIR", tmp_path / "generated" / "reports")
+    monkeypatch.setattr("app.cli.REPORTS_DIR", tmp_path / "generated" / "reports")
     monkeypatch.setattr("sys.argv", ["main.py"])
 
     from main import main
@@ -62,9 +62,9 @@ def test_main_pipeline_success(monkeypatch, tmp_path):
 
 def test_main_pipeline_config_fail(monkeypatch):
     """No credentials → exit 1 with error message."""
-    monkeypatch.setattr("app.config.JIRA_URL", "")
-    monkeypatch.setattr("app.config.JIRA_EMAIL", "")
-    monkeypatch.setattr("app.config.JIRA_API_TOKEN", "")
+    monkeypatch.setattr("app.core.config.JIRA_URL", "")
+    monkeypatch.setattr("app.core.config.JIRA_EMAIL", "")
+    monkeypatch.setattr("app.core.config.JIRA_API_TOKEN", "")
     monkeypatch.setattr("sys.argv", ["main.py"])
 
     from main import main
@@ -81,7 +81,7 @@ def test_main_clean_removes_reports(monkeypatch, tmp_path):
     reports_dir.mkdir(parents=True)
     (reports_dir / "dummy.txt").write_text("x")
 
-    monkeypatch.setattr("main.REPORTS_DIR", reports_dir)
+    monkeypatch.setattr("app.cli.REPORTS_DIR", reports_dir)
     monkeypatch.setattr("sys.argv", ["main.py", "--clean"])
 
     from main import main
@@ -99,10 +99,10 @@ def test_filter_metadata_in_html(monkeypatch, tmp_path):
     issues = [make_issue("T-1", "Done", 5.0)]
     cl_issue = make_issue_with_changelog("T-1", "2026-01-02T10:00:00+00:00", "2026-01-05T10:00:00+00:00")
 
-    monkeypatch.setattr("app.config.JIRA_URL", "https://test.atlassian.net")
-    monkeypatch.setattr("app.config.JIRA_EMAIL", "u@t.com")
-    monkeypatch.setattr("app.config.JIRA_API_TOKEN", "tok")
-    monkeypatch.setattr("app.config.JIRA_FILTER_ID", 42)
+    monkeypatch.setattr("app.core.config.JIRA_URL", "https://test.atlassian.net")
+    monkeypatch.setattr("app.core.config.JIRA_EMAIL", "u@t.com")
+    monkeypatch.setattr("app.core.config.JIRA_API_TOKEN", "tok")
+    monkeypatch.setattr("app.core.config.JIRA_FILTER_ID", 42)
 
     mock_jira = MagicMock()
     # Mock the _session.get for filter name
@@ -110,12 +110,12 @@ def test_filter_metadata_in_html(monkeypatch, tmp_path):
     mock_filter_resp.json.return_value = {"name": "My Test Filter"}
     mock_jira._session.get.return_value = mock_filter_resp
 
-    monkeypatch.setattr("app.jira_client.create_client", lambda: mock_jira)
-    monkeypatch.setattr("app.jira_client.fetch_sprint_data", lambda j: (sprints, {1: issues}))
-    monkeypatch.setattr("app.jira_client.get_issues_with_changelog", lambda j, keys: [cl_issue])
-    monkeypatch.setattr("app.jira_client.get_filter_jql", lambda j: "project = TEST")
+    monkeypatch.setattr("app.core.jira_client.create_client", lambda: mock_jira)
+    monkeypatch.setattr("app.core.jira_client.fetch_sprint_data", lambda j: (sprints, {1: issues}))
+    monkeypatch.setattr("app.core.jira_client.get_issues_with_changelog", lambda j, keys: [cl_issue])
+    monkeypatch.setattr("app.core.jira_client.get_filter_jql", lambda j: "project = TEST")
 
-    monkeypatch.setattr("main.REPORTS_DIR", tmp_path / "generated" / "reports")
+    monkeypatch.setattr("app.cli.REPORTS_DIR", tmp_path / "generated" / "reports")
     monkeypatch.setattr("sys.argv", ["main.py"])
 
     from main import main

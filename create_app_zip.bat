@@ -8,6 +8,8 @@ cd /d "%~dp0"
 :: ============================================================
 set APP_NAME=ai_adoption_manager
 set RELEASES_DIR=generated\releases
+set ROBOCOPY_DIR_EXCLUDES=__pycache__ .pytest_cache .mypy_cache .ruff_cache
+set ROBOCOPY_FILE_EXCLUDES=*.pyc *.pyo .DS_Store Thumbs.db *.log dau_report.json
 
 :: ============================================================
 :: GENERATE TIMESTAMP
@@ -50,24 +52,36 @@ if errorlevel 1 (
 :: ============================================================
 echo  Copying app sources...
 
-robocopy "app"       "%STAGING_DIR%\app"       /E /XD __pycache__ /XF *.pyc /NFL /NDL /NJH /NJS >nul
+robocopy "app"       "%STAGING_DIR%\app"       /E /XD %ROBOCOPY_DIR_EXCLUDES% /XF %ROBOCOPY_FILE_EXCLUDES% /NFL /NDL /NJH /NJS >nul
 if errorlevel 8 ( echo [ERROR] Failed to copy app\      & goto :ABORT )
 
-robocopy "templates" "%STAGING_DIR%\templates" /E /XD __pycache__ /XF *.pyc /NFL /NDL /NJH /NJS >nul
+robocopy "templates" "%STAGING_DIR%\templates" /E /XD %ROBOCOPY_DIR_EXCLUDES% /XF %ROBOCOPY_FILE_EXCLUDES% /NFL /NDL /NJH /NJS >nul
 if errorlevel 8 ( echo [ERROR] Failed to copy templates\ & goto :ABORT )
 
-robocopy "ui"        "%STAGING_DIR%\ui"        /E /XD __pycache__ /XF *.pyc /NFL /NDL /NJH /NJS >nul
+robocopy "ui"        "%STAGING_DIR%\ui"        /E /XD %ROBOCOPY_DIR_EXCLUDES% /XF %ROBOCOPY_FILE_EXCLUDES% /NFL /NDL /NJH /NJS >nul
 if errorlevel 8 ( echo [ERROR] Failed to copy ui\        & goto :ABORT )
 
-robocopy "docs"      "%STAGING_DIR%\docs"      /E /XD __pycache__ /XF *.pyc /NFL /NDL /NJH /NJS >nul
-if errorlevel 8 ( echo [ERROR] Failed to copy docs\      & goto :ABORT )
+echo  Copying schema storage...
+if exist "docs\product\schemas" (
+    robocopy "docs\product\schemas" "%STAGING_DIR%\docs\product\schemas" /E /XD %ROBOCOPY_DIR_EXCLUDES% /XF %ROBOCOPY_FILE_EXCLUDES% /NFL /NDL /NJH /NJS >nul
+    if errorlevel 8 ( echo [ERROR] Failed to copy docs\product\schemas\ & goto :ABORT )
+) else (
+    mkdir "%STAGING_DIR%\docs\product\schemas"
+    if errorlevel 1 ( echo [ERROR] Failed to create docs\product\schemas\ & goto :ABORT )
+)
+
+echo  Preparing certs folder...
+mkdir "%STAGING_DIR%\certs"
+if errorlevel 1 ( echo [ERROR] Failed to create certs\ & goto :ABORT )
+> "%STAGING_DIR%\certs\README.txt" echo Place jira_ca_bundle.pem here if your Jira instance uses a custom CA.
+if errorlevel 1 ( echo [ERROR] Failed to create certs\README.txt & goto :ABORT )
 
 :: ============================================================
 :: COPY ROOT FILES
 :: ============================================================
 echo  Copying configuration and scripts...
 
-for %%F in (main.py server.py requirements.txt .env.example start_app.bat python_setup.bat README.md) do (
+for %%F in (main.py server.py requirements.txt .env.example start_app.bat project_setup.bat README.md) do (
     copy /Y "%%F" "%STAGING_DIR%\" >nul
     if errorlevel 1 (
         echo [ERROR] Failed to copy %%F
@@ -103,8 +117,8 @@ echo    %ZIP_PATH%
 echo.
 echo  Share this zip with end users. They should:
 echo    1. Unzip to any folder
-echo    2. Run python_setup.bat  (installs Python ^& dependencies, once)
-echo    3. Copy .env.example to .env and fill in Jira credentials
+echo    2. Run project_setup.bat (installs Python ^& dependencies, once)
+echo    3. Review .env and fill in Jira credentials
 echo    4. Run start_app.bat     (opens the app in the browser)
 echo.
 pause

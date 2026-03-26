@@ -13,21 +13,25 @@ Usage:
 import base64
 import json
 import os
+import re
 import ssl
 import subprocess
 import sys
 import urllib.error
 import urllib.request
 import webbrowser
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import quote as urlquote, unquote as urlunquote, urlparse
 
 from dotenv import load_dotenv
+from app.core import config
 
 load_dotenv()
 
 ROOT = Path(__file__).resolve().parent.parent
+HOST = os.environ.get("HOST", "127.0.0.1").strip() or "127.0.0.1"
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("PORT", 8080))
 
 MIME = {
@@ -92,6 +96,27 @@ class Handler(BaseHTTPRequestHandler):
     def _cors_headers(self) -> None:
         self.send_header("Access-Control-Allow-Origin", "*")
 
+    @staticmethod
+    def _reports_dir() -> Path:
+        return (ROOT / "generated" / "reports").resolve()
+
+    @staticmethod
+    def _jira_ssl_context() -> ssl.SSLContext | None:
+        if config.JIRA_SSL_CERT is True:
+            return None
+        return ssl.create_default_context(cafile=config.JIRA_SSL_CERT)
+
+    def _resolve_report_path(self, requested_path: str) -> Path | None:
+        rel = urlunquote(requested_path[len("/generated/reports/"):]).lstrip("/")
+        if not rel:
+            return None
+        target = (self._reports_dir() / rel).resolve()
+        try:
+            target.relative_to(self._reports_dir())
+        except ValueError:
+            return None
+        return target
+
     def _read_json_body(self) -> dict | None:
         length = int(self.headers.get("Content-Length", 0))
         if length == 0:
@@ -106,7 +131,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_OPTIONS(self) -> None:
         self.send_response(204)
         self._cors_headers()
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
         self.end_headers()
 
@@ -121,9 +146,18 @@ class Handler(BaseHTTPRequestHandler):
             self._handle_cert_status()
         elif path == "/api/config":
             self._handle_get_config()
+        elif path == "/api/schemas":
+            self._handle_get_schemas()
+        elif path.startswith("/api/schema-detail/"):
+            filename = path[len("/api/schema-detail/"):]
+            self._handle_get_schema_detail(filename)
         elif path.startswith("/generated/reports/"):
-            rel = path.lstrip("/")
-            self._serve_file(ROOT / rel)
+            target = self._resolve_report_path(path)
+            if target is None:
+                self.send_response(404)
+                self.end_headers()
+                return
+            self._serve_file(target)
         else:
             self.send_response(404)
             self.end_headers()
@@ -137,6 +171,18 @@ class Handler(BaseHTTPRequestHandler):
             self._handle_fetch_cert()
         elif path == "/api/config":
             self._handle_post_config()
+        elif path == "/api/schemas":
+            self._handle_post_schema()
+        else:
+            self.send_response(404)
+            self.end_headers()
+
+    def do_DELETE(self) -> None:
+        path = self.path.split("?")[0]
+
+        if path.startswith("/api/schemas/"):
+            filename = path[len("/api/schemas/"):]
+            self._handle_delete_schema(filename)
         else:
             self.send_response(404)
             self.end_headers()
@@ -166,7 +212,7 @@ class Handler(BaseHTTPRequestHandler):
         )
 
         try:
-            with urllib.request.urlopen(req, timeout=12) as resp:
+            with urllib.request.urlopen(req, timeout=12, context=self._jira_ssl_context()) as resp:
                 data = json.loads(resp.read())
                 self._send_json(200, {
                     "ok":           True,
@@ -323,6 +369,211 @@ class Handler(BaseHTTPRequestHandler):
 
         self._send_json(200, {"ok": True, "path": "certs/jira_ca_bundle.pem", "host": host})
 
+    # ── Schema handlers ─────────────────────────────────────────────────────
+
+    @staticmethod
+    def _schemas_dir() -> Path:
+        return ROOT / "docs" / "product" / "schemas"
+
+    @staticmethod
+    def _slugify(name: str) -> str:
+        """Turn a human-readable name into a safe filename slug."""
+        slug = name.lower().strip()
+        slug = re.sub(r"[^a-z0-9]+", "_", slug)
+        slug = slug.strip("_")[:80]
+        return slug or "schema"
+
+    def _read_env_credentials(self) -> tuple[str, str, str]:
+        """Read Jira credentials from .env on disk."""
+        env_path = ROOT / ".env"
+        config: dict[str, str] = {}
+        if env_path.exists():
+            for line in env_path.read_text(encoding="utf-8").splitlines():
+                stripped = line.strip()
+                if stripped.startswith("#") or "=" not in stripped:
+                    continue
+                key, _, val = stripped.partition("=")
+                config[key.strip()] = val.strip()
+        return (
+            config.get("JIRA_URL", "").rstrip("/"),
+            config.get("JIRA_EMAIL", ""),
+            config.get("JIRA_API_TOKEN", ""),
+        )
+
+    def _jira_api_get(self, endpoint: str, url: str, email: str, token: str) -> dict:
+        """Make an authenticated GET request to Jira and return parsed JSON."""
+        creds = base64.b64encode(f"{email}:{token}".encode()).decode()
+        req = urllib.request.Request(
+            f"{url}{endpoint}",
+            headers={"Authorization": f"Basic {creds}", "Accept": "application/json"},
+        )
+        with urllib.request.urlopen(req, timeout=30, context=self._jira_ssl_context()) as resp:
+            return json.loads(resp.read())
+
+    def _handle_get_schemas(self) -> None:
+        """Return list of saved schema files from docs/product/schemas/."""
+        schemas_dir = self._schemas_dir()
+        entries: list[dict] = []
+        if schemas_dir.is_dir():
+            for f in sorted(schemas_dir.glob("*.json"), key=lambda p: p.stat().st_mtime, reverse=True):
+                try:
+                    data = json.loads(f.read_text(encoding="utf-8"))
+                    entries.append({
+                        "name":         data.get("name", f.stem),
+                        "filename":     f.name,
+                        "created_at":   data.get("created_at", ""),
+                        "projects":     data.get("projects", []),
+                        "field_count":  len(data.get("fields", [])),
+                        "custom_count": sum(1 for fd in data.get("fields", []) if fd.get("custom")),
+                    })
+                except (json.JSONDecodeError, OSError):
+                    continue
+        self._send_json(200, {"schemas": entries[:20]})
+
+    def _handle_get_schema_detail(self, filename: str) -> None:
+        """Return full schema JSON for a specific schema file."""
+        filename = urlunquote(filename)
+        if not filename.endswith(".json") or "/" in filename or "\\" in filename:
+            self._send_json(400, {"ok": False, "error": "Invalid filename"})
+            return
+        target = self._schemas_dir() / filename
+        if not target.is_file():
+            self._send_json(404, {"ok": False, "error": "Schema not found"})
+            return
+        try:
+            data = json.loads(target.read_text(encoding="utf-8"))
+            self._send_json(200, data)
+        except (json.JSONDecodeError, OSError) as exc:
+            self._send_json(500, {"ok": False, "error": str(exc)})
+
+    def _handle_post_schema(self) -> None:
+        """Fetch Jira field catalogue + sample issue, save schema JSON."""
+        body = self._read_json_body()
+        if body is None:
+            self._send_json(400, {"ok": False, "error": "Invalid JSON body"})
+            return
+
+        name     = (body.get("name") or "").strip()
+        projects = [p.strip() for p in (body.get("projects") or "").split(",") if p.strip()]
+        filter_id = (body.get("filter_id") or "").strip() or None
+
+        if not name:
+            self._send_json(400, {"ok": False, "error": "Schema name is required"})
+            return
+        if not projects:
+            self._send_json(400, {"ok": False, "error": "At least one Project Key is required"})
+            return
+
+        url, email, token = self._read_env_credentials()
+        if not url or not email or not token:
+            self._send_json(400, {
+                "ok": False,
+                "error": "Jira credentials not found in .env. Save credentials in the Jira Connection tab first.",
+            })
+            return
+
+        # 1. Fetch all fields from Jira
+        try:
+            fields_raw = self._jira_api_get("/rest/api/2/field", url, email, token)
+        except urllib.error.HTTPError as exc:
+            self._send_json(200, {"ok": False, "error": f"Jira API error fetching fields: HTTP {exc.code} {exc.reason}"})
+            return
+        except (urllib.error.URLError, OSError) as exc:
+            self._send_json(200, {"ok": False, "error": f"Could not reach Jira: {exc}"})
+            return
+
+        fields: list[dict] = []
+        for f in fields_raw if isinstance(fields_raw, list) else []:
+            entry: dict = {
+                "id":     f.get("id", ""),
+                "name":   f.get("name", ""),
+                "custom": f.get("custom", False),
+            }
+            if f.get("schema"):
+                entry["schema"] = {
+                    "type":   f["schema"].get("type", ""),
+                    "custom": f["schema"].get("custom", ""),
+                    "system": f["schema"].get("system", ""),
+                }
+            fields.append(entry)
+
+        # 2. Fetch a sample issue to see which fields are populated
+        proj_clause = projects[0] if len(projects) == 1 else f"({', '.join(projects)})"
+        jql = f"project {'= ' + proj_clause if len(projects) == 1 else 'IN ' + proj_clause} ORDER BY created DESC"
+        sample_issue_key = None
+        populated_fields: list[str] = []
+
+        try:
+            search_result = self._jira_api_get(
+                f"/rest/api/2/search?jql={urlquote(jql)}&maxResults=1&fields=*all",
+                url, email, token,
+            )
+            issues = search_result.get("issues") or []
+            if issues:
+                issue = issues[0]
+                sample_issue_key = issue.get("key")
+                issue_fields = issue.get("fields") or {}
+                populated_fields = [k for k, v in issue_fields.items() if v is not None]
+        except (urllib.error.HTTPError, urllib.error.URLError, OSError):
+            pass  # sample issue is best-effort; not fatal
+
+        # 3. If filter_id provided, fetch filter metadata
+        filter_jql = None
+        if filter_id:
+            try:
+                filter_data = self._jira_api_get(f"/rest/api/2/filter/{filter_id}", url, email, token)
+                filter_jql = filter_data.get("jql")
+            except (urllib.error.HTTPError, urllib.error.URLError, OSError):
+                pass
+
+        # 4. Save schema file
+        slug     = self._slugify(name)
+        filename = f"{slug}.json"
+        schemas_dir = self._schemas_dir()
+        schemas_dir.mkdir(parents=True, exist_ok=True)
+        out_path = schemas_dir / filename
+
+        updated = out_path.exists()
+        created_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+
+        schema_data = {
+            "name":             name,
+            "created_at":       created_at,
+            "projects":         projects,
+            "filter_id":        filter_id,
+            "filter_jql":       filter_jql,
+            "fields":           fields,
+            "sample_issue_key": sample_issue_key,
+            "populated_fields": populated_fields,
+        }
+
+        out_path.write_text(json.dumps(schema_data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+        custom_count = sum(1 for f in fields if f.get("custom"))
+        self._send_json(200, {
+            "ok":           True,
+            "updated":      updated,
+            "name":         name,
+            "filename":     filename,
+            "created_at":   created_at,
+            "field_count":  len(fields),
+            "custom_count": custom_count,
+        })
+
+    def _handle_delete_schema(self, filename: str) -> None:
+        """Delete a schema file from docs/product/schemas/."""
+        filename = urlunquote(filename)
+        # Safety: only allow .json files in the schemas directory
+        if not filename.endswith(".json") or "/" in filename or "\\" in filename:
+            self._send_json(400, {"ok": False, "error": "Invalid filename"})
+            return
+        target = self._schemas_dir() / filename
+        if target.is_file():
+            target.unlink()
+            self._send_json(200, {"ok": True})
+        else:
+            self._send_json(404, {"ok": False, "error": "Schema not found"})
+
     def _handle_generate(self) -> None:
         """Run main.py and stream stdout/stderr as Server-Sent Events."""
         self.send_response(200)
@@ -372,10 +623,10 @@ class Handler(BaseHTTPRequestHandler):
                 pass
 
 
-def run(port: int = PORT) -> None:
+def run(port: int = PORT, host: str = HOST) -> None:
     """Start the HTTP server on the given port."""
-    server = Server(("", port), Handler)
-    url = f"http://localhost:{port}"
+    server = Server((host, port), Handler)
+    url = f"http://localhost:{port}" if host in {"127.0.0.1", "localhost"} else f"http://{host}:{port}"
     print(f"  AI Adoption Metrics — dev server")
     print(f"  Listening on {url}")
     print(f"  Press Ctrl+C to stop.\n")

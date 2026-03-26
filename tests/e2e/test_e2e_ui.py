@@ -5,8 +5,8 @@ tab navigation, form validation, localStorage persistence, SSE streaming,
 and dynamic UI updates.
 
 Run:
-    pytest tests/test_e2e_ui.py -v            # headless
-    pytest tests/test_e2e_ui.py -v --headed   # visual debug
+    pytest tests/e2e/test_e2e_ui.py -v            # headless
+    pytest tests/e2e/test_e2e_ui.py -v --headed   # visual debug
 """
 from __future__ import annotations
 
@@ -111,10 +111,11 @@ def test_default_tab_is_generate(page: Page, live_server_url: str):
     expect(page.locator("#panel-filter")).to_be_hidden()
 
 
-def test_all_three_tabs_visible(page: Page, live_server_url: str):
-    """All three tab buttons are present in the tab bar."""
+def test_all_four_tabs_visible(page: Page, live_server_url: str):
+    """All four tab buttons are present in the tab bar."""
     _goto(page, live_server_url)
     expect(page.get_by_role("tab", name="Jira Connection")).to_be_visible()
+    expect(page.get_by_role("tab", name="Jira Schema")).to_be_visible()
     expect(page.get_by_role("tab", name="Jira Filter")).to_be_visible()
     expect(page.get_by_role("tab", name="Generate Report")).to_be_visible()
 
@@ -146,14 +147,14 @@ def test_click_filter_tab(page: Page, live_server_url: str):
 def test_keyboard_arrow_right_navigation(page: Page, live_server_url: str):
     """ArrowRight on a focused tab activates the next tab."""
     _goto(page, live_server_url)
-    # Tab order in DOM: connection(0), filter(1), generate(2)
+    # Tab order in DOM: connection(0), schema(1), filter(2), generate(3)
     page.get_by_role("tab", name="Jira Connection").click()
     expect(page.locator("#panel-connection")).to_be_visible()
 
-    # Press ArrowRight → should move to Filter tab
+    # Press ArrowRight → should move to Schema tab
     page.keyboard.press("ArrowRight")
-    expect(page.locator("#tab-filter")).to_have_attribute("aria-selected", "true")
-    expect(page.locator("#panel-filter")).to_be_visible()
+    expect(page.locator("#tab-schema")).to_have_attribute("aria-selected", "true")
+    expect(page.locator("#panel-schema")).to_be_visible()
     expect(page.locator("#panel-connection")).to_be_hidden()
 
 
