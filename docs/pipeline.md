@@ -66,6 +66,41 @@ corresponding repository variable.
 Set the value to the **string** `true` to enable, or remove/set to anything else
 to disable.
 
+### Recommended enablement order
+
+Enable stages incrementally rather than all at once. This surfaces problems one
+layer at a time and avoids burning Windows/Playwright runner minutes on a broken
+build.
+
+| Step | Enable | Why this order |
+|---|---|---|
+| 1 | `ENABLE_UNIT` | Fastest feedback (~30 s), zero secrets needed |
+| 2 | `ENABLE_COMPONENT` | Still no secrets, covers HTTP + templates |
+| 3 | `ENABLE_SECURITY_SCAN` | No secrets, good hygiene before adding external calls |
+| 4 | `ENABLE_INTEGRATION` | Add Jira secrets first (see [Jira Secrets Setup](#jira-secrets-setup)) |
+| 5 | `ENABLE_E2E` | Slowest ubuntu job (~3–5 min), needs Jira secrets + Playwright |
+| 6 | `ENABLE_WINDOWS_TESTS` | Dedicated windows-latest runner — enable after Steps 1–2 are stable |
+
+Verify the pipeline is green at each step before proceeding to the next.
+
+### Stage cost and speed reference
+
+GitHub-hosted runner minutes are billed at different rates. Keeping expensive
+stages conditional protects runner budget.
+
+| Stage | Typical duration | Runner | Relative cost | Secrets needed |
+|---|---|---|---|---|
+| Unit Tests | ~30 s | ubuntu-latest | ★☆☆☆☆ | No |
+| Component Tests | ~30 s | ubuntu-latest | ★☆☆☆☆ | No |
+| Security Scan | ~45 s | ubuntu-latest | ★☆☆☆☆ | No |
+| Integration Tests | ~1–2 min | ubuntu-latest | ★★☆☆☆ | Yes |
+| E2E Tests | ~3–5 min | ubuntu-latest | ★★★☆☆ | Yes |
+| Windows Tests | ~2–4 min | windows-latest | ★★★★☆ (2× rate) | No |
+
+> **Tip:** If runner minutes are limited, keep `ENABLE_WINDOWS_TESTS` and
+> `ENABLE_E2E` disabled on feature branches and enable them only on `master`
+> using the `RESTRICT_TO_MASTER` flag per stage (see below).
+
 ### Manual one-off runs
 
 1. Go to **Actions → CI → Run workflow**
@@ -91,6 +126,55 @@ To additionally skip all automatic runs on non-master branches:
 | `RESTRICT_TO_MASTER` not set | Runs if `ENABLE_UNIT == 'true'` |
 | `RESTRICT_TO_MASTER = true` | Skipped (yellow dash) |
 | Manual `workflow_dispatch` | Always runs regardless of this flag |
+
+> **Warning:** Setting `RESTRICT_TO_MASTER = true` blocks **all** stages on
+> **all** non-master branches, including open PRs. Use this only if you
+> intentionally want CI to run exclusively on merges to master.
+> For most projects, leaving this unset and relying on
+> `ENABLE_*` variables gives finer control.
+
+### Common configuration strategies
+
+Choose the pattern that matches your workflow:
+
+**Fast feedback on every commit (recommended starting point)**
+```
+ENABLE_UNIT          = true
+ENABLE_COMPONENT     = true
+ENABLE_SECURITY_SCAN = true
+# All other stages disabled — run Integration/E2E manually or on master only
+```
+
+**Full CI on every branch (requires Jira secrets already configured)**
+```
+ENABLE_UNIT          = true
+ENABLE_COMPONENT     = true
+ENABLE_INTEGRATION   = true
+ENABLE_E2E           = true
+ENABLE_SECURITY_SCAN = true
+ENABLE_WINDOWS_TESTS = true
+# RESTRICT_TO_MASTER  — leave unset
+```
+
+**Save runner minutes: cheap stages on every branch, slow stages on master only**
+```
+ENABLE_UNIT          = true   # runs on every branch
+ENABLE_COMPONENT     = true   # runs on every branch
+ENABLE_SECURITY_SCAN = true   # runs on every branch
+ENABLE_INTEGRATION   = true   # gated by RESTRICT_TO_MASTER below
+ENABLE_E2E           = true   # gated by RESTRICT_TO_MASTER below
+ENABLE_WINDOWS_TESTS = true   # gated by RESTRICT_TO_MASTER below
+RESTRICT_TO_MASTER   = true   # Integration, E2E, Windows only run on master
+```
+> This pattern is not yet supported per-stage — `RESTRICT_TO_MASTER` applies
+> globally. Implement per-stage branch filtering by editing the `if:` condition
+> in `ci.yml` if you need finer control.
+
+**Disable everything temporarily (e.g. during a repo migration)**
+```
+# Remove all ENABLE_* variables, or set each to any value other than 'true'
+# Manual workflow_dispatch runs will still work
+```
 
 ---
 
@@ -214,6 +298,51 @@ weekly PRs for:
 - **github-actions** — action versions (`actions/checkout`, `actions/setup-python`, etc.)
 
 PRs are labelled `dependencies` and capped at 5 open PRs per ecosystem.
+
+> **Recommendation:** Keep `ENABLE_UNIT = true` and `ENABLE_COMPONENT = true`
+> so that Dependabot PRs are automatically validated before you merge them.
+> This catches dependency updates that break the API surface without requiring
+> manual test runs.
+
+---
+
+## Troubleshooting
+
+### A stage shows as a yellow dash (skipped)
+
+The job's `if:` condition evaluated to `false`. Check in order:
+1. Is the matching `ENABLE_*` variable set to the exact string `true` (not `True`, `yes`, or `1`)?
+2. Is `RESTRICT_TO_MASTER = true` active and the push is on a non-master branch?
+3. Did the workflow file get pushed? Go to **Actions** tab — if the workflow is not listed, the YAML was never pushed to the default branch or the current branch.
+
+### A stage shows as expected but never starts
+
+- Check **Actions → CI → the run** — expand the job to see the evaluated `if:` expression.
+- Variables are case-sensitive: `ENABLE_UNIT` ≠ `enable_unit`.
+
+### Integration or E2E fails with authentication errors
+
+- Confirm all three secrets exist: `JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`.
+- Secret names are case-sensitive. Check for trailing spaces in the value.
+- Re-run the job after correcting secrets; no commit is needed.
+
+### E2E fails with `SSL: CERTIFICATE_VERIFY_FAILED`
+
+The local `certs/jira_ca_bundle.pem` is excluded from git (`.gitignore`). If
+your Jira instance uses a custom CA not trusted by ubuntu-latest:
+
+1. Add the PEM content as a new secret: `JIRA_CA_BUNDLE`
+2. Add a step before the E2E test step in `ci.yml`:
+   ```yaml
+   - name: Write CA bundle
+     run: echo "${{ secrets.JIRA_CA_BUNDLE }}" > certs/jira_ca_bundle.pem
+   ```
+
+### Windows Tests are skipped on ubuntu-latest
+
+This is expected. Tests decorated with `@pytest.mark.windows_only` are
+excluded by the `-m "... and not windows_only"` marker filter on all ubuntu
+jobs. They only run in the dedicated `windows-tests` job.
 
 ---
 
