@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Tool Usage Survey</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --accent:       #0052CC;
+      --accent-hover: #0747A6;
+      --accent-light: #DEEBFF;
+      --bg:           #F4F5F7;
+      --surface:      #FFFFFF;
+      --border:       #DFE1E6;
+      --text:         #172B4D;
+      --text-muted:   #6B778C;
+      --text-subtle:  #97A0AF;
+      --success:      #006644;
+      --success-bg:   #E3FCEF;
+      --success-border: #ABF5D1;
+      --error:        #BF2600;
+      --error-bg:     #FFEBE6;
+      --error-border: #FFBDAD;
+      --warn-bg:      #FFFAE6;
+      --warn-border:  #FFE380;
+      --warn:         #172B4D;
+      --radius:       6px;
+      --shadow:       0 1px 3px rgba(9,30,66,.12), 0 0 0 1px rgba(9,30,66,.06);
+      --font:         -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    }
+
+    html { font-size: 15px; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 0 16px 48px;
+    }
+
+    /* ── Header ── */
+    .app-header {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 28px 0 20px;
+      border-bottom: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .app-header-icon {
+      width: 40px;
+      height: 40px;
+      background: var(--accent);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .app-header-icon svg { display: block; }
+    .app-header h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      color: var(--text);
+      line-height: 1.2;
+    }
+    .app-header p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    /* ── Main body ── */
+    .app-body {
+      max-width: 600px;
+      margin: 0 auto;
+      padding-top: 28px;
+    }
+
+    /* ── Progress bar ── */
+    .progress-wrap {
+      margin-bottom: 24px;
+    }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .progress-label span {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+    .progress-label .progress-count {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--accent);
+    }
+    .progress-track {
+      height: 4px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 99px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+
+    /* ── Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+      margin-bottom: 16px;
+    }
+    .card-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .card-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+
+    /* ── Form field ── */
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .field label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .field label .required-star {
+      color: var(--error);
+      margin-left: 2px;
+    }
+    .field-hint {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: -2px;
+    }
+
+    input[type="text"], select {
+      font-family: var(--font);
+      font-size: 0.875rem;
+      color: var(--text);
+      background: var(--surface);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      width: 100%;
+    }
+    input[type="text"]::placeholder { color: var(--text-subtle); }
+    input[type="text"]:focus, select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(0,82,204,0.2);
+    }
+    input[type="text"].is-error {
+      border-color: var(--error);
+      box-shadow: 0 0 0 2px rgba(191,38,0,0.15);
+    }
+    input[type="text"].is-valid {
+      border-color: #00875A;
+      box-shadow: 0 0 0 2px rgba(0,135,90,0.15);
+    }
+
+    select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236B778C' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 36px;
+      cursor: pointer;
+    }
+    select option[value=""] { color: var(--text-subtle); }
+
+    .field-error {
+      font-size: 0.78rem;
+      color: var(--error);
+      font-weight: 500;
+      min-height: 18px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .field-error:empty { visibility: hidden; }
+
+    /* ── Radio cards ── */
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .radio-card {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 12px 16px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+      user-select: none;
+      position: relative;
+    }
+    .radio-card:hover {
+      border-color: #B3D4FF;
+      background: #F8FAFF;
+    }
+    .radio-card.selected {
+      border-color: var(--accent);
+      background: var(--accent-light);
+      border-left-width: 3px;
+    }
+    .radio-card:focus-within {
+      box-shadow: 0 0 0 2px rgba(0,82,204,0.2);
+    }
+    .radio-card input[type="radio"] {
+      position: absolute;
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    .radio-indicator {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border);
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.15s;
+    }
+    .radio-card.selected .radio-indicator {
+      border-color: var(--accent);
+    }
+    .radio-indicator-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      transform: scale(0);
+      transition: transform 0.15s;
+    }
+    .radio-card.selected .radio-indicator-dot {
+      transform: scale(1);
+    }
+    .radio-card-text {
+      flex: 1;
+    }
+    .radio-card-label {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text);
+      line-height: 1.3;
+    }
+    .radio-card-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .radio-card-score {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 7px;
+      flex-shrink: 0;
+      font-variant-numeric: tabular-nums;
+    }
+    .radio-card.selected .radio-card-score {
+      background: rgba(0,82,204,0.1);
+      border-color: rgba(0,82,204,0.25);
+      color: var(--accent);
+    }
+
+    /* ── Submit area ── */
+    .submit-area {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-family: var(--font);
+      font-size: 0.875rem;
+      font-weight: 500;
+      border: none;
+      border-radius: var(--radius);
+      cursor: pointer;
+      padding: 10px 22px;
+      transition: background 0.15s, box-shadow 0.15s, opacity 0.15s;
+      outline: none;
+      line-height: 1;
+    }
+    .btn:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn-primary:active:not(:disabled) { background: #03358A; }
+    .btn-primary:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .btn-secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-secondary:hover { background: var(--bg); }
+
+    .submit-tooltip-wrap {
+      position: relative;
+      display: inline-block;
+    }
+    .submit-tooltip {
+      display: none;
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--text);
+      color: #fff;
+      font-size: 0.75rem;
+      white-space: nowrap;
+      padding: 5px 10px;
+      border-radius: 4px;
+      pointer-events: none;
+      z-index: 10;
+    }
+    .submit-tooltip::after {
+      content: '';
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      border: 5px solid transparent;
+      border-top-color: var(--text);
+    }
+    .submit-tooltip-wrap:hover .submit-tooltip { display: block; }
+
+    /* ── Confirmation screen ── */
+    #confirmation { display: none; }
+    #confirmation.visible { display: block; }
+    #survey-form.hidden { display: none; }
+
+    .confirm-card {
+      background: var(--surface);
+      border: 1px solid var(--success-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 32px 28px;
+      text-align: center;
+    }
+    .confirm-icon {
+      width: 56px;
+      height: 56px;
+      background: var(--success-bg);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 20px;
+    }
+    .confirm-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .confirm-subtitle {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+      line-height: 1.6;
+    }
+    .confirm-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      margin-bottom: 24px;
+      font-size: 0.85rem;
+    }
+    .confirm-table tr + tr td { border-top: 1px solid var(--border); }
+    .confirm-table td {
+      padding: 10px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+    }
+    .confirm-table td:first-child {
+      font-weight: 600;
+      color: var(--text-muted);
+      width: 160px;
+      background: #FAFBFC;
+    }
+    .confirm-table td:last-child {
+      color: var(--text);
+    }
+    .confirm-file-note {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-align: left;
+    }
+    .confirm-file-note strong { color: var(--text); }
+
+    /* ── Responsive ── */
+    @media (max-width: 520px) {
+      .app-header { padding: 20px 0 16px; }
+      .card { padding: 18px 16px; }
+      .confirm-card { padding: 24px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="app-header" role="banner">
+    <div class="app-header-icon" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 11l3 3L22 4" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <div>
+      <h1>AI Tool Usage Survey</h1>
+      <p>AI Adoption Metrics &mdash; weekly check-in</p>
+    </div>
+  </header>
+
+  <main class="app-body" role="main">
+
+    <!-- ── Confirmation screen ── -->
+    <div id="confirmation" role="region" aria-live="polite" aria-label="Submission confirmed">
+      <div class="confirm-card">
+        <div class="confirm-icon" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <path d="M20 6L9 17l-5-5" stroke="#006644" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="confirm-title">Response saved &mdash; thank you!</div>
+        <p class="confirm-subtitle">Your weekly AI usage data has been recorded. The team lead will collect these files to generate the adoption report.</p>
+
+        <table class="confirm-table" aria-label="Summary of your response">
+          <tbody>
+            <tr>
+              <td>Username</td>
+              <td id="conf-username"></td>
+            </tr>
+            <tr>
+              <td>Role</td>
+              <td id="conf-role"></td>
+            </tr>
+            <tr>
+              <td>AI usage</td>
+              <td id="conf-usage"></td>
+            </tr>
+            <tr>
+              <td>Score</td>
+              <td id="conf-score"></td>
+            </tr>
+            <tr>
+              <td>Submitted at</td>
+              <td id="conf-timestamp"></td>
+            </tr>
+            <tr>
+              <td>Week</td>
+              <td id="conf-week"></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="confirm-file-note" role="note">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="#6B778C" stroke-width="1.5" stroke-linejoin="round"/>
+            <polyline points="14 2 14 8 20 8" stroke="#6B778C" stroke-width="1.5" stroke-linejoin="round"/>
+          </svg>
+          <span id="conf-file-note">Saved as <strong>dau_report.json</strong></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Survey form ── -->
+    <div id="survey-form">
+
+      <!-- Progress -->
+      <div class="progress-wrap" aria-label="Form completion progress">
+        <div class="progress-label">
+          <span>Survey progress</span>
+          <span class="progress-count" id="progress-count" aria-live="polite">0 of 3 answered</span>
+        </div>
+        <div class="progress-track" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" id="progress-bar-wrap">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+      </div>
+
+      <!-- Q1: Username -->
+      <div class="card">
+        <div class="card-title">Question 1 of 3</div>
+        <div class="card-subtitle">Enter your username so your response can be identified when the team lead collects all files.</div>
+        <div class="field">
+          <label for="input-username">
+            Your username
+            <span class="required-star" aria-hidden="true">*</span>
+          </label>
+          <div class="field-hint">Letters and digits only &mdash; no spaces or special characters (e.g. <em>alice123</em>)</div>
+          <input
+            type="text"
+            id="input-username"
+            name="username"
+            placeholder="e.g. alice123"
+            maxlength="30"
+            autocomplete="username"
+            autocorrect="off"
+            autocapitalize="off"
+            spellcheck="false"
+            aria-describedby="username-error"
+            aria-required="true"
+          />
+          <div class="field-error" id="username-error" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <!-- Q2: Role -->
+      <div class="card">
+        <div class="card-title">Question 2 of 3</div>
+        <div class="card-subtitle">What is your primary role on the project?</div>
+        <div class="field">
+          <label for="select-role">
+            Primary role
+            <span class="required-star" aria-hidden="true">*</span>
+          </label>
+          <select id="select-role" name="role" aria-required="true">
+            <option value="">Select your role&hellip;</option>
+            <option value="Developer">Developer</option>
+            <option value="QA / Test Engineer">QA / Test Engineer</option>
+            <option value="Business Analyst">Business Analyst</option>
+            <option value="Delivery Manager / Lead">Delivery Manager / Lead</option>
+            <option value="Other">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Q3: AI usage frequency -->
+      <div class="card">
+        <div class="card-title">Question 3 of 3</div>
+        <div class="card-subtitle">How many working days during the past week did you use AI tools (e.g. GitHub Copilot, Gemini Assist, Cursor) as part of your work?</div>
+        <div class="radio-group" role="radiogroup" aria-label="AI tool usage frequency" aria-required="true">
+
+          <label class="radio-card" id="rc-everyday">
+            <input type="radio" name="usage" value="Every day (5 days)" data-score="5" />
+            <div class="radio-indicator"><div class="radio-indicator-dot"></div></div>
+            <div class="radio-card-text">
+              <div class="radio-card-label">Every day</div>
+              <div class="radio-card-sub">5 days this week</div>
+            </div>
+            <span class="radio-card-score" aria-label="Score: 5">5 pts</span>
+          </label>
+
+          <label class="radio-card" id="rc-mostdays">
+            <input type="radio" name="usage" value="Most days (3–4 days)" data-score="3.5" />
+            <div class="radio-indicator"><div class="radio-indicator-dot"></div></div>
+            <div class="radio-card-text">
+              <div class="radio-card-label">Most days</div>
+              <div class="radio-card-sub">3&ndash;4 days this week</div>
+            </div>
+            <span class="radio-card-score" aria-label="Score: 3.5">3.5 pts</span>
+          </label>
+
+          <label class="radio-card" id="rc-rarely">
+            <input type="radio" name="usage" value="Rarely (1–2 days)" data-score="1.5" />
+            <div class="radio-indicator"><div class="radio-indicator-dot"></div></div>
+            <div class="radio-card-text">
+              <div class="radio-card-label">Rarely</div>
+              <div class="radio-card-sub">1&ndash;2 days this week</div>
+            </div>
+            <span class="radio-card-score" aria-label="Score: 1.5">1.5 pts</span>
+          </label>
+
+          <label class="radio-card" id="rc-notused">
+            <input type="radio" name="usage" value="Not used" data-score="0" />
+            <div class="radio-indicator"><div class="radio-indicator-dot"></div></div>
+            <div class="radio-card-text">
+              <div class="radio-card-label">Not used</div>
+              <div class="radio-card-sub">Did not use AI tools this week</div>
+            </div>
+            <span class="radio-card-score" aria-label="Score: 0">0 pts</span>
+          </label>
+
+        </div>
+      </div>
+
+      <!-- Submit -->
+      <div class="submit-area">
+        <div class="submit-tooltip-wrap">
+          <button
+            class="btn btn-primary"
+            id="btn-submit"
+            type="button"
+            disabled
+            aria-disabled="true"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v13a2 2 0 01-2 2z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              <polyline points="17 21 17 13 7 13 7 21" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              <polyline points="7 3 7 8 15 8" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+            Save response
+          </button>
+          <div class="submit-tooltip" id="submit-tooltip" role="tooltip">Please answer all 3 questions first</div>
+        </div>
+        <span id="submit-hint" style="font-size:0.78rem;color:var(--text-muted);">
+          You will be asked to select the folder where <strong>dau_survey.html</strong> is saved &mdash; <strong>dau_report.json</strong> will be written there
+        </span>
+      </div>
+
+    </div><!-- /survey-form -->
+
+  </main>
+
+  <script>
+    (function () {
+      'use strict';
+
+      // ── Score map ──
+      const SCORE_MAP = {
+        'Every day (5 days)': 5,
+        'Most days (3–4 days)': 3.5,
+        'Rarely (1–2 days)': 1.5,
+        'Not used': 0
+      };
+
+      // ── State ──
+      const state = {
+        username: '',
+        role: '',
+        usage: '',
+        usernameValid: false
+      };
+
+      // ── Elements ──
+      const inputUsername = document.getElementById('input-username');
+      const selectRole    = document.getElementById('select-role');
+      const radioCards    = document.querySelectorAll('.radio-card');
+      const radioInputs   = document.querySelectorAll('input[name="usage"]');
+      const btnSubmit     = document.getElementById('btn-submit');
+      const submitTooltip = document.getElementById('submit-tooltip');
+      const progressFill  = document.getElementById('progress-fill');
+      const progressCount = document.getElementById('progress-count');
+      const progressBarWrap = document.getElementById('progress-bar-wrap');
+      const formEl        = document.getElementById('survey-form');
+      const confirmEl     = document.getElementById('confirmation');
+
+      // ── Restore username from localStorage ──
+      try {
+        const saved = localStorage.getItem('dau_username');
+        if (saved) {
+          inputUsername.value = saved;
+          validateUsername();
+        }
+      } catch (_) {}
+
+      // ── Initialise progress bar to reflect current state ──
+      updateProgress();
+
+      // ── Username validation ──
+      const RE_USERNAME = /^[A-Za-z0-9]+$/;
+
+      function validateUsername() {
+        const val = inputUsername.value.trim();
+        state.username = val;
+        const errEl = document.getElementById('username-error');
+
+        if (val === '') {
+          inputUsername.classList.remove('is-valid', 'is-error');
+          errEl.textContent = '';
+          state.usernameValid = false;
+        } else if (val.length < 2) {
+          inputUsername.classList.add('is-error');
+          inputUsername.classList.remove('is-valid');
+          errEl.textContent = 'Username must be at least 2 characters.';
+          state.usernameValid = false;
+        } else if (!RE_USERNAME.test(val)) {
+          inputUsername.classList.add('is-error');
+          inputUsername.classList.remove('is-valid');
+          errEl.textContent = 'Only letters and digits are allowed (no spaces or special characters).';
+          state.usernameValid = false;
+        } else {
+          inputUsername.classList.remove('is-error');
+          inputUsername.classList.add('is-valid');
+          errEl.textContent = '';
+          state.usernameValid = true;
+        }
+        updateProgress();
+      }
+
+      inputUsername.addEventListener('input', validateUsername);
+      inputUsername.addEventListener('blur', function () {
+        if (inputUsername.value.trim() !== '' && !state.usernameValid) {
+          document.getElementById('username-error').textContent =
+            document.getElementById('username-error').textContent ||
+            'Please enter a valid username (letters and digits only).';
+        }
+      });
+
+      // ── Role validation ──
+      selectRole.addEventListener('change', function () {
+        state.role = this.value;
+        updateProgress();
+      });
+
+      // ── Radio card selection ──
+      radioInputs.forEach(function (radio) {
+        radio.addEventListener('change', function () {
+          state.usage = this.value;
+          radioCards.forEach(function (card) { card.classList.remove('selected'); });
+          this.closest('.radio-card').classList.add('selected');
+          updateProgress();
+        });
+      });
+
+      // Support keyboard navigation within radio group
+      document.querySelector('.radio-group').addEventListener('keydown', function (e) {
+        const radios = Array.from(radioInputs);
+        const idx = radios.findIndex(function (r) { return r === document.activeElement; });
+        if (idx === -1) return;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+          e.preventDefault();
+          radios[(idx + 1) % radios.length].focus();
+          radios[(idx + 1) % radios.length].click();
+        } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+          e.preventDefault();
+          radios[(idx - 1 + radios.length) % radios.length].focus();
+          radios[(idx - 1 + radios.length) % radios.length].click();
+        }
+      });
+
+      // ── Progress update ──
+      function updateProgress() {
+        let answered = 0;
+        if (state.usernameValid) answered++;
+        if (state.role)         answered++;
+        if (state.usage)        answered++;
+
+        const pct = Math.round((answered / 3) * 100);
+        progressFill.style.width = pct + '%';
+        progressBarWrap.setAttribute('aria-valuenow', pct);
+        progressCount.textContent = answered + ' of 3 answered';
+
+        const allDone = answered === 3;
+        btnSubmit.disabled = !allDone;
+        btnSubmit.setAttribute('aria-disabled', String(!allDone));
+        submitTooltip.style.display = allDone ? 'none' : '';
+      }
+
+      // ── ISO week helper ──
+      function isoWeek(d) {
+        const jan4 = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
+        const startOfWeek1 = new Date(jan4);
+        startOfWeek1.setUTCDate(jan4.getUTCDate() - ((jan4.getUTCDay() + 6) % 7));
+        const thursday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+        thursday.setUTCDate(thursday.getUTCDate() + (4 - ((thursday.getUTCDay() + 6) % 7)));
+        const weekNum = Math.round((thursday - startOfWeek1) / 604800000) + 1;
+        return thursday.getUTCFullYear() + '-W' + String(weekNum).padStart(2, '0');
+      }
+
+      // ── Build JSON payload ──
+      function buildPayload() {
+        const score = SCORE_MAP[state.usage] !== undefined ? SCORE_MAP[state.usage] : null;
+        const now = new Date();
+        const ts = now.toISOString().replace(/\.\d{3}Z$/, '+00:00');
+        return {
+          username:  state.username,
+          role:      state.role,
+          usage:     state.usage,
+          score:     score,
+          timestamp: ts,
+          week:      isoWeek(now)
+        };
+      }
+
+      // ── Show confirmation ──
+      function showConfirmation(payload, fileNote) {
+        document.getElementById('conf-username').textContent  = payload.username;
+        document.getElementById('conf-role').textContent      = payload.role;
+        document.getElementById('conf-usage').textContent     = payload.usage;
+        document.getElementById('conf-score').textContent     = payload.score + ' / 5';
+        document.getElementById('conf-timestamp').textContent =
+          new Date(payload.timestamp).toLocaleString(undefined, {
+            dateStyle: 'medium', timeStyle: 'short'
+          });
+        document.getElementById('conf-week').textContent = payload.week;
+        document.getElementById('conf-file-note').innerHTML =
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="#6B778C" stroke-width="1.5" stroke-linejoin="round"/><polyline points="14 2 14 8 20 8" stroke="#6B778C" stroke-width="1.5" stroke-linejoin="round"/></svg><span>' + fileNote + '</span>';
+
+        formEl.classList.add('hidden');
+        confirmEl.classList.add('visible');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      // ── Fallback: trigger download ──
+      function downloadFallback(payload) {
+        const json = JSON.stringify(payload, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = 'dau_report.json';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 100);
+        return 'Downloaded as <strong>dau_report.json</strong> to your Downloads folder.';
+      }
+
+      // ── Save via File System Access API (directory picker) ──
+      async function saveWithFSAPI(payload) {
+        const json = JSON.stringify(payload, null, 2);
+        const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        const fileHandle = await dirHandle.getFileHandle('dau_report.json', { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(json);
+        await writable.close();
+        return 'Saved as <strong>dau_report.json</strong> in <strong>' + dirHandle.name + '</strong>';
+      }
+
+      // ── Submit handler ──
+      btnSubmit.addEventListener('click', async function () {
+        if (btnSubmit.disabled) return;
+
+        const payload = buildPayload();
+
+        // Persist username for next time
+        try { localStorage.setItem('dau_username', payload.username); } catch (_) {}
+
+        if (typeof window.showDirectoryPicker === 'function') {
+          try {
+            const fileNote = await saveWithFSAPI(payload);
+            showConfirmation(payload, fileNote);
+          } catch (err) {
+            if (err.name !== 'AbortError') {
+              // Non-cancel error: fall back to download silently
+              const note = downloadFallback(payload);
+              showConfirmation(payload, note);
+            }
+            // AbortError (user cancelled dialog): do nothing, keep form intact
+          }
+        } else {
+          // Browser doesn't support File System Access API
+          const note = downloadFallback(payload);
+          showConfirmation(payload, note);
+        }
+      });
+
+    })();
+  </script>
+
+</body>
+</html>

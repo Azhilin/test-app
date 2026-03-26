@@ -2,9 +2,10 @@
 from __future__ import annotations
 
 import json
+import sys
 import urllib.request
 import urllib.error
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -286,3 +287,47 @@ def test_fetch_cert_unreachable_host_returns_error(server_url):
     data = json.loads(resp.read())
     assert data["ok"] is False
     assert "error" in data
+
+
+# ---------------------------------------------------------------------------
+# Windows-specific: socket error suppression
+# ---------------------------------------------------------------------------
+
+@pytest.mark.windows_only
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="ConnectionAbortedError maps to WSAECONNABORTED — a Windows Sockets error not raised on Linux/macOS",
+)
+def test_handle_error_swallows_connection_aborted_error():
+    """Server.handle_error silently drops ConnectionAbortedError (WSAECONNABORTED).
+
+    On Windows, abrupt client disconnections during an active SSE stream raise
+    ConnectionAbortedError (WinSock error 10053 WSAECONNABORTED). The Server
+    subclass must catch this and return without propagating or printing a
+    traceback.  This contract is invisible on Linux/macOS so it is guarded by
+    the windows_only marker and a skipif decorator so it only asserts on the
+    OS where the behaviour is observable.
+    """
+    import server as srv
+
+    server_instance = srv.Server(("127.0.0.1", 0), srv.Handler)
+    try:
+        mock_request = MagicMock()
+        propagated = []
+
+        try:
+            raise ConnectionAbortedError("simulated WSAECONNABORTED")
+        except ConnectionAbortedError:
+            # handle_error reads sys.exc_info()[1] internally — must be called
+            # from within the except block so the exception context is active.
+            try:
+                server_instance.handle_error(mock_request, ("127.0.0.1", 0))
+            except Exception as exc:  # noqa: BLE001
+                propagated.append(exc)
+
+        assert not propagated, (
+            "Server.handle_error must swallow ConnectionAbortedError; "
+            f"got: {propagated}"
+        )
+    finally:
+        server_instance.server_close()

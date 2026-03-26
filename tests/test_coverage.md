@@ -3,16 +3,16 @@
 ## Test Pyramid
 
 ```
-              /  E2E  \              24 tests  (11%)  (subprocess, server, Playwright UI)  → tests/e2e/
+              /  E2E  \              43 tests  (18%)  (subprocess, server, Playwright UI)  → tests/e2e/
              /----------\
-            / Integration \           6 tests   (3%)  (module boundaries, mocked I/O)       → tests/integration/
+            / Integration \           6 tests   (2%)  (module boundaries, mocked I/O)       → tests/integration/
            /----------------\
-          /    Component      \      76 tests  (34%)  (filesystem, HTTP, data shapes)        → tests/component/
+          /    Component      \      77 tests  (32%)  (filesystem, HTTP, data shapes)        → tests/component/
          /--------------------\
-        /        Unit            \   115 tests  (52%)  (pure functions, no I/O)               → tests/unit/
+        /        Unit            \   115 tests  (48%)  (pure functions, no I/O)               → tests/unit/
        /------------------------\
                                      ────────────────
-                                     221 tests total
+                                     241 tests total
 ```
 
 ## Coverage Matrix
@@ -73,7 +73,7 @@ tests\run_e2e_tests.bat
 | `unit/test_imports.py`             | Unit        |    7 | Module imports (smoke)                |
 | `component/test_report_html.py`    | Component   |   31 | HTML template rendering, visibility   |
 | `component/test_report_md.py`      | Component   |   16 | Markdown generation                   |
-| `component/test_server.py`         | Component   |   17 | HTTP routes, CORS, SSE                |
+| `component/test_server.py`         | Component   |   18 | HTTP routes, CORS, SSE                |
 | `component/test_contracts.py`      | Component   |   12 | Data shapes across boundaries         |
 | `integration/test_integration.py`  | Integration |    6 | Full pipeline, filter flow, server    |
 | `e2e/test_e2e.py`                  | E2E         |    3 | CLI subprocess, server health         |
