@@ -11,3 +11,10 @@ markers = [
 
 [tool.playwright]
 browser = "chromium"
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]  # pycodestyle, pyflakes, isort, pyupgrade
