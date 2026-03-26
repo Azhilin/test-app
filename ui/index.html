@@ -336,6 +336,11 @@
       font-size: 0.75rem;
       margin-left: 5px;
     }
+    .form-label .required-star {
+      color: var(--error, #DE350B);
+      margin-left: 2px;
+      font-weight: 700;
+    }
     .form-input {
       width: 100%;
       font-family: var(--font);
@@ -900,7 +905,7 @@
         <p class="form-helper" id="conn-status-detail" style="margin-bottom:18px;"></p>
 
         <div class="form-group">
-          <label class="form-label" for="jira-url">Jira URL</label>
+          <label class="form-label" for="jira-url">Jira URL<span class="required-star" aria-hidden="true">*</span></label>
           <input
             class="form-input"
             type="url"
@@ -916,7 +921,7 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="jira-email">User Email</label>
+          <label class="form-label" for="jira-email">User Email<span class="required-star" aria-hidden="true">*</span></label>
           <input
             class="form-input"
             type="email"
@@ -932,7 +937,7 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="jira-token">API Token</label>
+          <label class="form-label" for="jira-token">API Token<span class="required-star" aria-hidden="true">*</span></label>
           <div class="input-with-toggle">
             <input
               class="form-input"
@@ -971,7 +976,7 @@
         </div>
 
         <div class="btn-row">
-          <button class="btn btn-primary" id="btn-save-conn" type="button">
+          <button class="btn btn-primary" id="btn-save-conn" type="button" disabled>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
               <polyline points="17 21 17 13 7 13 7 21"/>
@@ -1018,6 +1023,10 @@
       // True when .env on disk has JIRA_API_TOKEN set (returned as "***" by GET /api/config).
       // Used to skip the "token required" validation when the user hasn't touched the field.
       let hasServerToken = false;
+
+      // True only after a successful Test Connection with the current field values.
+      // Reset to false whenever any of the three credential fields change.
+      let connectedOk = false;
 
       async function saveConfigToServer(updates) {
         try {
@@ -1679,15 +1688,22 @@
           const data = await res.json();
 
           if (data.ok) {
+            connectedOk = true;
             setStatus('success', `Connected as ${data.displayName || data.emailAddress || email}`);
           } else if (data.httpStatus === 401) {
+            connectedOk = false;
             setStatus('error', 'Authentication failed — check your email and API token.');
           } else if (data.httpStatus === 403) {
+            connectedOk = false;
             setStatus('error', 'Access denied (HTTP 403). Verify your account permissions.');
           } else {
+            connectedOk = false;
             setStatus('error', data.error || `HTTP error ${data.httpStatus ?? res.status}`);
           }
+          updateSaveBtn();
         } catch (err) {
+          connectedOk = false;
+          updateSaveBtn();
           setStatus('error', `Request failed: ${err.message}`);
         }
       });
@@ -1730,6 +1746,19 @@
         badge.textContent = BADGE_LABELS[state] ?? state;
         badgeDetail.textContent = detail;
         badgeDetail.style.color = state === 'error' ? 'var(--error)' : state === 'success' ? 'var(--success)' : 'var(--text-muted)';
+      }
+
+      function allConnFieldsFilled() {
+        return !!(
+          jiraUrlInput.value.trim() &&
+          jiraEmailInput.value.trim() &&
+          (jiraTokenInput.value || hasServerToken)
+        );
+      }
+
+      function updateSaveBtn() {
+        const btn = document.getElementById('btn-save-conn');
+        btn.disabled = !(connectedOk && allConnFieldsFilled());
       }
 
       function updateBadgeFromSaved() {
@@ -1806,6 +1835,9 @@
           if (input.classList.contains('invalid')) validateConnFields();
         });
         input.addEventListener('input', () => {
+          // Any edit invalidates the last successful test result
+          connectedOk = false;
+          updateSaveBtn();
           if (input.classList.contains('invalid')) validateConnFields();
         });
       });
@@ -1891,6 +1923,9 @@
             // Server not reachable — localStorage values already shown above
           }
         }
+
+        // Ensure Save button reflects initial state (disabled until Test Connection passes)
+        updateSaveBtn();
 
         // Reports list (async — fetches from /api/reports when served)
         loadReports();

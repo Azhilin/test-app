@@ -162,13 +162,24 @@ def test_keyboard_arrow_right_navigation(page: Page, live_server_url: str):
 # ---------------------------------------------------------------------------
 
 def test_save_connection_valid_inputs(page: Page, live_server_url: str):
-    """Filling valid inputs and clicking Save shows confirmation flash."""
+    """Filling valid inputs, testing connection, then clicking Save shows confirmation flash."""
+    # Mock Test Connection to return success so Save button becomes enabled
+    page.route("**/api/test-connection", lambda route: route.fulfill(
+        status=200,
+        content_type="application/json",
+        body=json.dumps({"ok": True, "displayName": "Test User", "emailAddress": "user@example.com"}),
+    ))
     _goto(page, live_server_url)
     page.get_by_role("tab", name="Jira Connection").click()
 
     page.locator("#jira-url").fill("https://test.atlassian.net")
     page.locator("#jira-email").fill("user@example.com")
     page.locator("#jira-token").fill("test-token-123")
+
+    # Test Connection must succeed first to enable Save
+    page.locator("#btn-test-conn").click()
+    expect(page.locator("#conn-status-badge")).to_have_text("Connected", timeout=5000)
+
     page.locator("#btn-save-conn").click()
 
     # "Settings saved" flash should appear
@@ -181,7 +192,7 @@ def test_save_connection_valid_inputs(page: Page, live_server_url: str):
 
 
 def test_validation_error_empty_fields(page: Page, live_server_url: str):
-    """Clicking Save with empty fields shows validation errors."""
+    """Clicking Test Connection with empty fields shows validation errors via badge."""
     _goto(page, live_server_url)
     page.get_by_role("tab", name="Jira Connection").click()
 
@@ -189,27 +200,34 @@ def test_validation_error_empty_fields(page: Page, live_server_url: str):
     page.locator("#jira-url").fill("")
     page.locator("#jira-email").fill("")
     page.locator("#jira-token").fill("")
-    page.locator("#btn-save-conn").click()
 
-    expect(page.locator("#err-jira-url")).to_have_class(re.compile(r"visible"))
-    expect(page.locator("#err-jira-email")).to_have_class(re.compile(r"visible"))
-    expect(page.locator("#err-jira-token")).to_have_class(re.compile(r"visible"))
-    expect(page.locator("#jira-url")).to_have_class(re.compile(r"invalid"))
+    # Save is disabled until Test Connection succeeds — trigger validation via Test Connection
+    page.locator("#btn-test-conn").click()
+
+    badge = page.locator("#conn-status-badge")
+    expect(badge).to_have_text("Error")
+    detail = page.locator("#conn-status-detail")
+    expect(detail).to_contain_text("Fill in URL, email")
+    # Save button must remain disabled
+    expect(page.locator("#btn-save-conn")).to_be_disabled()
 
 
 def test_validation_error_invalid_url(page: Page, live_server_url: str):
-    """Invalid URL shows URL error but not email/token errors."""
+    """Invalid URL: Test Connection still proceeds but Jira call fails; Save remains disabled."""
     _goto(page, live_server_url)
     page.get_by_role("tab", name="Jira Connection").click()
 
     page.locator("#jira-url").fill("not-a-url")
     page.locator("#jira-email").fill("user@example.com")
     page.locator("#jira-token").fill("some-token")
-    page.locator("#btn-save-conn").click()
 
-    expect(page.locator("#err-jira-url")).to_have_class(re.compile(r"visible"))
-    expect(page.locator("#err-jira-email")).not_to_have_class(re.compile(r"visible"))
-    expect(page.locator("#err-jira-token")).not_to_have_class(re.compile(r"visible"))
+    # Save is disabled; Test Connection attempts the call and returns an error for invalid URL
+    page.locator("#btn-test-conn").click()
+
+    badge = page.locator("#conn-status-badge")
+    expect(badge).to_have_text("Error", timeout=15000)
+    # Save button must remain disabled regardless
+    expect(page.locator("#btn-save-conn")).to_be_disabled()
 
 
 def test_token_show_hide_toggle(page: Page, live_server_url: str):
