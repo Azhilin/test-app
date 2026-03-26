@@ -438,3 +438,91 @@ def test_log_clear_button(page: Page, live_server_url: str):
     # Now clear
     page.locator("#btn-clear-log").click()
     expect(log).to_be_empty()
+
+
+# ---------------------------------------------------------------------------
+# Group 7: SSL Certificate Panel
+# ---------------------------------------------------------------------------
+
+def _mock_cert_status(page: Page, payload: dict) -> None:
+    """Register a route mock for /api/cert-status returning *payload*."""
+    page.route("**/api/cert-status", lambda route: route.fulfill(
+        status=200,
+        content_type="application/json",
+        body=json.dumps(payload),
+    ))
+
+
+def test_cert_status_badge_no_cert(page: Page, live_server_url: str):
+    """When /api/cert-status reports no cert, the badge shows 'No certificate'."""
+    _mock_cert_status(page, {"exists": False, "path": "certs/jira_ca_bundle.pem"})
+    _goto(page, live_server_url)
+    page.get_by_role("tab", name="Jira Connection").click()
+
+    badge = page.locator("#cert-status-badge")
+    expect(badge).to_have_text("No certificate", timeout=5000)
+
+
+def test_cert_status_badge_valid_cert(page: Page, live_server_url: str):
+    """When /api/cert-status reports a valid cert, the badge shows 'Valid'."""
+    _mock_cert_status(page, {
+        "exists": True,
+        "path": "certs/jira_ca_bundle.pem",
+        "valid": True,
+        "expires_at": "2027-01-01T00:00:00+00:00",
+        "days_remaining": 90,
+        "subject": "CN=test.atlassian.net",
+    })
+    _goto(page, live_server_url)
+    page.get_by_role("tab", name="Jira Connection").click()
+
+    badge = page.locator("#cert-status-badge")
+    expect(badge).to_have_text("Valid", timeout=5000)
+
+
+def test_fetch_cert_button_success(page: Page, live_server_url: str):
+    """Clicking Fetch Certificate logs success and updates the badge to 'Valid'."""
+    # First call (page load): no cert.  Second call (after fetch): cert valid.
+    call_count = {"n": 0}
+
+    def _cert_status_handler(route):
+        call_count["n"] += 1
+        if call_count["n"] == 1:
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({"exists": False, "path": "certs/jira_ca_bundle.pem"}),
+            )
+        else:
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({
+                    "exists": True,
+                    "path": "certs/jira_ca_bundle.pem",
+                    "valid": True,
+                    "expires_at": "2027-01-01T00:00:00+00:00",
+                    "days_remaining": 90,
+                    "subject": "CN=test.atlassian.net",
+                }),
+            )
+
+    page.route("**/api/cert-status", _cert_status_handler)
+    page.route("**/api/fetch-cert", lambda route: route.fulfill(
+        status=200,
+        content_type="application/json",
+        body=json.dumps({"ok": True, "path": "certs/jira_ca_bundle.pem", "host": "test.atlassian.net"}),
+    ))
+
+    _goto(page, live_server_url)
+    page.get_by_role("tab", name="Jira Connection").click()
+
+    # Provide a Jira URL so the fetch button doesn't short-circuit
+    page.locator("#jira-url").fill("https://test.atlassian.net")
+    page.locator("#btn-fetch-cert").click()
+
+    cert_log = page.locator("#cert-log-output")
+    expect(cert_log).to_contain_text("Certificate saved", timeout=5000)
+
+    badge = page.locator("#cert-status-badge")
+    expect(badge).to_have_text("Valid", timeout=5000)

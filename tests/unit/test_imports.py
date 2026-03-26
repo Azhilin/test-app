@@ -41,9 +41,14 @@ def test_import_app_jira_client():
     assert callable(jira_client.fetch_sprint_data)
 
 
+def test_import_app_cert_utils():
+    from app.cert_utils import validate_cert
+    assert callable(validate_cert)
+
+
 def test_main_imports_resolve():
     """Import main.py via importlib without executing it — confirms 'from app import ...' resolves."""
-    main_path = Path(__file__).resolve().parent.parent / "main.py"
+    main_path = Path(__file__).resolve().parent.parent.parent / "main.py"
     spec = importlib.util.spec_from_file_location("main", main_path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

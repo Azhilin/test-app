@@ -236,3 +236,53 @@ def test_cert_status_with_valid_cert_returns_enriched_fields(server_url, tmp_pat
     assert "subject" in data
     assert data["valid"] is True
     assert data["days_remaining"] > 0
+
+
+# ---------------------------------------------------------------------------
+# POST /api/fetch-cert
+# ---------------------------------------------------------------------------
+
+def test_fetch_cert_missing_url_returns_400(server_url, monkeypatch):
+    """POST /api/fetch-cert with empty url and no JIRA_URL fallback returns HTTP 400."""
+    # The server falls back to JIRA_URL env var when url is empty; clear it so the
+    # "url is required" branch is reached.
+    monkeypatch.delenv("JIRA_URL", raising=False)
+    body = json.dumps({"url": ""}).encode()
+    req = urllib.request.Request(
+        f"{server_url}/api/fetch-cert",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with pytest.raises(urllib.error.HTTPError) as exc_info:
+        urllib.request.urlopen(req)
+    assert exc_info.value.code == 400
+
+
+def test_fetch_cert_invalid_url_returns_400(server_url):
+    """POST /api/fetch-cert with an unparseable hostname returns HTTP 400."""
+    body = json.dumps({"url": "not-a-url"}).encode()
+    req = urllib.request.Request(
+        f"{server_url}/api/fetch-cert",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    with pytest.raises(urllib.error.HTTPError) as exc_info:
+        urllib.request.urlopen(req)
+    assert exc_info.value.code == 400
+
+
+def test_fetch_cert_unreachable_host_returns_error(server_url):
+    """POST /api/fetch-cert for an unreachable host returns 200 with ok=False."""
+    body = json.dumps({"url": "https://nonexistent-jira-12345.invalid"}).encode()
+    req = urllib.request.Request(
+        f"{server_url}/api/fetch-cert",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    resp = urllib.request.urlopen(req, timeout=15)
+    data = json.loads(resp.read())
+    assert data["ok"] is False
+    assert "error" in data

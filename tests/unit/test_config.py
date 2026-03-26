@@ -10,6 +10,17 @@ import pytest
 pytestmark = pytest.mark.unit
 
 
+@pytest.fixture(autouse=True)
+def _restore_config():
+    """Reload app.config with stock env after each test to prevent module-state leakage."""
+    yield
+    _reload_config({
+        "JIRA_URL": "https://x.atlassian.net",
+        "JIRA_EMAIL": "a@b.com",
+        "JIRA_API_TOKEN": "t",
+    })
+
+
 def _reload_config(env: dict):
     """Reload app.config with a patched environment, return the module."""
     with patch.dict(os.environ, env, clear=True):
@@ -153,3 +164,45 @@ def test_jira_ssl_cert_returns_path_when_file_exists():
         })
     assert isinstance(cfg.JIRA_SSL_CERT, str)
     assert cfg.JIRA_SSL_CERT.endswith("jira_ca_bundle.pem")
+
+
+# ---------------------------------------------------------------------------
+# AI label config vars
+# ---------------------------------------------------------------------------
+
+_BASE_ENV = {"JIRA_URL": "https://x.atlassian.net", "JIRA_EMAIL": "a@b.com", "JIRA_API_TOKEN": "t"}
+
+
+def test_ai_assisted_label_default():
+    cfg = _reload_config(_BASE_ENV)
+    assert cfg.AI_ASSISTED_LABEL == "AI_assistance"
+
+
+def test_ai_assisted_label_custom():
+    cfg = _reload_config({**_BASE_ENV, "AI_ASSISTED_LABEL": "ai_helped"})
+    assert cfg.AI_ASSISTED_LABEL == "ai_helped"
+
+
+def test_ai_exclude_labels_empty():
+    cfg = _reload_config(_BASE_ENV)
+    assert cfg.AI_EXCLUDE_LABELS == []
+
+
+def test_ai_exclude_labels_parsed():
+    cfg = _reload_config({**_BASE_ENV, "AI_EXCLUDE_LABELS": "bug,chore"})
+    assert cfg.AI_EXCLUDE_LABELS == ["bug", "chore"]
+
+
+def test_ai_tool_labels_parsed():
+    cfg = _reload_config({**_BASE_ENV, "AI_TOOL_LABELS": "AI_Tool_Copilot,AI_Tool_ChatGPT"})
+    assert cfg.AI_TOOL_LABELS == ["AI_Tool_Copilot", "AI_Tool_ChatGPT"]
+
+
+def test_ai_action_labels_parsed():
+    cfg = _reload_config({**_BASE_ENV, "AI_ACTION_LABELS": "AI_Case_CodeGen,AI_Case_Review"})
+    assert cfg.AI_ACTION_LABELS == ["AI_Case_CodeGen", "AI_Case_Review"]
+
+
+def test_jira_story_points_field_custom():
+    cfg = _reload_config({**_BASE_ENV, "JIRA_STORY_POINTS_FIELD": "customfield_99999"})
+    assert cfg.JIRA_STORY_POINTS_FIELD == "customfield_99999"

@@ -2,18 +2,20 @@
 from __future__ import annotations
 
 import os
+import socket
 import subprocess
 import sys
-import threading
 import time
 import urllib.request
+from pathlib import Path
 
 import pytest
 
 pytestmark = pytest.mark.e2e
 
 PYTHON = sys.executable
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# __file__ is tests/e2e/test_e2e.py → parents[2] is the project root
+PROJECT_ROOT = str(Path(__file__).resolve().parents[2])
 
 
 def test_cli_clean_via_subprocess(tmp_path):
@@ -49,8 +51,12 @@ def test_cli_no_credentials_via_subprocess():
 
 
 def test_server_health_check():
-    """Start server.py subprocess on a random port, GET / → 200, then kill."""
-    port = 18765  # unlikely to be in use
+    """Start server.py subprocess on an OS-assigned port, poll until ready, GET / → 200."""
+    # Let the OS assign a free ephemeral port before starting the subprocess.
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+
     proc = subprocess.Popen(
         [PYTHON, os.path.join(PROJECT_ROOT, "server.py"), str(port)],
         stdout=subprocess.PIPE,
@@ -58,10 +64,18 @@ def test_server_health_check():
         cwd=PROJECT_ROOT,
     )
     try:
-        # Give server time to start
-        time.sleep(2)
-        resp = urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=5)
-        assert resp.status == 200
+        # Poll until server is ready (up to 15 s) instead of sleeping a fixed amount.
+        deadline = time.monotonic() + 15
+        resp = None
+        while time.monotonic() < deadline:
+            try:
+                resp = urllib.request.urlopen(
+                    f"http://127.0.0.1:{port}/", timeout=2
+                )
+                break
+            except (urllib.error.URLError, OSError):
+                time.sleep(0.25)
+        assert resp is not None and resp.status == 200, "Server did not become ready"
     finally:
         proc.terminate()
         proc.wait(timeout=5)
