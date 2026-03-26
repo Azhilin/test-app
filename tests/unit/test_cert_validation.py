@@ -72,7 +72,11 @@ def test_validate_cert_expired(tmp_path):
 
 
 def test_validate_cert_expiring_soon(tmp_path):
-    """Certificate expiring in 5 days should be invalid=False after days_remaining<=7 check."""
+    """Certificate expiring in 5 days is still valid=True (not yet expired).
+
+    days_remaining <= 7 is a UI-only warning threshold; validate_cert itself
+    has no 7-day cutoff — it only checks days_remaining >= 0.
+    """
     pem = _make_pem("soon.example.com", 5)
     cert_file = tmp_path / "jira_ca_bundle.pem"
     cert_file.write_bytes(pem)

@@ -510,3 +510,11 @@ def test_ai_usage_empty_labels():
     assert result["ai_assisted_issue_count"] == 1
     assert result["tool_breakdown"] == []
     assert result["action_breakdown"] == []
+
+
+# ---------------------------------------------------------------------------
+# compute_custom_trends (placeholder)
+# ---------------------------------------------------------------------------
+
+def test_compute_custom_trends_returns_empty_list():
+    assert metrics.compute_custom_trends([], {}) == []

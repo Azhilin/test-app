@@ -1,11 +1,14 @@
 """Jira Cloud API client wrapper for fetching boards, sprints, and issues."""
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from atlassian import Jira
 
 from app import config
+
+logger = logging.getLogger(__name__)
 
 
 def create_client() -> Jira:
@@ -87,7 +90,8 @@ def get_issues_with_changelog(
     for key in issue_keys:
         try:
             out.append(get_issue_with_changelog(jira, key))
-        except Exception:
+        except Exception as exc:
+            logger.warning("Failed to fetch changelog for %s: %s", key, exc)
             out.append({})  # Skip failed issues; metrics can tolerate missing
     return out
 

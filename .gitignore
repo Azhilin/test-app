@@ -1,4 +1,4 @@
-# Environment & secrets
+# Secrets & local config
 .env
 .vscode/mcp.json
 .claude/settings.local.json
@@ -7,14 +7,18 @@
 .tmplib/
 .venv/
 venv/
+env/
 
 # Python bytecode
-__pycache__/
-*.pyc
-*.pyo
+**/__pycache__/
+**/*.py[cod]
 
-# Pytest & coverage
+# Test & lint caches
 .pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Coverage
 .coverage
 htmlcov/
 coverage.xml
@@ -22,15 +26,18 @@ coverage.xml
 # Playwright test output
 playwright-report/
 test-results/
+.playwright-mcp/
 
-# Python packaging
+# Build / packaging
 *.egg-info/
 dist/
 build/
+pip-*.log
 
 # Generated reports
 report.html
 report.md
+reports/
 generated/
 
 # Certificates
@@ -43,6 +50,11 @@ tools/_diag_out.txt
 logs/
 *.tmp
 *.log
+
+# IDE / editor
+.cursor/*
+*.swp
+*.swo
 
 # OS artifacts
 .DS_Store
