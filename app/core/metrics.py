@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from app import config
+from app.core import config
 
 
 def _parse_iso(s: str | None) -> datetime | None:

@@ -5,8 +5,8 @@ import re
 
 import pytest
 
-from app import metrics
-from app.report_html import TEMPLATES_DIR
+from app.core import metrics
+from app.reporters.report_html import TEMPLATES_DIR
 from tests.conftest import (
     make_sprint,
     make_issue,
@@ -171,7 +171,7 @@ def _make_test_pem(days: int = 90) -> bytes:
 
 def test_validate_cert_response_has_all_keys_when_valid(tmp_path):
     """validate_cert() returns the full set of keys consumed by _handle_cert_status."""
-    from app.cert_utils import validate_cert
+    from app.utils.cert_utils import validate_cert
 
     cert_file = tmp_path / "jira_ca_bundle.pem"
     cert_file.write_bytes(_make_test_pem(90))
@@ -187,7 +187,7 @@ def test_validate_cert_response_has_all_keys_when_valid(tmp_path):
 
 def test_validate_cert_response_has_all_keys_when_missing(tmp_path):
     """validate_cert() on a missing file returns the error-shape consumed by _handle_cert_status."""
-    from app.cert_utils import validate_cert
+    from app.utils.cert_utils import validate_cert
 
     result = validate_cert(tmp_path / "nonexistent.pem")
 

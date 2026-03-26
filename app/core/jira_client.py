@@ -6,7 +6,7 @@ from typing import Any
 
 from atlassian import Jira
 
-from app import config
+from app.core import config
 
 logger = logging.getLogger(__name__)
 

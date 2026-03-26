@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.report_html import generate_html, TEMPLATES_DIR
+from app.reporters.report_html import generate_html, TEMPLATES_DIR
 
 pytestmark = pytest.mark.component
 

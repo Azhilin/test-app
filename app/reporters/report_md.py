@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-DEFAULT_OUTPUT = Path(__file__).resolve().parent.parent / "report.md"
+DEFAULT_OUTPUT = Path(__file__).resolve().parent.parent.parent / "report.md"
 
 
 def _md_table(headers: list[str], rows: list[list[str]]) -> str:

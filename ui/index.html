@@ -911,50 +911,6 @@
 
         <hr class="section-divider" />
 
-        <!-- ── SSL Certificate section ── -->
-        <div class="card-title" style="margin-bottom:4px;">SSL / TLS Certificate</div>
-        <div class="card-subtitle">
-          Cache the Jira host&rsquo;s TLS certificate for secure API connections.
-          Required when your network uses a custom CA or self-signed certificate.
-        </div>
-
-        <!-- Status row (hidden in file:// mode) -->
-        <div class="status-row" id="cert-status-row">
-          <span class="status-badge badge-neutral" id="cert-status-badge" role="status" aria-live="polite">Checking&hellip;</span>
-          <span id="cert-status-path" style="font-size:0.8rem;color:var(--text-muted);font-family:monospace;"></span>
-        </div>
-
-        <!-- file:// mode note (no server available) -->
-        <p id="cert-file-mode-note" hidden style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">
-          Certificate fetching requires the local server.
-          Run <code style="background:#EEE;padding:1px 5px;border-radius:3px">python tools/fetch_ssl_cert.py</code>
-          manually and restart <code style="background:#EEE;padding:1px 5px;border-radius:3px">python server.py</code>.
-        </p>
-
-        <!-- Fetch button + helper (hidden in file:// mode) -->
-        <div id="cert-server-controls">
-          <button class="btn btn-primary" id="btn-fetch-cert" type="button">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-            </svg>
-            Fetch Certificate
-          </button>
-          <p class="form-helper" style="margin-top:8px;">
-            Retrieves the TLS certificate from the Jira URL above and saves it to
-            <code>certs/jira_ca_bundle.pem</code>. The Jira client uses it automatically on the next run.
-          </p>
-        </div>
-
-        <div class="log-wrap" aria-live="polite" aria-label="Certificate fetch output" style="margin-top:14px;">
-          <div class="log-toolbar">
-            <span class="log-toolbar-label">Output</span>
-            <button class="log-clear-btn" id="btn-clear-cert-log" type="button" aria-label="Clear certificate log">Clear</button>
-          </div>
-          <div class="log-output" id="cert-log-output"></div>
-        </div>
-
-        <hr class="section-divider" />
-
         <div class="form-group">
           <label class="form-label" for="jira-url">Jira URL<span class="required-star" aria-hidden="true">*</span></label>
           <input
@@ -1054,6 +1010,53 @@
             Connection testing proxies through the local server to avoid browser CORS restrictions.
           </p>
         </div>
+
+        <hr class="section-divider" />
+
+        <!-- ── SSL Certificate section ── -->
+        <div class="card-title" style="margin-bottom:4px;">SSL / TLS Certificate</div>
+        <div class="card-subtitle">
+          Cache the Jira host&rsquo;s TLS certificate for secure API connections.
+          Required when your network uses a custom CA or self-signed certificate.
+        </div>
+
+        <!-- Status row (hidden in file:// mode) -->
+        <div class="status-row" id="cert-status-row">
+          <span class="status-badge badge-neutral" id="cert-status-badge" role="status" aria-live="polite">Checking&hellip;</span>
+          <span id="cert-status-path" style="font-size:0.8rem;color:var(--text-muted);font-family:monospace;"></span>
+        </div>
+
+        <!-- file:// mode note (no server available) -->
+        <p id="cert-file-mode-note" hidden style="font-size:0.82rem;color:var(--text-muted);margin-bottom:12px;">
+          Certificate fetching requires the local server.
+          Run <code style="background:#EEE;padding:1px 5px;border-radius:3px">python tools/fetch_ssl_cert.py</code>
+          manually and restart <code style="background:#EEE;padding:1px 5px;border-radius:3px">python server.py</code>.
+        </p>
+
+        <!-- Fetch button + helper (hidden in file:// mode) -->
+        <div id="cert-server-controls">
+          <button class="btn btn-primary" id="btn-fetch-cert" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            Fetch Certificate
+          </button>
+          <p class="form-helper" style="margin-top:8px;">
+            Retrieves the TLS certificate from the Jira URL above and saves it to
+            <code>certs/jira_ca_bundle.pem</code>. The Jira client uses it automatically on the next run.
+          </p>
+        </div>
+
+        <div class="log-wrap" aria-live="polite" aria-label="Certificate fetch output" style="margin-top:14px;">
+          <div class="log-toolbar">
+            <span class="log-toolbar-label">Output</span>
+            <button class="log-clear-btn" id="btn-clear-cert-log" type="button" aria-label="Clear certificate log">Clear</button>
+          </div>
+          <div class="log-output" id="cert-log-output"></div>
+        </div>
+
+        <hr class="section-divider" />
+
 
     </div><!-- /panel-connection -->
 
