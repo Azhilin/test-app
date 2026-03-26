@@ -6,6 +6,7 @@ markers = [
     "component: tests that exercise filesystem or HTTP but no inter-module orchestration (deselect with -m 'not component')",
     "integration: tests requiring module integration (skip with -m 'not integration')",
     "e2e: end-to-end tests (skip with -m 'not e2e')",
+    "windows_only: tests covering Windows-specific OS behaviour (automatically skipped on Linux/macOS via skipif decorator)",
 ]
 
 [tool.playwright]
