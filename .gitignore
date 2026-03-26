@@ -1,13 +1,50 @@
+# Environment & secrets
 .env
+.vscode/mcp.json
+.claude/settings.local.json
+
+# Virtual environments
 .tmplib/
-__pycache__/
-*.pyc
 .venv/
 venv/
+
+# Python bytecode
+__pycache__/
+*.pyc
+*.pyo
+
+# Pytest & coverage
+.pytest_cache/
+.coverage
+htmlcov/
+coverage.xml
+
+# Playwright test output
+playwright-report/
+test-results/
+
+# Python packaging
+*.egg-info/
+dist/
+build/
+
+# Generated reports
 report.html
 report.md
-.pytest_cache/
-app/__pycache__/
-tests/__pycache__/
 generated/
+
+# Certificates
 certs/*.pem
+
+# Diagnostic output
+tools/_diag_out.txt
+
+# Logs & temp files
+logs/
+*.tmp
+*.log
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
