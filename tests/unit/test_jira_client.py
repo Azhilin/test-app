@@ -20,12 +20,14 @@ def test_create_client_returns_jira_instance(monkeypatch):
     monkeypatch.setattr("app.config.JIRA_URL", "https://test.atlassian.net")
     monkeypatch.setattr("app.config.JIRA_EMAIL", "user@test.com")
     monkeypatch.setattr("app.config.JIRA_API_TOKEN", "tok123")
+    monkeypatch.setattr("app.config.JIRA_SSL_CERT", True)
     with patch("app.jira_client.Jira") as MockJira:
         jira_client.create_client()
         MockJira.assert_called_once_with(
             url="https://test.atlassian.net",
             username="user@test.com",
             password="tok123",
+            verify_ssl=True,
         )
 
 
@@ -33,11 +35,23 @@ def test_create_client_uses_config_values(monkeypatch):
     monkeypatch.setattr("app.config.JIRA_URL", "https://other.atlassian.net")
     monkeypatch.setattr("app.config.JIRA_EMAIL", "other@test.com")
     monkeypatch.setattr("app.config.JIRA_API_TOKEN", "other_tok")
+    monkeypatch.setattr("app.config.JIRA_SSL_CERT", True)
     with patch("app.jira_client.Jira") as MockJira:
         jira_client.create_client()
         args = MockJira.call_args
         assert args.kwargs["url"] == "https://other.atlassian.net"
         assert args.kwargs["username"] == "other@test.com"
+
+
+def test_create_client_passes_verify_ssl(monkeypatch):
+    monkeypatch.setattr("app.config.JIRA_URL", "https://test.atlassian.net")
+    monkeypatch.setattr("app.config.JIRA_EMAIL", "user@test.com")
+    monkeypatch.setattr("app.config.JIRA_API_TOKEN", "tok123")
+    monkeypatch.setattr("app.config.JIRA_SSL_CERT", "/some/path/jira_ca_bundle.pem")
+    with patch("app.jira_client.Jira") as MockJira:
+        jira_client.create_client()
+        args = MockJira.call_args
+        assert args.kwargs["verify_ssl"] == "/some/path/jira_ca_bundle.pem"
 
 
 # ---------------------------------------------------------------------------

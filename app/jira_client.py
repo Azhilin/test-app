@@ -14,6 +14,7 @@ def create_client() -> Jira:
         url=config.JIRA_URL,
         username=config.JIRA_EMAIL,
         password=config.JIRA_API_TOKEN,
+        verify_ssl=config.JIRA_SSL_CERT,
     )
 
 

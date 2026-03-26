@@ -130,3 +130,26 @@ def test_env_path_points_to_project_root():
     # _env_path should be <root>/.env, not <root>/app/.env
     assert cfg._env_path.name == ".env"
     assert cfg._env_path.parent.name != "app"
+
+
+def test_jira_ssl_cert_returns_true_when_no_file():
+    from pathlib import Path
+    with patch.object(Path, "is_file", return_value=False):
+        cfg = _reload_config({
+            "JIRA_URL": "https://x.atlassian.net",
+            "JIRA_EMAIL": "a@b.com",
+            "JIRA_API_TOKEN": "t",
+        })
+    assert cfg.JIRA_SSL_CERT is True
+
+
+def test_jira_ssl_cert_returns_path_when_file_exists():
+    from pathlib import Path
+    with patch.object(Path, "is_file", return_value=True):
+        cfg = _reload_config({
+            "JIRA_URL": "https://x.atlassian.net",
+            "JIRA_EMAIL": "a@b.com",
+            "JIRA_API_TOKEN": "t",
+        })
+    assert isinstance(cfg.JIRA_SSL_CERT, str)
+    assert cfg.JIRA_SSL_CERT.endswith("jira_ca_bundle.pem")

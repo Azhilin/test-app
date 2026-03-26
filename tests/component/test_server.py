@@ -168,3 +168,71 @@ def test_generate_ends_with_close_event(server_url):
     resp = urllib.request.urlopen(req, timeout=30)
     body = resp.read().decode()
     assert "event: close" in body
+
+
+# ---------------------------------------------------------------------------
+# GET /api/cert-status
+# ---------------------------------------------------------------------------
+
+def _make_test_pem(days: int = 90) -> bytes:
+    import datetime
+    from cryptography import x509
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import ec
+    from cryptography.x509.oid import NameOID
+
+    key = ec.generate_private_key(ec.SECP256R1())
+    now = datetime.datetime.now(datetime.timezone.utc)
+    name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "test.example.com")])
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(name).issuer_name(name)
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(now - datetime.timedelta(days=1))
+        .not_valid_after(now + datetime.timedelta(days=days))
+        .sign(key, hashes.SHA256())
+    )
+    return cert.public_bytes(serialization.Encoding.PEM)
+
+
+def test_cert_status_no_cert_returns_exists_false(server_url, tmp_path):
+    """GET /api/cert-status when no cert file exists returns exists=False with path key."""
+    import server as srv
+
+    orig = srv.ROOT
+    srv.ROOT = tmp_path          # temp dir has no certs/ subdirectory
+    try:
+        resp = urllib.request.urlopen(f"{server_url}/api/cert-status")
+        data = json.loads(resp.read())
+    finally:
+        srv.ROOT = orig
+
+    assert data["exists"] is False
+    assert data["path"] == "certs/jira_ca_bundle.pem"
+
+
+def test_cert_status_with_valid_cert_returns_enriched_fields(server_url, tmp_path):
+    """GET /api/cert-status with a valid cert PEM returns all validity fields."""
+    import server as srv
+
+    certs_dir = tmp_path / "certs"
+    certs_dir.mkdir()
+    (certs_dir / "jira_ca_bundle.pem").write_bytes(_make_test_pem(90))
+
+    orig = srv.ROOT
+    srv.ROOT = tmp_path
+    try:
+        resp = urllib.request.urlopen(f"{server_url}/api/cert-status")
+        data = json.loads(resp.read())
+    finally:
+        srv.ROOT = orig
+
+    assert data["exists"] is True
+    assert data["path"] == "certs/jira_ca_bundle.pem"
+    assert "valid" in data
+    assert "expires_at" in data
+    assert "days_remaining" in data
+    assert "subject" in data
+    assert data["valid"] is True
+    assert data["days_remaining"] > 0
