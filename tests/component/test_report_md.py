@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from app.report_md import generate_md, _md_table
+from app.reporters.report_md import generate_md, _md_table
 
 pytestmark = pytest.mark.component
 

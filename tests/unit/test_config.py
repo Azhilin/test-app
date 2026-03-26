@@ -22,9 +22,9 @@ def _restore_config():
 
 
 def _reload_config(env: dict):
-    """Reload app.config with a patched environment, return the module."""
+    """Reload app.core.config with a patched environment, return the module."""
     with patch.dict(os.environ, env, clear=True):
-        import app.config as cfg
+        import app.core.config as cfg
         importlib.reload(cfg)
         return cfg
 
@@ -136,7 +136,7 @@ def test_filter_id_empty():
 
 
 def test_env_path_points_to_project_root():
-    import app.config as cfg
+    import app.core.config as cfg
     importlib.reload(cfg)
     # _env_path should be <root>/.env, not <root>/app/.env
     assert cfg._env_path.name == ".env"

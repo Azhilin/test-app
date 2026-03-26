@@ -198,7 +198,7 @@ def _make_test_pem(days: int = 90) -> bytes:
 
 def test_cert_status_no_cert_returns_exists_false(server_url, tmp_path):
     """GET /api/cert-status when no cert file exists returns exists=False with path key."""
-    import server as srv
+    import app.server as srv
 
     orig = srv.ROOT
     srv.ROOT = tmp_path          # temp dir has no certs/ subdirectory
@@ -214,7 +214,7 @@ def test_cert_status_no_cert_returns_exists_false(server_url, tmp_path):
 
 def test_cert_status_with_valid_cert_returns_enriched_fields(server_url, tmp_path):
     """GET /api/cert-status with a valid cert PEM returns all validity fields."""
-    import server as srv
+    import app.server as srv
 
     certs_dir = tmp_path / "certs"
     certs_dir.mkdir()

@@ -66,8 +66,8 @@ def _post_expect_error(url: str, payload: dict | None = None, raw: bytes | None 
 
 @pytest.fixture
 def temp_root(tmp_path, monkeypatch):
-    """Redirect server.ROOT to a fresh tmp_path so real .env is never touched."""
-    import server as srv
+    """Redirect app.server.ROOT to a fresh tmp_path so real .env is never touched."""
+    import app.server as srv
     monkeypatch.setattr(srv, "ROOT", tmp_path)
     return tmp_path
 
@@ -94,7 +94,8 @@ class TestWriteEnvFields:
 
     def _make_handler(self, tmp_path: Path, monkeypatch):
         """Return a Handler instance with ROOT pointing to tmp_path."""
-        srv = _import_server_safe()
+        _import_server_safe()
+        import app.server as srv
         monkeypatch.setattr(srv, "ROOT", tmp_path)
         # Instantiate without a real socket by bypassing __init__
         handler = object.__new__(srv.Handler)

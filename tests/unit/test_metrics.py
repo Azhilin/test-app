@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from app import metrics
+from app.core import metrics
 from tests.conftest import make_sprint, make_issue, make_issue_with_changelog, make_issue_with_labels
 
 pytestmark = pytest.mark.unit
@@ -66,7 +66,7 @@ def test_get_story_points_missing_field():
 
 
 def test_get_story_points_custom_field(monkeypatch):
-    monkeypatch.setattr("app.config.JIRA_STORY_POINTS_FIELD", "customfield_99999")
+    monkeypatch.setattr("app.core.config.JIRA_STORY_POINTS_FIELD", "customfield_99999")
     issue = {"key": "X-1", "fields": {"customfield_99999": 13.0}}
     assert metrics._get_story_points(issue) == 13.0
 

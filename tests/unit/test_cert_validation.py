@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from app.cert_utils import validate_cert
+from app.utils.cert_utils import validate_cert
 
 pytestmark = pytest.mark.unit
 

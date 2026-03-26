@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from atlassian import Jira
 
-from app import jira_client
+from app.core import jira_client
 from tests.conftest import make_sprint
 
 pytestmark = pytest.mark.unit
@@ -17,11 +17,11 @@ pytestmark = pytest.mark.unit
 # ---------------------------------------------------------------------------
 
 def test_create_client_returns_jira_instance(monkeypatch):
-    monkeypatch.setattr("app.config.JIRA_URL", "https://test.atlassian.net")
-    monkeypatch.setattr("app.config.JIRA_EMAIL", "user@test.com")
-    monkeypatch.setattr("app.config.JIRA_API_TOKEN", "tok123")
-    monkeypatch.setattr("app.config.JIRA_SSL_CERT", True)
-    with patch("app.jira_client.Jira") as MockJira:
+    monkeypatch.setattr("app.core.config.JIRA_URL", "https://test.atlassian.net")
+    monkeypatch.setattr("app.core.config.JIRA_EMAIL", "user@test.com")
+    monkeypatch.setattr("app.core.config.JIRA_API_TOKEN", "tok123")
+    monkeypatch.setattr("app.core.config.JIRA_SSL_CERT", True)
+    with patch("app.core.jira_client.Jira") as MockJira:
         jira_client.create_client()
         MockJira.assert_called_once_with(
             url="https://test.atlassian.net",
@@ -32,11 +32,11 @@ def test_create_client_returns_jira_instance(monkeypatch):
 
 
 def test_create_client_uses_config_values(monkeypatch):
-    monkeypatch.setattr("app.config.JIRA_URL", "https://other.atlassian.net")
-    monkeypatch.setattr("app.config.JIRA_EMAIL", "other@test.com")
-    monkeypatch.setattr("app.config.JIRA_API_TOKEN", "other_tok")
-    monkeypatch.setattr("app.config.JIRA_SSL_CERT", True)
-    with patch("app.jira_client.Jira") as MockJira:
+    monkeypatch.setattr("app.core.config.JIRA_URL", "https://other.atlassian.net")
+    monkeypatch.setattr("app.core.config.JIRA_EMAIL", "other@test.com")
+    monkeypatch.setattr("app.core.config.JIRA_API_TOKEN", "other_tok")
+    monkeypatch.setattr("app.core.config.JIRA_SSL_CERT", True)
+    with patch("app.core.jira_client.Jira") as MockJira:
         jira_client.create_client()
         args = MockJira.call_args
         assert args.kwargs["url"] == "https://other.atlassian.net"
@@ -44,11 +44,11 @@ def test_create_client_uses_config_values(monkeypatch):
 
 
 def test_create_client_passes_verify_ssl(monkeypatch):
-    monkeypatch.setattr("app.config.JIRA_URL", "https://test.atlassian.net")
-    monkeypatch.setattr("app.config.JIRA_EMAIL", "user@test.com")
-    monkeypatch.setattr("app.config.JIRA_API_TOKEN", "tok123")
-    monkeypatch.setattr("app.config.JIRA_SSL_CERT", "/some/path/jira_ca_bundle.pem")
-    with patch("app.jira_client.Jira") as MockJira:
+    monkeypatch.setattr("app.core.config.JIRA_URL", "https://test.atlassian.net")
+    monkeypatch.setattr("app.core.config.JIRA_EMAIL", "user@test.com")
+    monkeypatch.setattr("app.core.config.JIRA_API_TOKEN", "tok123")
+    monkeypatch.setattr("app.core.config.JIRA_SSL_CERT", "/some/path/jira_ca_bundle.pem")
+    with patch("app.core.jira_client.Jira") as MockJira:
         jira_client.create_client()
         args = MockJira.call_args
         assert args.kwargs["verify_ssl"] == "/some/path/jira_ca_bundle.pem"
@@ -59,19 +59,19 @@ def test_create_client_passes_verify_ssl(monkeypatch):
 # ---------------------------------------------------------------------------
 
 def test_get_board_id_from_config(monkeypatch, mock_jira):
-    monkeypatch.setattr("app.config.JIRA_BOARD_ID", 42)
+    monkeypatch.setattr("app.core.config.JIRA_BOARD_ID", 42)
     assert jira_client.get_board_id(mock_jira) == 42
     mock_jira.get_all_agile_boards.assert_not_called()
 
 
 def test_get_board_id_from_api(monkeypatch, mock_jira):
-    monkeypatch.setattr("app.config.JIRA_BOARD_ID", None)
+    monkeypatch.setattr("app.core.config.JIRA_BOARD_ID", None)
     mock_jira.get_all_agile_boards.return_value = {"values": [{"id": 99, "name": "My Board"}]}
     assert jira_client.get_board_id(mock_jira) == 99
 
 
 def test_get_board_id_no_boards_raises(monkeypatch, mock_jira):
-    monkeypatch.setattr("app.config.JIRA_BOARD_ID", None)
+    monkeypatch.setattr("app.core.config.JIRA_BOARD_ID", None)
     mock_jira.get_all_agile_boards.return_value = {"values": []}
     with pytest.raises(ValueError, match="No boards found"):
         jira_client.get_board_id(mock_jira)
@@ -82,7 +82,7 @@ def test_get_board_id_no_boards_raises(monkeypatch, mock_jira):
 # ---------------------------------------------------------------------------
 
 def test_get_sprints_sorted_desc_by_start_date(monkeypatch, mock_jira):
-    monkeypatch.setattr("app.config.JIRA_SPRINT_COUNT", 10)
+    monkeypatch.setattr("app.core.config.JIRA_SPRINT_COUNT", 10)
     mock_jira.get_all_sprints_from_board.side_effect = [
         {"values": [
             {"id": 1, "name": "S1", "startDate": "2026-01-01"},
@@ -96,7 +96,7 @@ def test_get_sprints_sorted_desc_by_start_date(monkeypatch, mock_jira):
 
 
 def test_get_sprints_capped_at_sprint_count(monkeypatch, mock_jira):
-    monkeypatch.setattr("app.config.JIRA_SPRINT_COUNT", 2)
+    monkeypatch.setattr("app.core.config.JIRA_SPRINT_COUNT", 2)
     mock_jira.get_all_sprints_from_board.side_effect = [
         {"values": [
             {"id": i, "name": f"S{i}", "startDate": f"2026-0{i}-01"}
@@ -109,7 +109,7 @@ def test_get_sprints_capped_at_sprint_count(monkeypatch, mock_jira):
 
 
 def test_get_sprints_empty(monkeypatch, mock_jira):
-    monkeypatch.setattr("app.config.JIRA_SPRINT_COUNT", 10)
+    monkeypatch.setattr("app.core.config.JIRA_SPRINT_COUNT", 10)
     mock_jira.get_all_sprints_from_board.side_effect = [
         {"values": []},
         {"values": []},
@@ -122,18 +122,18 @@ def test_get_sprints_empty(monkeypatch, mock_jira):
 # ---------------------------------------------------------------------------
 
 def test_get_filter_jql_none(monkeypatch, mock_jira):
-    monkeypatch.setattr("app.config.JIRA_FILTER_ID", None)
+    monkeypatch.setattr("app.core.config.JIRA_FILTER_ID", None)
     assert jira_client.get_filter_jql(mock_jira) == ""
 
 
 def test_get_filter_jql_valid(monkeypatch, mock_jira):
-    monkeypatch.setattr("app.config.JIRA_FILTER_ID", 123)
+    monkeypatch.setattr("app.core.config.JIRA_FILTER_ID", 123)
     mock_jira.get_filter.return_value = {"jql": "project = MYPROJ"}
     assert jira_client.get_filter_jql(mock_jira) == "project = MYPROJ"
 
 
 def test_get_filter_jql_api_error(monkeypatch, mock_jira):
-    monkeypatch.setattr("app.config.JIRA_FILTER_ID", 123)
+    monkeypatch.setattr("app.core.config.JIRA_FILTER_ID", 123)
     mock_jira.get_filter.side_effect = Exception("API error")
     assert jira_client.get_filter_jql(mock_jira) == ""
 
@@ -206,9 +206,9 @@ def test_get_issues_with_changelog_skips_failures(mock_jira):
 # ---------------------------------------------------------------------------
 
 def test_fetch_sprint_data_orchestration(monkeypatch, mock_jira):
-    monkeypatch.setattr("app.config.JIRA_BOARD_ID", 5)
-    monkeypatch.setattr("app.config.JIRA_FILTER_ID", None)
-    monkeypatch.setattr("app.config.JIRA_SPRINT_COUNT", 10)
+    monkeypatch.setattr("app.core.config.JIRA_BOARD_ID", 5)
+    monkeypatch.setattr("app.core.config.JIRA_FILTER_ID", None)
+    monkeypatch.setattr("app.core.config.JIRA_SPRINT_COUNT", 10)
     mock_jira.get_all_sprints_from_board.side_effect = [
         {"values": [{"id": 10, "name": "S10", "startDate": "2026-01-01"}]},
         {"values": []},
