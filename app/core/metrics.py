@@ -22,6 +22,11 @@ def _get_story_points(issue: dict[str, Any]) -> float:
     raw = fields.get(config.JIRA_STORY_POINTS_FIELD)
     if raw is None:
         return 0.0
+    if isinstance(raw, dict):
+        for key in ("value", "number", "estimate", "amount"):
+            if key in raw:
+                raw = raw[key]
+                break
     try:
         return float(raw)
     except (TypeError, ValueError):
@@ -77,7 +82,7 @@ def _cycle_time_from_changelog(issue: dict[str, Any]) -> float | None:
     done_at: datetime | None = None
     done_statuses = {"done", "closed", "resolved", "complete"}
 
-    for h in histories:
+    for h in sorted(histories, key=lambda item: _parse_iso(item.get("created")) or datetime.max.replace(tzinfo=timezone.utc)):
         created = _parse_iso(h.get("created"))
         if not created:
             continue
@@ -90,9 +95,11 @@ def _cycle_time_from_changelog(issue: dict[str, Any]) -> float | None:
                 "progress" in to_val or "in progress" in to_val or to_val == "in progress"
             ):
                 in_progress_at = created
-            if to_val in done_statuses:
+            if in_progress_at is not None and to_val in done_statuses:
                 done_at = created
                 break
+        if in_progress_at is not None and done_at is not None:
+            break
 
     if in_progress_at is not None and done_at is not None and done_at >= in_progress_at:
         delta = done_at - in_progress_at

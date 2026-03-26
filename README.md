@@ -4,18 +4,21 @@ Fetches data from Jira Cloud and generates AI adoption and velocity trend report
 
 ## Setup
 
-### Step 1 — Install Python and dependencies (run once)
+### Step 1 - Install Python, dependencies, and bootstrap config (run once)
 
-Double-click **`python_setup.bat`**.
+Double-click **`project_setup.bat`**.
 
 This will:
+
 - Detect or install Python 3.12 (per-user, no admin rights needed)
 - Create a `.venv` virtual environment
 - Install all required packages from `requirements.txt`
+- Create `.env` from `.env.example` when `.env` is missing
+- Prompt to keep or back up and recreate `.env` when it already exists
 
-### Step 2 — Configure Jira credentials
+### Step 2 - Configure Jira credentials
 
-Copy `.env.example` to `.env` and fill in:
+Open `.env` and fill in:
 
 - `JIRA_URL` – e.g. `https://your-domain.atlassian.net`
 - `JIRA_EMAIL` – your Atlassian account email
@@ -29,15 +32,32 @@ Optional settings (see `.env.example` for details):
 
 ### Using the browser UI (recommended)
 
-Double-click **`start_app.bat`** — this starts a local server and opens the app in your browser at `http://localhost:8080`.
+Double-click **`start_app.bat`** — this starts a local server bound to `127.0.0.1` and opens the app in your browser at `http://localhost:8080`.
 
 Use the UI to configure your Jira connection, select a filter, and generate reports.
+
+If your Jira instance uses a custom CA certificate, use the Jira Connection tab to fetch it or place the PEM bundle at `certs/jira_ca_bundle.pem`.
 
 ### Using the command line
 
 ```bash
 .venv\Scripts\python main.py
 ```
+
+### Validate setup changes
+
+To smoke-test the Windows setup flow without installing Python or dependencies from a full repository checkout:
+
+```bash
+python tools/smoke_test_setup.py
+```
+
+This helper is not included in the end-user release zip.
+
+For scripted setup runs, you can suppress the `.env` prompt:
+
+- `project_setup.bat --keep-env` keeps an existing `.env` unchanged
+- `project_setup.bat --refresh-env` backs up an existing `.env` and recreates it from `.env.example`
 
 Reports are written to `generated/reports/<timestamp>/` — each run creates a new timestamped folder containing `report.html` and `report.md`.
 

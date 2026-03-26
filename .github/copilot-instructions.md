@@ -1,5 +1,20 @@
 # Project Instructions
 
+## Generated and temporary files
+
+Place temporary, scratch, diagnostic, or AI-generated working files under
+`generated/`, not in the repository root or next to source files.
+
+Use these locations by default:
+
+- `generated/tmp/` for one-off temporary files
+- `generated/debug/` for diagnostic output
+- `generated/reports/` for report artifacts
+
+Delete disposable files before finishing a task when they are no longer needed.
+Do not move real source files into `generated/`; this applies only to generated
+or temporary artifacts.
+
 ## Test Coverage Stats — never hand-edit
 
 `tests/test_coverage.md` contains auto-generated statistics (test counts, percentages,

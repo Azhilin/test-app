@@ -148,7 +148,7 @@ def collect_stats() -> tuple[list[dict], int]:
 #               {total}
 
 _PYRAMID_TEMPLATE = """\
-```
+```text
               /  E2E  \\              {e2e_n} tests  ({e2e_pct}%)  {e2e_desc}  {e2e_path}
              /----------\\
             / Integration \\           {int_n} tests   ({int_pct}%)  {int_desc}       {int_path}
@@ -227,7 +227,7 @@ def _update_file_table_counts(md: str, stats: list[dict]) -> str:
             pattern = (
                 r"(\|\s+`" + re.escape(rel) + r"`[^|]*\|[^|]*\|)\s*[~\d]+\s*(\|)"
             )
-            replacement = rf"\g<1> {count:>4} \2"
+            replacement = rf"\g<1> {count:>4}  \2"
             md = re.sub(pattern, replacement, md)
     return md
 

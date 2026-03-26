@@ -14,11 +14,42 @@ set PYTHON_URL_32=https://www.python.org/ftp/python/3.12.10/python-3.12.10.exe
 set PYTHON_HASH_64=67b5635e80ea51072b87941312d00ec8927c4db9ba18938f7ad2d27b328b95fb
 set PYTHON_HASH_32=fdfe385b94f5b8785a0226a886979527fd26eb65defdbf29992fd22cc4b0e31e
 set VENV_DIR=.venv
-set LOG_DIR=logs
-set LOG_FILE=logs\install_python.log
+set LOG_DIR=generated\logs
+set LOG_FILE=
+set ENV_FILE=.env
+set ENV_TEMPLATE=.env.example
+set SKIP_COUNTDOWN=0
+set SMOKE_TEST_MODE=0
+set ENV_EXISTING_ACTION=prompt
+
+:: Parse optional arguments
+:PARSE_ARGS
+if "%~1"=="" goto :ARGS_DONE
+if /i "%~1"=="--smoke-test" (
+    set SMOKE_TEST_MODE=1
+    set SKIP_COUNTDOWN=1
+)
+if /i "%~1"=="--keep-env" (
+    if /i not "%ENV_EXISTING_ACTION%"=="prompt" goto :ARGS_CONFLICT
+    set ENV_EXISTING_ACTION=keep
+)
+if /i "%~1"=="--refresh-env" (
+    if /i not "%ENV_EXISTING_ACTION%"=="prompt" goto :ARGS_CONFLICT
+    set ENV_EXISTING_ACTION=refresh
+)
+shift
+goto :PARSE_ARGS
+:ARGS_DONE
+goto :ARGS_OK
+
+:ARGS_CONFLICT
+echo [ERROR] Conflicting .env options. Use only one of --keep-env or --refresh-env.
+exit /b 1
+
+:ARGS_OK
 
 :: ============================================================
-:: SECTION 1 — PRE-EXECUTION & OS VALIDATION
+:: SECTION 1 - PRE-EXECUTION & OS VALIDATION
 :: ============================================================
 
 :: OS check
@@ -29,7 +60,7 @@ if /i not "%OS%"=="Windows_NT" (
     exit /b 1
 )
 
-:: Architecture detection — handles WOW64 case (32-bit cmd on 64-bit Windows)
+:: Architecture detection - handles WOW64 case (32-bit cmd on 64-bit Windows)
 set ARCH=64
 if "%PROCESSOR_ARCHITECTURE%"=="x86" (
     if not defined PROCESSOR_ARCHITEW6432 set ARCH=32
@@ -37,9 +68,19 @@ if "%PROCESSOR_ARCHITECTURE%"=="x86" (
 
 :: Change to the script's own directory so relative paths are always correct
 cd /d "%~dp0"
+set "PROJECT_ROOT=%CD%"
+set "ENV_PATH=%PROJECT_ROOT%\%ENV_FILE%"
+set "ENV_TEMPLATE_PATH=%PROJECT_ROOT%\%ENV_TEMPLATE%"
+
+for /f "usebackq delims=" %%T in (`powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"`) do (
+    set "SESSION_STAMP=%%T"
+)
+if not defined SESSION_STAMP set "SESSION_STAMP=%RANDOM%"
+set "LOG_FILE=%LOG_DIR%\project_setup-%SESSION_STAMP%.log"
+set "LOG_FILE_PATH=%PROJECT_ROOT%\%LOG_FILE%"
 
 :: ============================================================
-:: SECTION 2 — LOGGING & USER EXPERIENCE
+:: SECTION 2 - LOGGING & USER EXPERIENCE
 :: ============================================================
 
 :: Create logs directory if it doesn't exist
@@ -47,10 +88,16 @@ if not exist "%LOG_DIR%" mkdir "%LOG_DIR%"
 
 :: Write a session header to the log file
 call :LOG_RAW "========================================================"
-call :LOG_RAW "  Python Setup Session Started — %DATE% %TIME%"
+call :LOG_RAW "  Project Setup Session Started - %DATE% %TIME%"
 call :LOG_RAW "========================================================"
+call :LOG "[INFO]" "Writing setup log to '%LOG_FILE_PATH%'."
 
 call :LOG "[INFO]" "OS validated: Windows_NT + Architecture: %ARCH%-bit"
+
+if "%SMOKE_TEST_MODE%"=="1" (
+    call :LOG "[INFO]" "Smoke-test mode enabled. Skipping Python installation and dependency setup."
+    goto :BOOTSTRAP_ENV
+)
 
 :: ============================================================
 :: PRIVILEGE ASSESSMENT (Least Privilege Principle)
@@ -59,11 +106,11 @@ net session >nul 2>&1
 if %errorlevel% == 0 (
     call :LOG "[INFO]" "Running with Administrator privileges. Installation will remain per-user (InstallAllUsers=0)."
 ) else (
-    call :LOG "[INFO]" "Running as standard user — per-user installation mode (no UAC prompt required)."
+    call :LOG "[INFO]" "Running as standard user - per-user installation mode (no UAC prompt required)."
 )
 
 :: ============================================================
-:: SECTION 3 — PYTHON DETECTION & VERSION VALIDATION
+:: SECTION 3 - PYTHON DETECTION & VERSION VALIDATION
 :: ============================================================
 call :LOG "[INFO]" "Detecting Python installation..."
 
@@ -120,7 +167,7 @@ call :LOG "[WARNING]" "No Python installation detected on PATH."
 goto :DO_INSTALL
 
 :PARSE_VERSION
-:: Extract Major and Minor from "3.12.10" → MAJOR=3, MINOR=12
+:: Extract Major and Minor from "3.12.10" -> MAJOR=3, MINOR=12
 for /f "tokens=1,2,3 delims=." %%A in ("!PYTHON_VERSION!") do (
     set PYTHON_MAJOR_FOUND=%%A
     set PYTHON_MINOR_FOUND=%%B
@@ -129,11 +176,11 @@ for /f "tokens=1,2,3 delims=." %%A in ("!PYTHON_VERSION!") do (
 if not defined PYTHON_MAJOR_FOUND goto :VERSION_PARSE_FAIL
 if not defined PYTHON_MINOR_FOUND goto :VERSION_PARSE_FAIL
 
-call :LOG "[INFO]" "Parsed version — Major: !PYTHON_MAJOR_FOUND!  Minor: !PYTHON_MINOR_FOUND!"
+call :LOG "[INFO]" "Parsed version - Major: !PYTHON_MAJOR_FOUND!  Minor: !PYTHON_MINOR_FOUND!"
 
 :: Validate major version is 3
 if not "!PYTHON_MAJOR_FOUND!"=="3" (
-    call :LOG "[WARNING]" "Detected Python !PYTHON_VERSION! — major version is not 3. Proceeding to install Python %PYTHON_INSTALL_VERSION%."
+    call :LOG "[WARNING]" "Detected Python !PYTHON_VERSION! - major version is not 3. Proceeding to install Python %PYTHON_INSTALL_VERSION%."
     goto :PROMPT_INSTALL
 )
 
@@ -167,7 +214,7 @@ call :COUNTDOWN
 exit /b 0
 
 :: ============================================================
-:: SECTION 4 — PYTHON INSTALLATION (SECURE & SILENT)
+:: SECTION 4 - PYTHON INSTALLATION (SECURE & SILENT)
 :: ============================================================
 :DO_INSTALL
 call :LOG "[INFO]" "Preparing to download Python %PYTHON_INSTALL_VERSION% (%ARCH%-bit)..."
@@ -247,7 +294,7 @@ call :LOG "[SUCCESS]" "Python %PYTHON_INSTALL_VERSION% installed successfully."
 :: Clean up installer
 del /f /q "!INSTALLER_FILE!" >nul 2>&1
 
-:: PATH Refresh — the current cmd session won't see the new PATH without a restart.
+:: PATH Refresh - the current cmd session won't see the new PATH without a restart.
 :: Read the updated User PATH from the registry via PowerShell and apply it to this session.
 call :LOG "[INFO]" "Refreshing PATH environment variable for this session..."
 for /f "usebackq delims=" %%P in (`powershell -NoProfile -Command "[Environment]::GetEnvironmentVariable('PATH','User')"`) do (
@@ -264,16 +311,20 @@ call :LOG "[INFO]" "PATH refreshed. New user segment: !USER_PATH!"
 set PYTHON_CMD=py
 
 :: ============================================================
-:: SECTION 5 — VIRTUAL ENVIRONMENT SETUP
+:: SECTION 5 - VIRTUAL ENVIRONMENT SETUP
 :: ============================================================
 :SETUP_VENV
 call :LOG "[INFO]" "Setting up Python virtual environment in '%VENV_DIR%'..."
 
-:: Create venv using the specific required Python version via the launcher
-py -%PYTHON_TARGET% -m venv %VENV_DIR%
+:: Create venv using the detected Python command, preferring the launcher when available
+if /i "%PYTHON_CMD%"=="py" (
+    py -%PYTHON_TARGET% -m venv "%VENV_DIR%"
+) else (
+    %PYTHON_CMD% -m venv "%VENV_DIR%"
+)
 
 if %errorlevel% neq 0 (
-    call :LOG "[ERROR]" "Failed to create virtual environment. Check that py -%PYTHON_TARGET% is available."
+    call :LOG "[ERROR]" "Failed to create virtual environment. Check that a compatible Python interpreter is available."
     call :COUNTDOWN
     exit /b 1
 )
@@ -332,7 +383,19 @@ if exist "requirements-dev.txt" (
     :AFTER_DEV
 )
 
-:: .gitignore check — ensure .venv/ is excluded from version control
+:: ============================================================
+:: SECTION 6 - ENVIRONMENT FILE BOOTSTRAP
+:: ============================================================
+:BOOTSTRAP_ENV
+call :ENSURE_ENV_FILE
+if errorlevel 1 (
+    call :COUNTDOWN
+    exit /b 1
+)
+
+:: ============================================================
+:: SECTION 7 - .GITIGNORE SAFETY CHECK
+:: ============================================================
 if exist ".gitignore" (
     findstr /i /c:".venv" .gitignore >nul 2>&1
     if !errorlevel! neq 0 (
@@ -355,8 +418,10 @@ call :LOG "[SUCCESS]" "=========================================================
 call :LOG "[SUCCESS]" "  Setup complete! Your Python environment is ready."
 call :LOG "[SUCCESS]" "  To activate the virtual environment, run:"
 call :LOG "[SUCCESS]" "    %VENV_DIR%\Scripts\activate.bat"
+call :LOG "[SUCCESS]" "  Review '%ENV_FILE%' and fill in Jira credentials before running start_app.bat."
+call :LOG "[SUCCESS]" "  Setup log saved to: %LOG_FILE_PATH%"
 call :LOG "[SUCCESS]" "================================================================"
-call :LOG_RAW "  Session ended — %DATE% %TIME%"
+call :LOG_RAW "  Session ended - %DATE% %TIME%"
 call :LOG_RAW "========================================================"
 echo.
 call :COUNTDOWN
@@ -386,10 +451,109 @@ goto :eof
 echo %~1 >> "%LOG_FILE%"
 goto :eof
 
+:: :ENSURE_ENV_FILE
+::   Creates .env from .env.example or offers a backup-and-refresh path when .env exists.
+:ENSURE_ENV_FILE
+call :LOG "[INFO]" "Ensuring '%ENV_FILE%' is available at '%ENV_PATH%'."
+
+if exist "%ENV_FILE%" goto :HANDLE_EXISTING_ENV
+
+if exist "%ENV_TEMPLATE%" (
+    call :COPY_TEMPLATE_TO_ENV
+    if errorlevel 1 exit /b 1
+    call :LOG "[SUCCESS]" "Created '%ENV_FILE%' at '%ENV_PATH%' from '%ENV_TEMPLATE_PATH%' with default values."
+) else (
+    call :LOG "[WARNING]" "'%ENV_TEMPLATE%' not found at '%ENV_TEMPLATE_PATH%'. Skipping '%ENV_FILE%' creation at '%ENV_PATH%'."
+)
+exit /b 0
+
+:HANDLE_EXISTING_ENV
+if not exist "%ENV_TEMPLATE%" (
+    call :LOG "[INFO]" "Existing '%ENV_FILE%' found at '%ENV_PATH%'. Leaving it unchanged."
+    call :LOG "[WARNING]" "'%ENV_TEMPLATE%' not found at '%ENV_TEMPLATE_PATH%', so refresh options for '%ENV_PATH%' are unavailable."
+    exit /b 0
+)
+
+if /i "%ENV_EXISTING_ACTION%"=="keep" (
+    call :LOG "[INFO]" "Existing '%ENV_FILE%' found at '%ENV_PATH%'. Keeping it unchanged because --keep-env was provided."
+    exit /b 0
+)
+
+if /i "%ENV_EXISTING_ACTION%"=="refresh" (
+    call :LOG "[INFO]" "Existing '%ENV_FILE%' found at '%ENV_PATH%'. Refreshing it from '%ENV_TEMPLATE_PATH%' because --refresh-env was provided."
+    goto :BACKUP_AND_RECREATE_ENV
+)
+
+echo.
+echo  Existing %ENV_FILE% found.
+echo    [K] Keep the current %ENV_FILE% unchanged
+echo    [B] Back up the current %ENV_FILE% and recreate it from %ENV_TEMPLATE%
+set /p ENV_CHOICE="  Choose [K/B] (default: K): "
+
+if not defined ENV_CHOICE (
+    call :LOG "[INFO]" "Existing '%ENV_FILE%' found at '%ENV_PATH%'. Leaving it unchanged."
+    exit /b 0
+)
+
+if /i "%ENV_CHOICE%"=="K" (
+    call :LOG "[INFO]" "Existing '%ENV_FILE%' found at '%ENV_PATH%'. Leaving it unchanged."
+    exit /b 0
+)
+
+if /i "%ENV_CHOICE%"=="B" goto :BACKUP_AND_RECREATE_ENV
+
+call :LOG "[WARNING]" "Unrecognized choice '%ENV_CHOICE%'. Leaving '%ENV_FILE%' unchanged at '%ENV_PATH%'."
+exit /b 0
+
+:BACKUP_AND_RECREATE_ENV
+call :BUILD_ENV_BACKUP_PATH
+copy /Y "%ENV_PATH%" "%ENV_BACKUP_FILE%" >nul
+if errorlevel 1 (
+    call :LOG "[ERROR]" "Failed to back up '%ENV_PATH%' to '%ENV_BACKUP_FILE%'."
+    exit /b 1
+)
+
+call :LOG "[SUCCESS]" "Backed up '%ENV_PATH%' to '%ENV_BACKUP_FILE%'."
+call :COPY_TEMPLATE_TO_ENV
+if errorlevel 1 (
+    copy /Y "%ENV_BACKUP_FILE%" "%ENV_PATH%" >nul
+    if errorlevel 1 (
+        call :LOG "[ERROR]" "Failed to recreate '%ENV_PATH%' and failed to restore the backup from '%ENV_BACKUP_FILE%'."
+    ) else (
+        call :LOG "[WARNING]" "Failed to recreate '%ENV_PATH%'. Restored the original file from backup '%ENV_BACKUP_FILE%'."
+    )
+    exit /b 1
+)
+
+call :LOG "[SUCCESS]" "Recreated '%ENV_FILE%' at '%ENV_PATH%' from '%ENV_TEMPLATE_PATH%' with default values."
+exit /b 0
+
+:: :COPY_TEMPLATE_TO_ENV
+::   Copies .env.example to .env and returns non-zero on failure.
+:COPY_TEMPLATE_TO_ENV
+copy /Y "%ENV_TEMPLATE_PATH%" "%ENV_PATH%" >nul
+if errorlevel 1 (
+    call :LOG "[ERROR]" "Failed to create '%ENV_FILE%' at '%ENV_PATH%' from '%ENV_TEMPLATE_PATH%'."
+    exit /b 1
+)
+exit /b 0
+
+:: :BUILD_ENV_BACKUP_PATH
+::   Builds a timestamped backup filename for the current .env file.
+:BUILD_ENV_BACKUP_PATH
+set "ENV_BACKUP_STAMP="
+for /f "usebackq delims=" %%T in (`powershell -NoProfile -Command "Get-Date -Format yyyyMMdd-HHmmss"`) do (
+    set "ENV_BACKUP_STAMP=%%T"
+)
+if not defined ENV_BACKUP_STAMP set "ENV_BACKUP_STAMP=%RANDOM%"
+set "ENV_BACKUP_FILE=%ENV_PATH%.backup-%ENV_BACKUP_STAMP%"
+goto :eof
+
 :: :COUNTDOWN
 ::   Prints a message and waits 10 seconds, closing immediately on any keypress.
 :COUNTDOWN
+if "%SKIP_COUNTDOWN%"=="1" goto :eof
 echo.
-echo  Closing in 10 seconds — press any key to close now.
+echo  Closing in 10 seconds - press any key to close now.
 timeout /t 10 >nul
 goto :eof

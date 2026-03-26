@@ -550,6 +550,14 @@
       >Jira Connection</button>
       <button
         role="tab"
+        id="tab-schema"
+        aria-controls="panel-schema"
+        aria-selected="false"
+        tabindex="-1"
+        class="tab-btn"
+      >Jira Schema</button>
+      <button
+        role="tab"
         id="tab-filter"
         aria-controls="panel-filter"
         aria-selected="false"
@@ -796,6 +804,19 @@
         </div>
 
         <div class="form-group">
+          <label class="form-label" for="filter-schema-select">
+            Jira Schema <span class="optional">optional — auto-fills Story Points Field</span>
+          </label>
+          <select class="form-input" id="filter-schema-select">
+            <option value="">— No schema selected —</option>
+          </select>
+          <p class="form-helper">Select a saved schema to auto-fill the Story Points Field below. Create schemas in the <strong>Jira Schema</strong> tab.</p>
+          <div id="schema-field-info" hidden style="margin-top:10px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);font-size:0.78rem;max-height:160px;overflow-y:auto;">
+            <!-- Populated by JS when a schema is selected -->
+          </div>
+        </div>
+
+        <div class="form-group">
           <label class="form-label" for="story-points-field">Story Points Field</label>
           <input
             class="form-input"
@@ -873,6 +894,120 @@
       </div>
 
     </div><!-- /panel-filter -->
+
+    <!-- ── Tab 2: Jira Schema ── -->
+    <div role="tabpanel" id="panel-schema" aria-labelledby="tab-schema" class="tab-panel" hidden>
+
+      <!-- Description -->
+      <div class="report-desc" role="note">
+        <span class="report-desc-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0747A6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </span>
+        <p>
+          Discover exact Jira <strong>field IDs</strong> for your project(s) without admin permissions.
+          The schema is fetched live from Jira using the
+          <code>GET /rest/api/2/field</code> endpoint and a sample issue search.
+          Saved schemas can be used in the <strong>Jira Filter</strong> tab to auto-fill field mappings
+          like the Story Points custom field ID.
+        </p>
+      </div>
+
+      <!-- Discover Schema card -->
+      <div class="card">
+        <div class="card-title">Discover Jira Schema</div>
+        <div class="card-subtitle">
+          Enter a name and at least one project key, then click <strong>Fetch &amp; Save Schema</strong>.
+          The app will retrieve all available fields from your Jira instance and save the mapping locally.
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="schema-name">
+            Schema Name <span class="required-star" aria-hidden="true">*</span>
+          </label>
+          <input
+            class="form-input"
+            type="text"
+            id="schema-name"
+            placeholder="e.g. My Team Schema"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="100"
+          />
+          <p class="form-helper">A descriptive name for this schema. Used as the filename when saving.</p>
+          <p class="form-error" id="err-schema-name">Schema name is required.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="schema-projects">
+            Project Key(s) <span class="required-star" aria-hidden="true">*</span>
+          </label>
+          <input
+            class="form-input"
+            type="text"
+            id="schema-projects"
+            placeholder="e.g. MYTEAM or MYTEAM, OPS"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="1000"
+          />
+          <p class="form-helper">Comma-separated Jira project keys. A sample issue from these projects will be fetched to identify populated fields.</p>
+          <p class="form-error" id="err-schema-projects">At least one project key is required.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="schema-filter-id">
+            Filter ID <span class="optional">optional</span>
+          </label>
+          <input
+            class="form-input"
+            type="number"
+            id="schema-filter-id"
+            min="1"
+            placeholder="e.g. 10042"
+            autocomplete="off"
+          />
+          <p class="form-helper">ID of a saved Jira filter. If provided, the filter's JQL is included in the schema for reference.</p>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-fetch-schema" type="button" disabled>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+            </svg>
+            Fetch &amp; Save Schema
+          </button>
+          <p class="form-error" id="err-schema-creds" style="margin:0;">
+            Jira credentials not configured. <a href="#" id="goto-connection-from-schema" style="color:var(--accent);font-weight:500;">Go to Jira Connection tab &rarr;</a>
+          </p>
+        </div>
+
+        <div class="log-wrap" aria-live="polite" aria-label="Schema fetch output" style="margin-top:16px;">
+          <div class="log-toolbar">
+            <span class="log-toolbar-label">Output</span>
+            <button class="log-clear-btn" id="btn-clear-schema-log" type="button" title="Clear log">Clear</button>
+          </div>
+          <div class="log-output" id="schema-log-output" role="log" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <!-- Saved Schemas list -->
+      <div class="card">
+        <div class="card-title">Saved Schemas</div>
+        <div class="card-subtitle">Previously fetched Jira field schemas in <code>docs/product/schemas/</code>. Showing last 20 by creation date.</div>
+
+        <ul class="reports-list" id="schemas-list" aria-label="Previously saved schemas">
+          <!-- Populated by JS -->
+        </ul>
+        <p class="reports-empty" id="schemas-empty" hidden>
+          No schemas saved yet. Enter a Schema Name and Project Key above and click &ldquo;Fetch &amp; Save Schema&rdquo; to create the first one.
+        </p>
+      </div>
+
+    </div><!-- /panel-schema -->
 
     <!-- ── Tab 1: Jira Connection ── -->
     <div role="tabpanel" id="panel-connection" aria-labelledby="tab-connection" class="tab-panel" hidden>
@@ -1540,6 +1675,450 @@
       document.getElementById('btn-clear-filter-log').addEventListener('click', filterLogClear);
 
       /* ═══════════════════════════════════════════════
+         Jira Schema tab
+      ═══════════════════════════════════════════════ */
+      const schemaLogEl    = document.getElementById('schema-log-output');
+      const schemaNameIn   = document.getElementById('schema-name');
+      const schemaProjects = document.getElementById('schema-projects');
+      const schemaFilterId = document.getElementById('schema-filter-id');
+      const btnFetchSchema = document.getElementById('btn-fetch-schema');
+      const errSchemaName  = document.getElementById('err-schema-name');
+      const errSchemaProj  = document.getElementById('err-schema-projects');
+      const errSchemaCreds = document.getElementById('err-schema-creds');
+      const schemasListEl  = document.getElementById('schemas-list');
+      const schemasEmptyEl = document.getElementById('schemas-empty');
+
+      STORE_KEYS.SCHEMAS = 'jira_saved_schemas';
+
+      function schemaLogLine(text, cls = '') {
+        const line = document.createElement('span');
+        if (cls) line.className = cls;
+        line.textContent = text;
+        schemaLogEl.appendChild(line);
+        schemaLogEl.appendChild(document.createTextNode('\n'));
+        schemaLogEl.scrollTop = schemaLogEl.scrollHeight;
+      }
+      function schemaLogClear() { schemaLogEl.innerHTML = ''; }
+      document.getElementById('btn-clear-schema-log').addEventListener('click', schemaLogClear);
+
+      // Navigate to connection tab from schema tab
+      document.getElementById('goto-connection-from-schema').addEventListener('click', (e) => {
+        e.preventDefault();
+        const connTab = document.getElementById('tab-connection');
+        if (connTab) connTab.click();
+      });
+
+      // Enable/disable Fetch button based on required fields
+      function updateSchemaFetchBtn() {
+        const nameOk = schemaNameIn.value.trim().length > 0;
+        const projOk = schemaProjects.value.trim().length > 0;
+        btnFetchSchema.disabled = !(nameOk && projOk);
+      }
+      schemaNameIn.addEventListener('input', () => {
+        updateSchemaFetchBtn();
+        if (schemaNameIn.value.trim()) {
+          schemaNameIn.classList.remove('invalid');
+          errSchemaName.classList.remove('visible');
+        }
+      });
+      schemaProjects.addEventListener('input', () => {
+        updateSchemaFetchBtn();
+        if (schemaProjects.value.trim()) {
+          schemaProjects.classList.remove('invalid');
+          errSchemaProj.classList.remove('visible');
+        }
+      });
+
+      const SCHEMA_BTN_IDLE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> Fetch &amp; Save Schema`;
+
+      function resetSchemaBtn() {
+        btnFetchSchema.disabled = false;
+        btnFetchSchema.innerHTML = SCHEMA_BTN_IDLE;
+        updateSchemaFetchBtn();
+      }
+      function setSchemaBusy() {
+        btnFetchSchema.disabled = true;
+        btnFetchSchema.innerHTML = '<span class="spinner" aria-hidden="true"></span> Fetching\u2026';
+      }
+
+      // Fetch & Save Schema handler
+      btnFetchSchema.addEventListener('click', async () => {
+        const name     = schemaNameIn.value.trim();
+        const projects = schemaProjects.value.trim();
+        const filterId = schemaFilterId.value.trim();
+
+        schemaLogClear();
+        errSchemaCreds.classList.remove('visible');
+
+        // Validate
+        let ok = true;
+        if (!name) {
+          schemaNameIn.classList.add('invalid');
+          errSchemaName.classList.add('visible');
+          ok = false;
+        }
+        if (!projects) {
+          schemaProjects.classList.add('invalid');
+          errSchemaProj.classList.add('visible');
+          ok = false;
+        }
+        if (!ok) return;
+
+        // Check credentials exist
+        const hasUrl   = store.get(STORE_KEYS.JIRA_URL);
+        const hasEmail = store.get(STORE_KEYS.JIRA_EMAIL);
+        const hasTok   = store.get(STORE_KEYS.JIRA_API_TOKEN) || hasServerToken;
+        if (!IS_SERVED) {
+          schemaLogLine('\u26A0 File:// mode \u2014 schema fetching requires the local server. Run python server.py.', 'log-error');
+          return;
+        }
+        if (!hasUrl || !hasEmail || !hasTok) {
+          errSchemaCreds.classList.add('visible');
+          schemaLogLine('\u26A0 Jira credentials not configured. Save credentials in the Jira Connection tab first.', 'log-error');
+          return;
+        }
+
+        setSchemaBusy();
+        schemaLogLine(`[ ${new Date().toLocaleTimeString()} ] Fetching Jira field schema for "${name}"\u2026`, 'log-info');
+        schemaLogLine(`Projects: ${projects}`, 'log-muted');
+        if (filterId) schemaLogLine(`Filter ID: ${filterId}`, 'log-muted');
+
+        try {
+          const res = await fetch('/api/schemas', {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify({ name, projects, filter_id: filterId }),
+          });
+          let data;
+          try {
+            data = await res.json();
+          } catch {
+            schemaLogLine('\u2717 Server returned an empty or non-JSON response. Restart server.py and try again.', 'log-error');
+            resetSchemaBtn();
+            return;
+          }
+          if (data.ok) {
+            const verb = data.updated ? 'Updated' : 'Saved';
+            schemaLogLine(`\u2713 ${verb} schema "${data.name}" \u2192 docs/product/schemas/${data.filename}`, 'log-ok');
+            schemaLogLine(`   Found ${data.field_count} fields (${data.custom_count} custom)`, 'log-ok');
+            addSchemaEntry({
+              name:         data.name,
+              filename:     data.filename,
+              created_at:   data.created_at,
+              projects:     projects.split(',').map((p) => p.trim()).filter(Boolean),
+              field_count:  data.field_count,
+              custom_count: data.custom_count,
+            });
+          } else {
+            schemaLogLine(`\u2717 Error: ${data.error || 'Unknown error'}`, 'log-error');
+          }
+        } catch (err) {
+          schemaLogLine(`\u2717 Request failed: ${err.message}`, 'log-error');
+        }
+
+        resetSchemaBtn();
+      });
+
+      /* ── Schema list rendering ── */
+
+      function renderSchemas(entries) {
+        schemasListEl.innerHTML = '';
+        if (!entries || entries.length === 0) {
+          schemasEmptyEl.hidden = false;
+          return;
+        }
+        schemasEmptyEl.hidden = true;
+        entries.slice(0, 20).forEach(({ name, created_at, projects, field_count, custom_count, filename }) => {
+          const li = document.createElement('li');
+          li.style.cssText = 'flex-wrap:wrap;gap:8px;align-items:center;';
+
+          const tsSpan = document.createElement('span');
+          tsSpan.className = 'report-ts';
+          tsSpan.textContent = created_at || '';
+
+          // Freshness badge: warn if > 30 days old
+          const ageDays = created_at ? Math.floor((Date.now() - new Date(created_at).getTime()) / 86400000) : 0;
+
+          const nameSpan = document.createElement('span');
+          nameSpan.style.cssText = 'font-weight:600;color:var(--text);flex-shrink:0;';
+          nameSpan.textContent = name || '(unnamed)';
+
+          const infoSpan = document.createElement('span');
+          infoSpan.style.cssText = 'color:var(--text-muted);font-size:0.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;';
+          const projList = Array.isArray(projects) ? projects.join(', ') : '';
+          infoSpan.textContent = `${projList ? projList + ' \u00b7 ' : ''}${field_count ?? '?'} fields (${custom_count ?? '?'} custom)`;
+
+          if (ageDays > 30) {
+            const stale = document.createElement('span');
+            stale.className = 'status-badge badge-warning';
+            stale.style.cssText = 'font-size:0.68rem;padding:2px 8px;';
+            stale.textContent = 'Outdated';
+            stale.title = `Schema is ${ageDays} days old \u2014 consider re-fetching`;
+            infoSpan.appendChild(document.createTextNode(' '));
+            infoSpan.appendChild(stale);
+          }
+
+          const useBtn = document.createElement('button');
+          useBtn.className = 'btn btn-secondary';
+          useBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;';
+          useBtn.textContent = 'Use in Filter';
+          useBtn.type = 'button';
+          useBtn.title = 'Switch to Jira Filter tab and select this schema';
+          useBtn.addEventListener('click', () => {
+            // Pre-select schema in filter dropdown, switch to filter tab
+            const filterSchemaSelect = document.getElementById('filter-schema-select');
+            if (filterSchemaSelect) filterSchemaSelect.value = filename || '';
+            // Trigger change to auto-fill Story Points
+            filterSchemaSelect.dispatchEvent(new Event('change'));
+            // Pre-fill project keys in filter tab
+            if (projList) {
+              const projInput = document.getElementById('jira-project');
+              if (projInput && !projInput.value.trim()) projInput.value = projList;
+            }
+            const filterTab = document.getElementById('tab-filter');
+            if (filterTab) filterTab.click();
+          });
+
+          const removeBtn = document.createElement('button');
+          removeBtn.className = 'btn btn-danger';
+          removeBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;';
+          removeBtn.textContent = 'Remove';
+          removeBtn.type = 'button';
+          removeBtn.title = 'Delete this schema';
+          removeBtn.addEventListener('click', async () => {
+            removeBtn.disabled = true;
+            removeBtn.textContent = 'Removing\u2026';
+            if (IS_SERVED && filename) {
+              try {
+                await fetch(`/api/schemas/${encodeURIComponent(filename)}`, { method: 'DELETE' });
+              } catch { /* ignore network errors */ }
+            }
+            const saved = store.getJSON(STORE_KEYS.SCHEMAS) || [];
+            store.setJSON(STORE_KEYS.SCHEMAS, saved.filter((s) => s.name !== name));
+            loadSchemas();
+          });
+
+          li.appendChild(tsSpan);
+          li.appendChild(nameSpan);
+          li.appendChild(infoSpan);
+          li.appendChild(useBtn);
+          li.appendChild(removeBtn);
+          schemasListEl.appendChild(li);
+        });
+
+        // Also rebuild the filter-tab schema dropdown
+        rebuildFilterSchemaDropdown(entries);
+      }
+
+      // Shared data: schemas loaded from server, cached for use by filter dropdown
+      let _schemasCache = [];
+
+      async function loadSchemas() {
+        if (IS_SERVED) {
+          try {
+            const res  = await fetch('/api/schemas');
+            const data = await res.json();
+            if (Array.isArray(data.schemas)) {
+              const serverKeys = new Set(data.schemas.map((s) => s.created_at + s.name));
+              const local      = store.getJSON(STORE_KEYS.SCHEMAS) || [];
+              const localOnly  = local.filter((s) => !serverKeys.has(s.created_at + s.name));
+              const merged = [...data.schemas, ...localOnly];
+              _schemasCache = merged;
+              renderSchemas(merged);
+              return;
+            }
+          } catch {
+            // fall through
+          }
+        }
+        const local = store.getJSON(STORE_KEYS.SCHEMAS) || [];
+        _schemasCache = local;
+        renderSchemas(local);
+      }
+
+      function addSchemaEntry(entry) {
+        const saved = store.getJSON(STORE_KEYS.SCHEMAS) || [];
+        const idx   = saved.findIndex((s) => s.name.toLowerCase() === entry.name.toLowerCase());
+        if (idx !== -1) {
+          saved[idx] = entry;
+        } else {
+          saved.unshift(entry);
+        }
+        store.setJSON(STORE_KEYS.SCHEMAS, saved.slice(0, 20));
+        loadSchemas();
+      }
+
+      /* ── Schema dropdown in Jira Filter tab ── */
+
+      function rebuildFilterSchemaDropdown(entries) {
+        const sel = document.getElementById('filter-schema-select');
+        if (!sel) return;
+        const prevVal = sel.value;
+        sel.innerHTML = '<option value="">— No schema selected —</option>';
+        (entries || []).slice(0, 20).forEach(({ name, filename, projects, field_count, custom_count }) => {
+          const opt = document.createElement('option');
+          opt.value = filename || '';
+          const projList = Array.isArray(projects) ? projects.join(', ') : '';
+          opt.textContent = `${name}${projList ? ' (' + projList + ')' : ''} — ${field_count ?? '?'} fields`;
+          opt.dataset.filename = filename || '';
+          sel.appendChild(opt);
+        });
+        if (prevVal) sel.value = prevVal;
+      }
+
+      // When user selects a schema in filter tab, auto-fill Story Points
+      document.getElementById('filter-schema-select').addEventListener('change', async (e) => {
+        const filename  = e.target.value;
+        const infoPanel = document.getElementById('schema-field-info');
+        const spField   = document.getElementById('story-points-field');
+
+        if (!filename) {
+          infoPanel.hidden = true;
+          infoPanel.innerHTML = '';
+          return;
+        }
+
+        // Fetch schema file from server to get full field list
+        if (!IS_SERVED) {
+          infoPanel.hidden = true;
+          return;
+        }
+
+        try {
+          const res  = await fetch('/api/schemas');
+          const data = await res.json();
+          const schemas = data.schemas || [];
+          const match   = schemas.find((s) => s.filename === filename);
+
+          if (!match) {
+            infoPanel.hidden = true;
+            return;
+          }
+
+          // We need the full field list — fetch the raw JSON file
+          // The server doesn't serve the raw files, so we load from the list endpoint details
+          // For the auto-fill, we'll look at the schema's fields via a dedicated fetch
+          const schemaRes  = await fetch(`/api/schema-detail/${encodeURIComponent(filename)}`).catch(() => null);
+          let schemaDetail = null;
+          if (schemaRes && schemaRes.ok) {
+            schemaDetail = await schemaRes.json();
+          }
+
+          if (!schemaDetail || !schemaDetail.fields) {
+            // Fallback: show basic info from the list
+            infoPanel.hidden = false;
+            infoPanel.replaceChildren();
+            const title = document.createElement('strong');
+            title.textContent = match.name;
+            infoPanel.append(title, document.createTextNode(` — ${match.field_count} fields (${match.custom_count} custom)`));
+            return;
+          }
+
+          // Auto-detect and fill Story Points field
+          const spMatch = schemaDetail.fields.find((f) =>
+            f.custom && /story.?point/i.test(f.name)
+          );
+          if (spMatch && spField) {
+            spField.value = spMatch.id;
+            store.set(STORE_KEYS.JIRA_STORY_POINTS_FIELD, spMatch.id);
+          }
+
+          // Show field info panel with key custom fields
+          const customFields = schemaDetail.fields.filter((f) => f.custom);
+          const populated    = new Set(schemaDetail.populated_fields || []);
+          infoPanel.hidden = false;
+          infoPanel.replaceChildren();
+
+          const summary = document.createElement('div');
+          summary.style.marginBottom = '6px';
+          const summaryTitle = document.createElement('strong');
+          summaryTitle.textContent = match.name;
+          summary.append(summaryTitle, document.createTextNode(` — ${schemaDetail.fields.length} fields (${customFields.length} custom)`));
+          infoPanel.append(summary);
+
+          if (spMatch) {
+            const storyPoints = document.createElement('div');
+            storyPoints.style.color = 'var(--success)';
+            storyPoints.style.marginBottom = '6px';
+
+            const storyLabel = document.createElement('strong');
+            storyLabel.textContent = 'Story Points:';
+            const storyCode = document.createElement('code');
+            storyCode.textContent = spMatch.id;
+
+            storyPoints.append(
+              storyLabel,
+              document.createTextNode(' '),
+              storyCode,
+              document.createTextNode(` (${spMatch.name}) — auto-filled above`)
+            );
+            infoPanel.append(storyPoints);
+          }
+
+          const fieldLabel = document.createElement('div');
+          fieldLabel.style.color = 'var(--text-muted)';
+          fieldLabel.style.marginBottom = '4px';
+          fieldLabel.textContent = 'Key custom fields:';
+          infoPanel.append(fieldLabel);
+
+          const table = document.createElement('table');
+          table.style.width = '100%';
+          table.style.fontSize = '0.76rem';
+          table.style.borderCollapse = 'collapse';
+
+          const headerRow = document.createElement('tr');
+          headerRow.style.borderBottom = '1px solid var(--border)';
+          ['ID', 'Name', 'In Use'].forEach((label) => {
+            const th = document.createElement('th');
+            th.style.textAlign = 'left';
+            th.style.padding = '2px 6px';
+            th.textContent = label;
+            headerRow.append(th);
+          });
+          table.append(headerRow);
+
+          customFields.slice(0, 25).forEach((f) => {
+            const row = document.createElement('tr');
+            row.style.borderBottom = '1px solid var(--border)';
+
+            const idCell = document.createElement('td');
+            idCell.style.padding = '2px 6px';
+            idCell.style.fontFamily = 'monospace';
+            idCell.textContent = f.id;
+
+            const nameCell = document.createElement('td');
+            nameCell.style.padding = '2px 6px';
+            nameCell.textContent = f.name;
+
+            const inUseCell = document.createElement('td');
+            inUseCell.style.padding = '2px 6px';
+            const inUseValue = document.createElement('span');
+            inUseValue.style.color = populated.has(f.id) ? 'var(--success)' : 'var(--text-subtle)';
+            inUseValue.textContent = populated.has(f.id) ? 'Yes' : 'No';
+            inUseCell.append(inUseValue);
+
+            row.append(idCell, nameCell, inUseCell);
+            table.append(row);
+          });
+
+          if (customFields.length > 25) {
+            const moreRow = document.createElement('tr');
+            const moreCell = document.createElement('td');
+            moreCell.colSpan = 3;
+            moreCell.style.padding = '4px 6px';
+            moreCell.style.color = 'var(--text-subtle)';
+            moreCell.textContent = `... and ${customFields.length - 25} more`;
+            moreRow.append(moreCell);
+            table.append(moreRow);
+          }
+
+          infoPanel.append(table);
+        } catch {
+          infoPanel.hidden = true;
+        }
+      });
+
+      /* ═══════════════════════════════════════════════
          Generate Report button
       ═══════════════════════════════════════════════ */
       const btnGenerate  = document.getElementById('btn-generate');
@@ -2089,6 +2668,8 @@
         loadReports();
         // Filters list (async — fetches from /api/filters when served)
         loadFilters();
+        // Schemas list (async — fetches from /api/schemas when served)
+        loadSchemas();
         // SSL certificate status
         loadCertStatus();
       }

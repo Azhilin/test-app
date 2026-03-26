@@ -126,8 +126,8 @@ test-app/                          ← project root
 ├── requirements.txt               ← runtime dependencies
 ├── requirements-dev.txt           ← runtime + test dependencies
 ├── pyproject.toml                 ← pytest config + Playwright config
-├── .env.example                   ← configuration template
-├── python_setup.bat               ← one-time Windows setup script
+├── .env.example                   ← configuration template copied to .env during setup
+├── project_setup.bat              ← one-time Windows setup script
 └── start_app.bat                  ← Windows launcher (starts server.py)
 ```
 
@@ -497,8 +497,8 @@ Add a new method `_handle_<name>(self)` to the `Handler` class in `app/server.py
 ### First-time setup (Windows)
 
 ```bat
-:: Installs Python 3.12 (per-user), creates .venv, installs requirements.txt
-python_setup.bat
+:: Installs Python 3.12 (per-user), creates .venv, installs requirements.txt, bootstraps .env
+project_setup.bat
 ```
 
 ### Cross-platform setup

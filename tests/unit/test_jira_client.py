@@ -221,3 +221,61 @@ def test_fetch_sprint_data_orchestration(monkeypatch, mock_jira):
     assert len(sprints) == 1
     assert 10 in sprint_issues
     assert len(sprint_issues[10]) == 1
+
+
+def test_fetch_sprint_data_passes_filter_jql_to_each_sprint(monkeypatch, mock_jira):
+    sprints = [
+        make_sprint(10, "Sprint 10", "2026-01-01", "2026-01-14"),
+        make_sprint(11, "Sprint 11", "2026-01-15", "2026-01-28"),
+    ]
+
+    monkeypatch.setattr(jira_client, "get_board_id", lambda jira: 5)
+    monkeypatch.setattr(jira_client, "get_sprints", lambda jira, board_id: sprints)
+    monkeypatch.setattr(jira_client, "get_filter_jql", lambda jira: "project = TEST")
+
+    captured_calls = []
+
+    def _fake_get_issues(jira, board_id, sprint_id, jql=""):
+        captured_calls.append((board_id, sprint_id, jql))
+        return [{"key": f"T-{sprint_id}"}]
+
+    monkeypatch.setattr(jira_client, "get_issues_for_sprint", _fake_get_issues)
+
+    fetched_sprints, sprint_issues = jira_client.fetch_sprint_data(mock_jira)
+
+    assert fetched_sprints == sprints
+    assert captured_calls == [
+        (5, 10, "project = TEST"),
+        (5, 11, "project = TEST"),
+    ]
+    assert sprint_issues == {
+        10: [{"key": "T-10"}],
+        11: [{"key": "T-11"}],
+    }
+
+
+def test_fetch_sprint_data_skips_sprints_without_id(monkeypatch, mock_jira):
+    monkeypatch.setattr(jira_client, "get_board_id", lambda jira: 5)
+    monkeypatch.setattr(
+        jira_client,
+        "get_sprints",
+        lambda jira, board_id: [
+            {"name": "No Id Sprint"},
+            make_sprint(12, "Sprint 12", "2026-02-01", "2026-02-14"),
+        ],
+    )
+    monkeypatch.setattr(jira_client, "get_filter_jql", lambda jira: "")
+
+    captured_sprint_ids = []
+
+    def _fake_get_issues(jira, board_id, sprint_id, jql=""):
+        captured_sprint_ids.append(sprint_id)
+        return [{"key": "T-12"}]
+
+    monkeypatch.setattr(jira_client, "get_issues_for_sprint", _fake_get_issues)
+
+    sprints, sprint_issues = jira_client.fetch_sprint_data(mock_jira)
+
+    assert len(sprints) == 2
+    assert captured_sprint_ids == [12]
+    assert sprint_issues == {12: [{"key": "T-12"}]}

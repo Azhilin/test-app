@@ -71,6 +71,11 @@ def test_get_story_points_custom_field(monkeypatch):
     assert metrics._get_story_points(issue) == 13.0
 
 
+def test_get_story_points_nested_value_dict():
+    issue = {"key": "X-1", "fields": {"customfield_10016": {"value": 8}}}
+    assert metrics._get_story_points(issue) == 8.0
+
+
 # ---------------------------------------------------------------------------
 # compute_velocity
 # ---------------------------------------------------------------------------
@@ -180,6 +185,31 @@ def test_compute_cycle_time_even_median():
     ]
     result = metrics.compute_cycle_time(issues)
     assert result["median_days"] == 3.0
+
+
+def test_cycle_time_uses_first_done_after_in_progress():
+    issue = {
+        "key": "X-1",
+        "fields": {"status": {"name": "Done"}},
+        "changelog": {
+            "histories": [
+                {
+                    "created": "2026-03-05T00:00:00+00:00",
+                    "items": [{"field": "status", "fromString": "Review", "toString": "Done"}],
+                },
+                {
+                    "created": "2026-03-01T00:00:00+00:00",
+                    "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}],
+                },
+                {
+                    "created": "2026-03-03T00:00:00+00:00",
+                    "items": [{"field": "status", "fromString": "In Progress", "toString": "Done"}],
+                },
+            ]
+        },
+    }
+
+    assert metrics._cycle_time_from_changelog(issue) == 2.0
 
 
 # ---------------------------------------------------------------------------

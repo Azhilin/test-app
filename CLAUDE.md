@@ -6,6 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 AI Adoption Metrics Report tool — fetches sprint data from Jira Cloud and generates velocity/cycle-time reports in both HTML and Markdown formats.
 
+## Generated and Temporary Files
+
+- Place temporary, scratch, diagnostic, and AI-generated working files under `generated/`.
+- Do not create ad hoc files in the repository root or alongside source files unless the user explicitly asks.
+- Prefer `generated/tmp/` for one-off temporary files, `generated/debug/` for diagnostics, and `generated/reports/` for report artifacts.
+- Delete disposable generated files before finishing when they are no longer needed.
+- Do not move or duplicate real source files into `generated/`; this applies only to disposable/generated artifacts.
+
 ## Commands
 
 ```bash
@@ -33,13 +41,15 @@ python tests/tools/test_coverage.py --dry-run   # preview only
 
 **Data flow:** `main.py` orchestrates the pipeline: fetch Jira data → compute metrics → generate HTML + MD reports in parallel (ThreadPoolExecutor).
 
-Key modules (all under `app/`):
-- `app/config.py` — loads `.env` via python-dotenv, exposes all `JIRA_*` settings as module-level constants, validates required credentials
-- `app/jira_client.py` — wraps `atlassian-python-api` Jira client; fetches boards, sprints, issues, and changelogs. Supports optional `JIRA_FILTER_ID` to scope issues by saved filter JQL
-- `app/metrics.py` — pure computation: velocity per sprint (story points of done issues), cycle time stats (from changelog transitions), extensible `compute_custom_trends` placeholder
-- `app/report_html.py` — renders Jinja2 template (`templates/report.html.j2`) to HTML
-- `app/report_md.py` — builds Markdown report with tables and bar chart visualization
-- `server.py` — stdlib HTTP server serving `ui/index.html`, with `/api/test-connection` (POST) and `/api/generate` (SSE stream that runs `main.py` as subprocess)
+Key modules:
+
+- `app/core/config.py` — loads `.env` via python-dotenv, exposes `JIRA_*` settings and AI-label config, and detects `certs/jira_ca_bundle.pem`
+- `app/core/jira_client.py` — wraps `atlassian-python-api` Jira client; fetches boards, sprints, issues, and changelogs. Supports optional `JIRA_FILTER_ID` to scope issues by saved filter JQL
+- `app/core/metrics.py` — pure computation: velocity per sprint, cycle time stats, and AI adoption metrics
+- `app/reporters/report_html.py` — renders Jinja2 template (`templates/report.html.j2`) to HTML
+- `app/reporters/report_md.py` — builds the Markdown report
+- `app/server.py` — stdlib HTTP server for `ui/index.html` and API endpoints
+- `server.py` — thin entry point that delegates to `app.server.run()`
 
 **Reports output:** `generated/reports/<ISO-timestamp>/report.html` and `report.md`
 
