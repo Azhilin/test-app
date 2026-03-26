@@ -115,6 +115,8 @@ class Handler(BaseHTTPRequestHandler):
             self._serve_file(ROOT / "ui" / "index.html")
         elif path == "/api/generate":
             self._handle_generate()
+        elif path == "/api/config":
+            self._handle_get_config()
         elif path.startswith("/generated/reports/"):
             rel = path.lstrip("/")
             self._serve_file(ROOT / rel)
@@ -127,6 +129,8 @@ class Handler(BaseHTTPRequestHandler):
 
         if path == "/api/test-connection":
             self._handle_test_connection()
+        elif path == "/api/config":
+            self._handle_post_config()
         else:
             self.send_response(404)
             self.end_headers()
@@ -176,6 +180,91 @@ class Handler(BaseHTTPRequestHandler):
             })
         except Exception as exc:  # noqa: BLE001
             self._send_json(500, {"ok": False, "error": str(exc)})
+
+    def _handle_get_config(self) -> None:
+        """Return current .env values; JIRA_API_TOKEN is masked as '***'."""
+        env_path = ROOT / ".env"
+        config: dict[str, str] = {}
+        if env_path.exists():
+            for line in env_path.read_text(encoding="utf-8").splitlines():
+                stripped = line.strip()
+                if stripped.startswith("#") or "=" not in stripped:
+                    continue
+                key, _, val = stripped.partition("=")
+                config[key.strip()] = val.strip()
+
+        keys = [
+            "JIRA_URL", "JIRA_EMAIL", "JIRA_API_TOKEN",
+            "JIRA_BOARD_ID", "JIRA_SPRINT_COUNT", "JIRA_STORY_POINTS_FIELD",
+            "JIRA_FILTER_ID", "JIRA_PROJECT", "JIRA_TEAM_ID",
+            "JIRA_ISSUE_TYPES", "JIRA_FILTER_STATUS",
+            "JIRA_CLOSED_SPRINTS_ONLY", "JIRA_FILTER_PAGE_SIZE",
+        ]
+        out: dict[str, str] = {}
+        for k in keys:
+            v = config.get(k, "")
+            if k == "JIRA_API_TOKEN" and v:
+                out[k] = "***"
+            elif v:
+                out[k] = v
+
+        configured = bool(out.get("JIRA_URL") and out.get("JIRA_EMAIL") and out.get("JIRA_API_TOKEN"))
+        self._send_json(200, {"config": out, "configured": configured})
+
+    def _handle_post_config(self) -> None:
+        """Write JIRA_URL, JIRA_EMAIL, JIRA_API_TOKEN to .env on disk."""
+        body = self._read_json_body()
+        if body is None:
+            self._send_json(400, {"ok": False, "error": "Invalid JSON body"})
+            return
+
+        updates: dict[str, str] = {}
+        for key in ("JIRA_URL", "JIRA_EMAIL", "JIRA_API_TOKEN"):
+            val = (body.get(key) or "").strip()
+            if val and val != "***":
+                updates[key] = val
+
+        try:
+            self._write_env_fields(updates)
+            self._send_json(200, {"ok": True})
+        except Exception as exc:  # noqa: BLE001
+            self._send_json(500, {"ok": False, "error": str(exc)})
+
+    def _write_env_fields(self, updates: dict[str, str]) -> None:
+        """Update or add key=value pairs in .env, creating from .env.example if absent."""
+        env_path     = ROOT / ".env"
+        example_path = ROOT / ".env.example"
+
+        if env_path.exists():
+            lines = env_path.read_text(encoding="utf-8").splitlines()
+        elif example_path.exists():
+            lines = example_path.read_text(encoding="utf-8").splitlines()
+        else:
+            lines = []
+
+        written = set()
+        new_lines: list[str] = []
+        for line in lines:
+            stripped = line.strip()
+            # Check if this line (possibly commented) sets one of our keys
+            check = stripped.lstrip("# ")
+            matched_key = None
+            for key in updates:
+                if check.startswith(key + "=") or check == key:
+                    matched_key = key
+                    break
+            if matched_key and matched_key not in written:
+                new_lines.append(f"{matched_key}={updates[matched_key]}")
+                written.add(matched_key)
+            else:
+                new_lines.append(line)
+
+        # Append any keys that were not found in the existing file
+        for key, val in updates.items():
+            if key not in written:
+                new_lines.append(f"{key}={val}")
+
+        env_path.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
 
     def _handle_generate(self) -> None:
         """Run main.py and stream stdout/stderr as Server-Sent Events."""

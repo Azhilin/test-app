@@ -13,7 +13,7 @@ import pytest
 pytestmark = pytest.mark.e2e
 
 PYTHON = sys.executable
-PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 
 def test_cli_clean_via_subprocess(tmp_path):
