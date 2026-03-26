@@ -98,7 +98,7 @@ jobs:
        vars.ENABLE_UNIT == 'true' &&
        (vars.RESTRICT_TO_MASTER != 'true' || github.ref == 'refs/heads/master'))
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v5
         with:
@@ -133,7 +133,7 @@ jobs:
        vars.ENABLE_COMPONENT == 'true' &&
        (vars.RESTRICT_TO_MASTER != 'true' || github.ref == 'refs/heads/master'))
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v5
         with:
@@ -172,7 +172,7 @@ jobs:
       JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
       JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v5
         with:
@@ -211,7 +211,7 @@ jobs:
       JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
       JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v5
         with:
@@ -266,7 +266,7 @@ jobs:
        vars.ENABLE_WINDOWS_TESTS == 'true' &&
        (vars.RESTRICT_TO_MASTER != 'true' || github.ref == 'refs/heads/master'))
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v5
         with:
@@ -303,7 +303,7 @@ jobs:
        vars.ENABLE_SECURITY_SCAN == 'true' &&
        (vars.RESTRICT_TO_MASTER != 'true' || github.ref == 'refs/heads/master'))
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: actions/setup-python@v5
         with:
