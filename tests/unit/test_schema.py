@@ -1,4 +1,5 @@
 """Tests for app.core.schema: load, save, delete, query field schemas."""
+
 from __future__ import annotations
 
 import json
@@ -13,6 +14,7 @@ pytestmark = pytest.mark.unit
 # ---------------------------------------------------------------------------
 # load_schemas
 # ---------------------------------------------------------------------------
+
 
 def test_load_schemas_returns_list_from_file(tmp_path):
     p = tmp_path / "schemas.json"
@@ -38,6 +40,7 @@ def test_load_schemas_invalid_json(tmp_path):
 # get_schema
 # ---------------------------------------------------------------------------
 
+
 def test_get_schema_found(tmp_path):
     p = tmp_path / "schemas.json"
     p.write_text(json.dumps({"schemas": [{"schema_name": "X", "fields": {}}]}), encoding="utf-8")
@@ -55,12 +58,15 @@ def test_get_schema_not_found(tmp_path):
 # get_active_schema
 # ---------------------------------------------------------------------------
 
+
 def test_get_active_schema_by_name(tmp_path):
     dn = schema_mod.DEFAULT_SCHEMA_NAME
-    data = {"schemas": [
-        {"schema_name": dn, "fields": {}},
-        {"schema_name": "Custom", "fields": {"story_points": {"id": "cf_99"}}},
-    ]}
+    data = {
+        "schemas": [
+            {"schema_name": dn, "fields": {}},
+            {"schema_name": "Custom", "fields": {"story_points": {"id": "cf_99"}}},
+        ]
+    }
     p = tmp_path / "schemas.json"
     p.write_text(json.dumps(data), encoding="utf-8")
     result = schema_mod.get_active_schema("Custom", p)
@@ -92,6 +98,7 @@ def test_get_active_schema_hardcoded_uses_builtin_story_points(tmp_path):
 # save_schema
 # ---------------------------------------------------------------------------
 
+
 def test_save_schema_creates_file(tmp_path):
     p = tmp_path / "sub" / "schemas.json"
     schema_mod.save_schema({"schema_name": "New", "fields": {}}, p)
@@ -121,13 +128,21 @@ def test_save_schema_appends_new(tmp_path):
 # delete_schema
 # ---------------------------------------------------------------------------
 
+
 def test_delete_schema_removes_entry(tmp_path):
     p = tmp_path / "schemas.json"
     dn = schema_mod.DEFAULT_SCHEMA_NAME
-    p.write_text(json.dumps({"schemas": [
-        {"schema_name": dn},
-        {"schema_name": "Custom"},
-    ]}), encoding="utf-8")
+    p.write_text(
+        json.dumps(
+            {
+                "schemas": [
+                    {"schema_name": dn},
+                    {"schema_name": "Custom"},
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
     assert schema_mod.delete_schema("Custom", p) is True
     data = json.loads(p.read_text(encoding="utf-8"))
     assert len(data["schemas"]) == 1
@@ -150,6 +165,7 @@ def test_delete_schema_not_found(tmp_path):
 # get_field_id / get_field_jql_name
 # ---------------------------------------------------------------------------
 
+
 def test_get_field_id():
     schema = {"fields": {"story_points": {"id": "cf_100", "type": "number"}}}
     assert schema_mod.get_field_id(schema, "story_points") == "cf_100"
@@ -169,6 +185,7 @@ def test_get_field_jql_name_falls_back_to_id():
 # ---------------------------------------------------------------------------
 # get_done_statuses / get_in_progress_statuses
 # ---------------------------------------------------------------------------
+
 
 def test_get_done_statuses():
     schema = {"status_mapping": {"done_statuses": ["Done", "Finished"]}}
@@ -191,6 +208,7 @@ def test_get_in_progress_statuses_defaults():
 # ---------------------------------------------------------------------------
 # build_schema_from_fields
 # ---------------------------------------------------------------------------
+
 
 def test_build_schema_from_fields_detects_sprint():
     jira_fields = [

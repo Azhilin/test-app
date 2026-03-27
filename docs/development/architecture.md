@@ -402,10 +402,10 @@ Current counts (run `python tests/tools/test_coverage.py` to refresh):
 
 | Layer | Count | Files |
 |-------|-------|-------|
-| Unit | 153 | test_cert_validation, test_config, test_imports, test_jira_client, test_main_helpers, test_metrics, test_schema |
-| Component | 128 | test_contracts, test_report_html, test_report_md, test_server, test_server_config |
+| Unit | 178 | test_cert_validation, test_config, test_imports, test_jira_client, test_main_helpers, test_metrics, test_schema |
+| Component | 129 | test_contracts, test_report_html, test_report_md, test_server, test_server_config |
 | Integration | 9 | test_integration, test_cli_server |
-| E2E | 47 | test_e2e_connection, test_e2e_ui |
+| E2E | 66 | test_dau_survey_ui, test_e2e_connection, test_e2e_ui |
 
 ### Running tests
 
