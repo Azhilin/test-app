@@ -561,8 +561,9 @@ class Handler(BaseHTTPRequestHandler):
                     sample_issue_key = issue.get("key")
                     issue_fields = issue.get("fields") or {}
                     populated_fields = [k for k, v in issue_fields.items() if v is not None]
-            except (urllib.error.HTTPError, urllib.error.URLError, OSError):
-                pass
+            except (urllib.error.HTTPError, urllib.error.URLError, OSError) as exc:
+                # Best-effort sampling of a recent issue; failure is non-fatal but logged for debugging.
+                print(f"Warning: failed to fetch sample Jira issue for schema inference: {exc}", file=sys.stderr)
 
             filter_jql = None
             if filter_id:
