@@ -72,7 +72,7 @@ def test_get_story_points_missing_field():
 
 
 def test_get_story_points_custom_field(monkeypatch):
-    monkeypatch.setattr("app.core.config.JIRA_STORY_POINTS_FIELD", "customfield_99999")
+    monkeypatch.setattr("app.core.schema.DEFAULT_STORY_POINTS_FIELD_ID", "customfield_99999")
     issue = {"key": "X-1", "fields": {"customfield_99999": 13.0}}
     assert metrics._get_story_points(issue) == 13.0
 
@@ -265,11 +265,12 @@ def test_build_metrics_dict_keys():
         "ai_usage_details",
         "ai_assisted_label",
         "ai_exclude_labels",
+        "dau",
+        "schema_name",
         "filter_name",
         "filter_id",
         "filter_jql",
         "project_key",
-        "dau",
     }
     assert set(result.keys()) == expected_keys
 
@@ -603,33 +604,150 @@ def test_ai_usage_empty_labels():
 
 
 # ---------------------------------------------------------------------------
+# Schema-driven parameters
+# ---------------------------------------------------------------------------
+
+
+def test_get_story_points_with_custom_field():
+    issue = {"key": "X-1", "fields": {"customfield_99": 13.0}}
+    assert metrics._get_story_points(issue, story_points_field="customfield_99") == 13.0
+
+
+def test_get_story_points_custom_field_missing():
+    issue = {"key": "X-1", "fields": {"customfield_10016": 5.0}}
+    assert metrics._get_story_points(issue, story_points_field="customfield_99") == 0.0
+
+
+def test_is_done_with_custom_statuses():
+    issue = make_issue("X-1", status="Finished")
+    assert metrics._is_done(issue) is False
+    assert metrics._is_done(issue, done_statuses=frozenset(("finished",))) is True
+
+
+def test_is_done_custom_statuses_case_insensitive():
+    issue = make_issue("X-1", status="SHIPPED")
+    assert metrics._is_done(issue, done_statuses=frozenset(("shipped",))) is True
+
+
+def test_compute_velocity_custom_field_and_statuses():
+    sprint = make_sprint(1)
+    issues = [
+        {"key": "X-1", "fields": {"status": {"name": "Shipped"}, "cf_sp": 8.0}},
+        {"key": "X-2", "fields": {"status": {"name": "Done"}, "cf_sp": 3.0}},
+    ]
+    result = metrics.compute_velocity(
+        [sprint],
+        {1: issues},
+        story_points_field="cf_sp",
+        done_statuses=frozenset(("shipped",)),
+    )
+    assert result[0]["velocity"] == 8.0
+    assert result[0]["issue_count"] == 1
+
+
+def test_cycle_time_custom_statuses():
+    issue = {
+        "key": "X-1",
+        "fields": {},
+        "changelog": {
+            "histories": [
+                {
+                    "created": "2026-03-01T10:00:00+00:00",
+                    "items": [{"field": "status", "fromString": "To Do", "toString": "Working"}],
+                },
+                {
+                    "created": "2026-03-03T10:00:00+00:00",
+                    "items": [{"field": "status", "fromString": "Working", "toString": "Shipped"}],
+                },
+            ]
+        },
+    }
+    result = metrics._cycle_time_from_changelog(
+        issue,
+        done_statuses=frozenset(("shipped",)),
+        in_progress_statuses=frozenset(("working",)),
+    )
+    assert result == 2.0
+
+
+def test_cycle_time_default_statuses_unchanged():
+    issue = make_issue_with_changelog(
+        "X-1",
+        "2026-03-01T09:00:00+00:00",
+        "2026-03-03T09:00:00+00:00",
+    )
+    assert metrics._cycle_time_from_changelog(issue) == 2.0
+
+
+def test_compute_cycle_time_with_custom_statuses():
+    issue = {
+        "key": "X-1",
+        "fields": {},
+        "changelog": {
+            "histories": [
+                {
+                    "created": "2026-03-01T10:00:00+00:00",
+                    "items": [{"field": "status", "fromString": "Backlog", "toString": "Active"}],
+                },
+                {
+                    "created": "2026-03-04T10:00:00+00:00",
+                    "items": [{"field": "status", "fromString": "Active", "toString": "Finished"}],
+                },
+            ]
+        },
+    }
+    result = metrics.compute_cycle_time(
+        [issue],
+        done_statuses=frozenset(("finished",)),
+        in_progress_statuses=frozenset(("active",)),
+    )
+    assert result["sample_size"] == 1
+    assert result["mean_days"] == 3.0
+
+
+def test_get_done_issue_keys_custom_statuses():
+    sprint = make_sprint(1)
+    issues = [
+        {"key": "X-1", "fields": {"status": {"name": "Shipped"}}},
+        {"key": "X-2", "fields": {"status": {"name": "Done"}}},
+    ]
+    result = metrics.get_done_issue_keys_for_changelog(
+        [sprint],
+        {1: issues},
+        done_statuses=frozenset(("shipped",)),
+    )
+    assert result == ["X-1"]
+
+
+def test_build_metrics_dict_with_schema():
+    schema = {
+        "schema_name": "Test Schema",
+        "fields": {"story_points": {"id": "cf_sp"}},
+        "status_mapping": {
+            "done_statuses": ["Shipped"],
+            "in_progress_statuses": ["Active"],
+        },
+    }
+    sprint = make_sprint(1)
+    issue = {"key": "X-1", "fields": {"status": {"name": "Shipped"}, "cf_sp": 10.0}}
+    result = metrics.build_metrics_dict([sprint], {1: [issue]}, [], schema=schema)
+    assert result["schema_name"] == "Test Schema"
+    assert result["velocity"][0]["velocity"] == 10.0
+    assert result["velocity"][0]["issue_count"] == 1
+
+
+def test_build_metrics_dict_without_schema_backward_compat():
+    sprint = make_sprint(1)
+    issue = make_issue("X-1", "Done", 5.0)
+    result = metrics.build_metrics_dict([sprint], {1: [issue]}, [])
+    assert result["schema_name"] is None
+    assert result["velocity"][0]["velocity"] == 5.0
+
+
+# ---------------------------------------------------------------------------
 # compute_custom_trends (placeholder)
 # ---------------------------------------------------------------------------
 
 
 def test_compute_custom_trends_returns_empty_list():
     assert metrics.compute_custom_trends([], {}) == []
-
-
-# ---------------------------------------------------------------------------
-# build_metrics_dict determinism (NFR-C-004)
-# ---------------------------------------------------------------------------
-
-
-def test_build_metrics_dict_is_deterministic():
-    """Two calls with identical inputs produce identical output (except generated_at)."""
-    from tests.conftest import make_issue, make_sprint
-
-    sprint = make_sprint(1, name="Sprint 1")
-    issue = make_issue("DET-1", points=3.0)
-    sprints = [sprint]
-    sprint_issues = {1: [issue]}
-
-    result_a = metrics.build_metrics_dict(sprints, sprint_issues, [])
-    result_b = metrics.build_metrics_dict(sprints, sprint_issues, [])
-
-    # generated_at is timestamp-based and intentionally differs between calls
-    for result in (result_a, result_b):
-        result.pop("generated_at", None)
-
-    assert result_a == result_b

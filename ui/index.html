@@ -664,6 +664,46 @@
         </p>
       </div>
 
+      <!-- Schema Management -->
+      <div class="card">
+        <div class="card-title">Jira Field Schema</div>
+        <div class="card-subtitle">
+          Select a field mapping schema for your Jira instance, or fetch one automatically
+          from the connected Jira server.
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="schema-select">Active Schema</label>
+          <select class="form-input" id="schema-select">
+            <option value="">Loading…</option>
+          </select>
+          <p class="form-helper">Field mapping used for metrics calculations and JQL building. Change this if your Jira instance uses different custom field IDs.</p>
+        </div>
+
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+          <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;">
+            <label class="form-label" for="schema-name-input">New Schema Name</label>
+            <input
+              class="form-input"
+              type="text"
+              id="schema-name-input"
+              placeholder="e.g. My Company Jira"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="100"
+            />
+          </div>
+          <button class="btn btn-primary" id="btn-fetch-schema" type="button" style="font-size:0.95rem;padding:11px 18px;white-space:nowrap;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/>
+              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+            </svg>
+            Fetch Schema from Jira
+          </button>
+        </div>
+        <div id="schema-status" style="margin-top:8px;font-size:0.92rem;" aria-live="polite"></div>
+      </div>
+
       <div class="card">
         <div class="card-title">Jira Filter &amp; Query Options</div>
         <div class="card-subtitle">
@@ -1250,6 +1290,7 @@
         JIRA_FILTER_PAGE_SIZE:     'jira_filter_page_size',
         REPORTS:                   'jira_reports_list',
         FILTERS:                   'jira_saved_filters',
+        JIRA_SCHEMA:               'jira_schema_name',
       };
 
       const store = {
@@ -1561,9 +1602,11 @@
         const teamIds   = rawTeamId.split(',').map((t) => t.trim()).filter(Boolean);
         if (teamIds.length) {
           const quoted = teamIds.map(jqlQuote);
+          const teamField = getActiveTeamJqlName();
+          const teamJql = `"${teamField}"`;
           clauses.push(quoted.length === 1
-            ? `"Team[Team]" = ${quoted[0]}`
-            : `"Team[Team]" IN (${quoted.join(', ')})`);
+            ? `${teamJql} = ${quoted[0]}`
+            : `${teamJql} IN (${quoted.join(', ')})`);
         }
 
         const rawStatus   = (params.JIRA_FILTER_STATUS || 'Done').trim();
@@ -1614,6 +1657,7 @@
           JIRA_ISSUE_TYPES:         issueTypes,
           JIRA_FILTER_STATUS:       filterStatus || 'Done',
           JIRA_CLOSED_SPRINTS_ONLY: closedSprints,
+          schema_name:              store.get(STORE_KEYS.JIRA_SCHEMA) || '',
         };
 
         if (IS_SERVED) {
@@ -1682,448 +1726,127 @@
       document.getElementById('btn-clear-filter-log').addEventListener('click', filterLogClear);
 
       /* ═══════════════════════════════════════════════
-         Jira Schema tab
+         Schema Management
       ═══════════════════════════════════════════════ */
-      const schemaLogEl    = document.getElementById('schema-log-output');
-      const schemaNameIn   = document.getElementById('schema-name');
-      const schemaProjects = document.getElementById('schema-projects');
-      const schemaFilterId = document.getElementById('schema-filter-id');
-      const btnFetchSchema = document.getElementById('btn-fetch-schema');
-      const errSchemaName  = document.getElementById('err-schema-name');
-      const errSchemaProj  = document.getElementById('err-schema-projects');
-      const errSchemaCreds = document.getElementById('err-schema-creds');
-      const schemasListEl  = document.getElementById('schemas-list');
-      const schemasEmptyEl = document.getElementById('schemas-empty');
+      const schemaSelect    = document.getElementById('schema-select');
+      const schemaNameInput = document.getElementById('schema-name-input');
+      const btnFetchSchema  = document.getElementById('btn-fetch-schema');
+      const schemaStatusEl  = document.getElementById('schema-status');
 
-      STORE_KEYS.SCHEMAS = 'jira_saved_schemas';
+      let _activeSchemaCache = null;
 
-      function schemaLogLine(text, cls = '') {
-        const line = document.createElement('span');
-        if (cls) line.className = cls;
-        line.textContent = text;
-        schemaLogEl.appendChild(line);
-        schemaLogEl.appendChild(document.createTextNode('\n'));
-        schemaLogEl.scrollTop = schemaLogEl.scrollHeight;
+      function schemaStatus(msg, isError) {
+        schemaStatusEl.textContent = msg;
+        schemaStatusEl.style.color = isError ? 'var(--danger, #d32f2f)' : 'var(--success, #2e7d32)';
       }
-      function schemaLogClear() { schemaLogEl.innerHTML = ''; }
-      document.getElementById('btn-clear-schema-log').addEventListener('click', schemaLogClear);
-
-      // Navigate to connection tab from schema tab
-      document.getElementById('goto-connection-from-schema').addEventListener('click', (e) => {
-        e.preventDefault();
-        const connTab = document.getElementById('tab-connection');
-        if (connTab) connTab.click();
-      });
-
-      // Enable/disable Fetch button based on required fields
-      function updateSchemaFetchBtn() {
-        const nameOk = schemaNameIn.value.trim().length > 0;
-        const projOk = schemaProjects.value.trim().length > 0;
-        btnFetchSchema.disabled = !(nameOk && projOk);
-      }
-      schemaNameIn.addEventListener('input', () => {
-        updateSchemaFetchBtn();
-        if (schemaNameIn.value.trim()) {
-          schemaNameIn.classList.remove('invalid');
-          errSchemaName.classList.remove('visible');
-        }
-      });
-      schemaProjects.addEventListener('input', () => {
-        updateSchemaFetchBtn();
-        if (schemaProjects.value.trim()) {
-          schemaProjects.classList.remove('invalid');
-          errSchemaProj.classList.remove('visible');
-        }
-      });
-
-      const SCHEMA_BTN_IDLE = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg> Fetch &amp; Save Schema`;
-
-      function resetSchemaBtn() {
-        btnFetchSchema.disabled = false;
-        btnFetchSchema.innerHTML = SCHEMA_BTN_IDLE;
-        updateSchemaFetchBtn();
-      }
-      function setSchemaBusy() {
-        btnFetchSchema.disabled = true;
-        btnFetchSchema.innerHTML = '<span class="spinner" aria-hidden="true"></span> Fetching\u2026';
-      }
-
-      // Fetch & Save Schema handler
-      btnFetchSchema.addEventListener('click', async () => {
-        const name     = schemaNameIn.value.trim();
-        const projects = schemaProjects.value.trim();
-        const filterId = schemaFilterId.value.trim();
-
-        schemaLogClear();
-        errSchemaCreds.classList.remove('visible');
-
-        // Validate
-        let ok = true;
-        if (!name) {
-          schemaNameIn.classList.add('invalid');
-          errSchemaName.classList.add('visible');
-          ok = false;
-        }
-        if (!projects) {
-          schemaProjects.classList.add('invalid');
-          errSchemaProj.classList.add('visible');
-          ok = false;
-        }
-        if (!ok) return;
-
-        // Check credentials exist
-        const hasUrl   = store.get(STORE_KEYS.JIRA_URL);
-        const hasEmail = store.get(STORE_KEYS.JIRA_EMAIL);
-        const hasTok   = store.get(STORE_KEYS.JIRA_API_TOKEN) || hasServerToken;
-        if (!IS_SERVED) {
-          schemaLogLine('\u26A0 File:// mode \u2014 schema fetching requires the local server. Run python server.py.', 'log-error');
-          return;
-        }
-        if (!hasUrl || !hasEmail || !hasTok) {
-          errSchemaCreds.classList.add('visible');
-          schemaLogLine('\u26A0 Jira credentials not configured. Save credentials in the Jira Connection tab first.', 'log-error');
-          return;
-        }
-
-        setSchemaBusy();
-        schemaLogLine(`[ ${new Date().toLocaleTimeString()} ] Fetching Jira field schema for "${name}"\u2026`, 'log-info');
-        schemaLogLine(`Projects: ${projects}`, 'log-muted');
-        if (filterId) schemaLogLine(`Filter ID: ${filterId}`, 'log-muted');
-
-        try {
-          const res = await fetch('/api/schemas', {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ name, projects, filter_id: filterId }),
-          });
-          let data;
-          try {
-            data = await res.json();
-          } catch {
-            schemaLogLine('\u2717 Server returned an empty or non-JSON response. Restart server.py and try again.', 'log-error');
-            resetSchemaBtn();
-            return;
-          }
-          if (data.ok) {
-            const verb = data.updated ? 'Updated' : 'Saved';
-            schemaLogLine(`\u2713 ${verb} schema "${data.name}" \u2192 docs/product/schemas/${data.filename}`, 'log-ok');
-            schemaLogLine(`   Found ${data.field_count} fields (${data.custom_count} custom)`, 'log-ok');
-            addSchemaEntry({
-              name:         data.name,
-              filename:     data.filename,
-              created_at:   data.created_at,
-              projects:     projects.split(',').map((p) => p.trim()).filter(Boolean),
-              field_count:  data.field_count,
-              custom_count: data.custom_count,
-            });
-          } else {
-            schemaLogLine(`\u2717 Error: ${data.error || 'Unknown error'}`, 'log-error');
-          }
-        } catch (err) {
-          schemaLogLine(`\u2717 Request failed: ${err.message}`, 'log-error');
-        }
-
-        resetSchemaBtn();
-      });
-
-      /* ── Schema list rendering ── */
-
-      function renderSchemas(entries) {
-        schemasListEl.innerHTML = '';
-        if (!entries || entries.length === 0) {
-          schemasEmptyEl.hidden = false;
-          return;
-        }
-        schemasEmptyEl.hidden = true;
-        entries.slice(0, 20).forEach(({ name, created_at, projects, field_count, custom_count, filename }) => {
-          const li = document.createElement('li');
-          li.style.cssText = 'flex-wrap:wrap;gap:8px;align-items:center;';
-
-          const tsSpan = document.createElement('span');
-          tsSpan.className = 'report-ts';
-          tsSpan.textContent = created_at || '';
-
-          // Freshness badge: warn if > 30 days old
-          const ageDays = created_at ? Math.floor((Date.now() - new Date(created_at).getTime()) / 86400000) : 0;
-
-          const nameSpan = document.createElement('span');
-          nameSpan.style.cssText = 'font-weight:600;color:var(--text);flex-shrink:0;';
-          nameSpan.textContent = name || '(unnamed)';
-
-          const infoSpan = document.createElement('span');
-          infoSpan.style.cssText = 'color:var(--text-muted);font-size:0.78rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;';
-          const projList = Array.isArray(projects) ? projects.join(', ') : '';
-          infoSpan.textContent = `${projList ? projList + ' \u00b7 ' : ''}${field_count ?? '?'} fields (${custom_count ?? '?'} custom)`;
-
-          if (ageDays > 30) {
-            const stale = document.createElement('span');
-            stale.className = 'status-badge badge-warning';
-            stale.style.cssText = 'font-size:0.68rem;padding:2px 8px;';
-            stale.textContent = 'Outdated';
-            stale.title = `Schema is ${ageDays} days old \u2014 consider re-fetching`;
-            infoSpan.appendChild(document.createTextNode(' '));
-            infoSpan.appendChild(stale);
-          }
-
-          const useBtn = document.createElement('button');
-          useBtn.className = 'btn btn-secondary';
-          useBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;';
-          useBtn.textContent = 'Use in Filter';
-          useBtn.type = 'button';
-          useBtn.title = 'Switch to Jira Filter tab and select this schema';
-          useBtn.addEventListener('click', () => {
-            // Pre-select schema in filter dropdown, switch to filter tab
-            const filterSchemaSelect = document.getElementById('filter-schema-select');
-            if (filterSchemaSelect) filterSchemaSelect.value = filename || '';
-            // Trigger change to auto-fill Story Points
-            filterSchemaSelect.dispatchEvent(new Event('change'));
-            // Pre-fill project keys in filter tab
-            if (projList) {
-              const projInput = document.getElementById('jira-project');
-              if (projInput && !projInput.value.trim()) projInput.value = projList;
-            }
-            const filterTab = document.getElementById('tab-filter');
-            if (filterTab) filterTab.click();
-          });
-
-          const removeBtn = document.createElement('button');
-          removeBtn.className = 'btn btn-danger';
-          removeBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;';
-          removeBtn.textContent = 'Remove';
-          removeBtn.type = 'button';
-          removeBtn.title = 'Delete this schema';
-          removeBtn.addEventListener('click', async () => {
-            removeBtn.disabled = true;
-            removeBtn.textContent = 'Removing\u2026';
-            if (IS_SERVED && filename) {
-              try {
-                await fetch(`/api/schemas/${encodeURIComponent(filename)}`, { method: 'DELETE' });
-              } catch { /* ignore network errors */ }
-            }
-            const saved = store.getJSON(STORE_KEYS.SCHEMAS) || [];
-            store.setJSON(STORE_KEYS.SCHEMAS, saved.filter((s) => s.name !== name));
-            loadSchemas();
-          });
-
-          li.appendChild(tsSpan);
-          li.appendChild(nameSpan);
-          li.appendChild(infoSpan);
-          li.appendChild(useBtn);
-          li.appendChild(removeBtn);
-          schemasListEl.appendChild(li);
-        });
-
-        // Also rebuild the filter-tab schema dropdown
-        rebuildFilterSchemaDropdown(entries);
-      }
-
-      // Shared data: schemas loaded from server, cached for use by filter dropdown
-      let _schemasCache = [];
 
       async function loadSchemas() {
-        if (IS_SERVED) {
-          try {
-            const res  = await fetch('/api/schemas');
-            const data = await res.json();
-            if (Array.isArray(data.schemas)) {
-              const serverKeys = new Set(data.schemas.map((s) => s.created_at + s.name));
-              const local      = store.getJSON(STORE_KEYS.SCHEMAS) || [];
-              const localOnly  = local.filter((s) => !serverKeys.has(s.created_at + s.name));
-              const merged = [...data.schemas, ...localOnly];
-              _schemasCache = merged;
-              renderSchemas(merged);
-              return;
-            }
-          } catch {
-            // fall through
-          }
-        }
-        const local = store.getJSON(STORE_KEYS.SCHEMAS) || [];
-        _schemasCache = local;
-        renderSchemas(local);
-      }
-
-      function addSchemaEntry(entry) {
-        const saved = store.getJSON(STORE_KEYS.SCHEMAS) || [];
-        const idx   = saved.findIndex((s) => s.name.toLowerCase() === entry.name.toLowerCase());
-        if (idx !== -1) {
-          saved[idx] = entry;
-        } else {
-          saved.unshift(entry);
-        }
-        store.setJSON(STORE_KEYS.SCHEMAS, saved.slice(0, 20));
-        loadSchemas();
-      }
-
-      /* ── Schema dropdown in Jira Filter tab ── */
-
-      function rebuildFilterSchemaDropdown(entries) {
-        const sel = document.getElementById('filter-schema-select');
-        if (!sel) return;
-        const prevVal = sel.value;
-        sel.innerHTML = '<option value="">— No schema selected —</option>';
-        (entries || []).slice(0, 20).forEach(({ name, filename, projects, field_count, custom_count }) => {
-          const opt = document.createElement('option');
-          opt.value = filename || '';
-          const projList = Array.isArray(projects) ? projects.join(', ') : '';
-          opt.textContent = `${name}${projList ? ' (' + projList + ')' : ''} — ${field_count ?? '?'} fields`;
-          opt.dataset.filename = filename || '';
-          sel.appendChild(opt);
-        });
-        if (prevVal) sel.value = prevVal;
-      }
-
-      // When user selects a schema in filter tab, auto-fill Story Points
-      document.getElementById('filter-schema-select').addEventListener('change', async (e) => {
-        const filename  = e.target.value;
-        const infoPanel = document.getElementById('schema-field-info');
-        const spField   = document.getElementById('story-points-field');
-
-        if (!filename) {
-          infoPanel.hidden = true;
-          infoPanel.innerHTML = '';
-          return;
-        }
-
-        // Fetch schema file from server to get full field list
-        if (!IS_SERVED) {
-          infoPanel.hidden = true;
-          return;
-        }
-
+        if (!IS_SERVED) return;
         try {
           const res  = await fetch('/api/schemas');
           const data = await res.json();
-          const schemas = data.schemas || [];
-          const match   = schemas.find((s) => s.filename === filename);
+          if (!data.ok) return;
+          const names = data.schemas || [];
+          const saved = store.get(STORE_KEYS.JIRA_SCHEMA);
 
-          if (!match) {
-            infoPanel.hidden = true;
-            return;
-          }
-
-          // We need the full field list — fetch the raw JSON file
-          // The server doesn't serve the raw files, so we load from the list endpoint details
-          // For the auto-fill, we'll look at the schema's fields via a dedicated fetch
-          const schemaRes  = await fetch(`/api/schema-detail/${encodeURIComponent(filename)}`).catch(() => null);
-          let schemaDetail = null;
-          if (schemaRes && schemaRes.ok) {
-            schemaDetail = await schemaRes.json();
-          }
-
-          if (!schemaDetail || !schemaDetail.fields) {
-            // Fallback: show basic info from the list
-            infoPanel.hidden = false;
-            infoPanel.replaceChildren();
-            const title = document.createElement('strong');
-            title.textContent = match.name;
-            infoPanel.append(title, document.createTextNode(` — ${match.field_count} fields (${match.custom_count} custom)`));
-            return;
-          }
-
-          // Auto-detect and fill Story Points field
-          const spMatch = schemaDetail.fields.find((f) =>
-            f.custom && /story.?point/i.test(f.name)
-          );
-          if (spMatch && spField) {
-            spField.value = spMatch.id;
-            store.set(STORE_KEYS.JIRA_STORY_POINTS_FIELD, spMatch.id);
-          }
-
-          // Show field info panel with key custom fields
-          const customFields = schemaDetail.fields.filter((f) => f.custom);
-          const populated    = new Set(schemaDetail.populated_fields || []);
-          infoPanel.hidden = false;
-          infoPanel.replaceChildren();
-
-          const summary = document.createElement('div');
-          summary.style.marginBottom = '6px';
-          const summaryTitle = document.createElement('strong');
-          summaryTitle.textContent = match.name;
-          summary.append(summaryTitle, document.createTextNode(` — ${schemaDetail.fields.length} fields (${customFields.length} custom)`));
-          infoPanel.append(summary);
-
-          if (spMatch) {
-            const storyPoints = document.createElement('div');
-            storyPoints.style.color = 'var(--success)';
-            storyPoints.style.marginBottom = '6px';
-
-            const storyLabel = document.createElement('strong');
-            storyLabel.textContent = 'Story Points:';
-            const storyCode = document.createElement('code');
-            storyCode.textContent = spMatch.id;
-
-            storyPoints.append(
-              storyLabel,
-              document.createTextNode(' '),
-              storyCode,
-              document.createTextNode(` (${spMatch.name}) — auto-filled above`)
-            );
-            infoPanel.append(storyPoints);
-          }
-
-          const fieldLabel = document.createElement('div');
-          fieldLabel.style.color = 'var(--text-muted)';
-          fieldLabel.style.marginBottom = '4px';
-          fieldLabel.textContent = 'Key custom fields:';
-          infoPanel.append(fieldLabel);
-
-          const table = document.createElement('table');
-          table.style.width = '100%';
-          table.style.fontSize = '0.76rem';
-          table.style.borderCollapse = 'collapse';
-
-          const headerRow = document.createElement('tr');
-          headerRow.style.borderBottom = '1px solid var(--border)';
-          ['ID', 'Name', 'In Use'].forEach((label) => {
-            const th = document.createElement('th');
-            th.style.textAlign = 'left';
-            th.style.padding = '2px 6px';
-            th.textContent = label;
-            headerRow.append(th);
+          schemaSelect.innerHTML = '';
+          names.forEach((name) => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            if (name === saved) opt.selected = true;
+            schemaSelect.appendChild(opt);
           });
-          table.append(headerRow);
-
-          customFields.slice(0, 25).forEach((f) => {
-            const row = document.createElement('tr');
-            row.style.borderBottom = '1px solid var(--border)';
-
-            const idCell = document.createElement('td');
-            idCell.style.padding = '2px 6px';
-            idCell.style.fontFamily = 'monospace';
-            idCell.textContent = f.id;
-
-            const nameCell = document.createElement('td');
-            nameCell.style.padding = '2px 6px';
-            nameCell.textContent = f.name;
-
-            const inUseCell = document.createElement('td');
-            inUseCell.style.padding = '2px 6px';
-            const inUseValue = document.createElement('span');
-            inUseValue.style.color = populated.has(f.id) ? 'var(--success)' : 'var(--text-subtle)';
-            inUseValue.textContent = populated.has(f.id) ? 'Yes' : 'No';
-            inUseCell.append(inUseValue);
-
-            row.append(idCell, nameCell, inUseCell);
-            table.append(row);
-          });
-
-          if (customFields.length > 25) {
-            const moreRow = document.createElement('tr');
-            const moreCell = document.createElement('td');
-            moreCell.colSpan = 3;
-            moreCell.style.padding = '4px 6px';
-            moreCell.style.color = 'var(--text-subtle)';
-            moreCell.textContent = `... and ${customFields.length - 25} more`;
-            moreRow.append(moreCell);
-            table.append(moreRow);
+          if (!saved && names.length) {
+            schemaSelect.value = names[0];
           }
-
-          infoPanel.append(table);
+          await applyActiveSchema();
         } catch {
-          infoPanel.hidden = true;
+          schemaSelect.innerHTML = '<option value="">Default (Jira Cloud)</option>';
+        }
+      }
+
+      async function fetchSchemaDetails(name) {
+        if (!IS_SERVED || !name) return null;
+        try {
+          const res  = await fetch(`/api/schemas?name=${encodeURIComponent(name)}`);
+          const data = await res.json();
+          return data.ok ? data.schema : null;
+        } catch { return null; }
+      }
+
+      async function applyActiveSchema() {
+        const name = schemaSelect.value;
+        store.set(STORE_KEYS.JIRA_SCHEMA, name);
+        const schema = await fetchSchemaDetails(name);
+        _activeSchemaCache = schema;
+        if (schema && schema.fields) {
+          const spId = (schema.fields.story_points || {}).id || 'customfield_10016';
+          const spField = document.getElementById('story-points-field');
+          if (spField && !spField.dataset.userEdited) {
+            spField.value = spId;
+            store.set(STORE_KEYS.JIRA_STORY_POINTS_FIELD, spId);
+          }
+        }
+      }
+
+      schemaSelect.addEventListener('change', async () => {
+        await applyActiveSchema();
+        schemaStatus('');
+      });
+
+      btnFetchSchema.addEventListener('click', async () => {
+        const name = schemaNameInput.value.trim();
+        if (!name) {
+          schemaStatus('Schema name is required.', true);
+          schemaNameInput.focus();
+          return;
+        }
+
+        const url   = store.get(STORE_KEYS.JIRA_URL);
+        const email = store.get(STORE_KEYS.JIRA_EMAIL);
+        const token = store.get(STORE_KEYS.JIRA_API_TOKEN);
+        if (!url || !email || !token) {
+          schemaStatus('Save Jira credentials on the Connection tab first.', true);
+          return;
+        }
+
+        btnFetchSchema.disabled = true;
+        const origText = btnFetchSchema.innerHTML;
+        btnFetchSchema.innerHTML = '<span class="spinner" aria-hidden="true"></span> Fetching…';
+        schemaStatus('');
+
+        try {
+          const res = await fetch('/api/schemas', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ schema_name: name, jira_url: url, jira_email: email, jira_token: token }),
+          });
+          const data = await res.json();
+          if (data.ok) {
+            schemaStatus(`Schema "${name}" saved successfully.`, false);
+            schemaNameInput.value = '';
+            await loadSchemas();
+            schemaSelect.value = name;
+            store.set(STORE_KEYS.JIRA_SCHEMA, name);
+            await applyActiveSchema();
+          } else {
+            schemaStatus(data.error || 'Failed to fetch schema.', true);
+          }
+        } catch (err) {
+          schemaStatus(`Request failed: ${err.message}`, true);
+        } finally {
+          btnFetchSchema.disabled = false;
+          btnFetchSchema.innerHTML = origText;
         }
       });
+
+      function getActiveTeamJqlName() {
+        if (_activeSchemaCache && _activeSchemaCache.fields && _activeSchemaCache.fields.team) {
+          return _activeSchemaCache.fields.team.jql_name || _activeSchemaCache.fields.team.id || 'Team[Team]';
+        }
+        return 'Team[Team]';
+      }
 
       /* ═══════════════════════════════════════════════
          Generate Report button
@@ -2671,6 +2394,8 @@
         // Ensure Save button reflects initial state (disabled until Test Connection passes)
         updateSaveBtn();
 
+        // Schema list (async — fetches from /api/schemas when served)
+        loadSchemas();
         // Reports list (async — fetches from /api/reports when served)
         loadReports();
         // Filters list (async — fetches from /api/filters when served)
