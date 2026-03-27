@@ -37,32 +37,3 @@ Double-click **`start_app.bat`** — this starts a local server bound to `127.0.
 Use the UI to configure your Jira connection, select a filter, and generate reports.
 
 If your Jira instance uses a custom CA certificate, use the Jira Connection tab to fetch it or place the PEM bundle at `certs/jira_ca_bundle.pem`.
-
-### Using the command line
-
-```bash
-.venv\Scripts\python main.py
-```
-
-### Validate setup changes
-
-To smoke-test the Windows setup flow without installing Python or dependencies from a full repository checkout:
-
-```bash
-python tools/smoke_test_setup.py
-```
-
-This helper is not included in the end-user release zip.
-
-For scripted setup runs, you can suppress the `.env` prompt:
-
-- `project_setup.bat --keep-env` keeps an existing `.env` unchanged
-- `project_setup.bat --refresh-env` backs up an existing `.env` and recreates it from `.env.example`
-
-Reports are written to `generated/reports/<timestamp>/` — each run creates a new timestamped folder containing `report.html` and `report.md`.
-
-To delete all generated reports:
-
-```bash
-.venv\Scripts\python main.py --clean
-```
