@@ -1,0 +1,66 @@
+{
+  "schemas": [
+    {
+      "schema_name": "Default (Jira Cloud)",
+      "description": "Standard Jira Cloud field mapping",
+      "jira_url_pattern": "",
+      "fields": {
+        "story_points": {
+          "id": "customfield_10016",
+          "type": "number",
+          "description": "Story point estimate"
+        },
+        "sprint": {
+          "id": "customfield_10020",
+          "type": "array",
+          "description": "Sprint(s) the issue belongs to"
+        },
+        "epic_link": {
+          "id": "customfield_10014",
+          "type": "string",
+          "description": "Parent epic key"
+        },
+        "epic_name": {
+          "id": "customfield_10011",
+          "type": "string",
+          "description": "Epic name"
+        },
+        "team": {
+          "id": "customfield_10001",
+          "type": "string",
+          "jql_name": "Team[Team]",
+          "description": "Team field"
+        },
+        "priority": {
+          "id": "priority",
+          "type": "string",
+          "description": "Issue priority"
+        },
+        "labels": {
+          "id": "labels",
+          "type": "array",
+          "description": "Issue labels"
+        },
+        "issue_type": {
+          "id": "issuetype",
+          "type": "string",
+          "description": "Issue type"
+        },
+        "status": {
+          "id": "status",
+          "type": "string",
+          "description": "Issue status"
+        },
+        "resolution": {
+          "id": "resolution",
+          "type": "string",
+          "description": "Resolution field"
+        }
+      },
+      "status_mapping": {
+        "done_statuses": ["Done", "Closed", "Resolved", "Complete"],
+        "in_progress_statuses": ["In Progress"]
+      }
+    }
+  ]
+}

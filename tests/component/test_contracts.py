@@ -75,11 +75,12 @@ def test_build_metrics_dict_has_all_expected_keys():
         "ai_usage_details",
         "ai_assisted_label",
         "ai_exclude_labels",
+        "dau",
+        "schema_name",
         "filter_name",
         "filter_id",
         "filter_jql",
         "project_key",
-        "dau",
     }
     assert set(result.keys()) == expected_keys
 

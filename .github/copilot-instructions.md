@@ -43,3 +43,24 @@ detail files in `tests/coverage/requirements/` (one file per `*_requirements.md`
 - The user asks to "update test coverage", "refresh coverage stats",
   or "update test_coverage.md"
 - You add a new test file to any of the layer folders above
+
+## Commit Messages
+
+Format: `<type>: <short imperative summary>` (subject line ≤50 chars, no period)
+
+Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
+
+Add a body only when changes span multiple unrelated areas — use 1–3 short bullets, no paragraphs:
+
+```
+refactor: extract schema detection into standalone module
+
+- Move field ID lookup out of jira_client
+- Add KNOWN_FIELD_SCHEMAS registry in schema.py
+- Update metrics to accept schema-driven done_statuses
+```
+
+Rules:
+- Imperative mood ("add", not "added" or "adds")
+- No file names, line numbers, or implementation details in the subject
+- Single-area changes need no body: `fix: handle missing story points field gracefully`

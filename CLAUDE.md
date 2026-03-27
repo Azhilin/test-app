@@ -37,25 +37,50 @@ python tests/tools/test_coverage.py
 python tests/tools/test_coverage.py --dry-run   # preview only
 ```
 
+## Commit Messages
+
+Format: `<type>: <short imperative summary>` (subject line ≤50 chars, no period)
+
+Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
+
+Add a body only when changes span multiple unrelated areas — use 1–3 short bullets, no paragraphs:
+
+```
+refactor: extract schema detection into standalone module
+
+- Move field ID lookup out of jira_client
+- Add KNOWN_FIELD_SCHEMAS registry in schema.py
+- Update metrics to accept schema-driven done_statuses
+```
+
+Rules:
+- Imperative mood ("add", not "added" or "adds")
+- No file names, line numbers, or implementation details in the subject
+- Single-area changes need no body: `fix: handle missing story points field gracefully`
+
 ## Architecture
 
 **Data flow:** `main.py` orchestrates the pipeline: fetch Jira data → compute metrics → generate HTML + MD reports in parallel (ThreadPoolExecutor).
 
-Key modules:
-
-- `app/core/config.py` — loads `.env` via python-dotenv, exposes `JIRA_*` settings and AI-label config, and detects `certs/jira_ca_bundle.pem`
+Key modules (all under `app/`):
+- `app/core/config.py` — loads `.env` via python-dotenv, exposes all `JIRA_*` settings as module-level constants, validates required credentials
 - `app/core/jira_client.py` — wraps `atlassian-python-api` Jira client; fetches boards, sprints, issues, and changelogs. Supports optional `JIRA_FILTER_ID` to scope issues by saved filter JQL
-- `app/core/metrics.py` — pure computation: velocity per sprint, cycle time stats, and AI adoption metrics
+- `app/core/metrics.py` — pure computation: velocity per sprint (story points of done issues), cycle time stats (from changelog transitions), extensible `compute_custom_trends` placeholder. Accepts optional schema-driven field IDs and status lists
+- `app/core/schema.py` — loads/saves/queries Jira field schemas from `config/jira_schema.json`. Provides field ID lookups, status mapping accessors, and auto-detection from Jira's `/rest/api/2/field` response
 - `app/reporters/report_html.py` — renders Jinja2 template (`templates/report.html.j2`) to HTML
-- `app/reporters/report_md.py` — builds the Markdown report
-- `app/server.py` — stdlib HTTP server for `ui/index.html` and API endpoints
-- `server.py` — thin entry point that delegates to `app.server.run()`
+- `app/reporters/report_md.py` — builds Markdown report with tables and bar chart visualization
+- `app/server.py` — stdlib HTTP server serving `ui/index.html`, with `/api/test-connection` (POST), `/api/generate` (SSE), `/api/schemas` (GET/POST/DELETE)
+
+**Config files:**
+- `config/jira_schema.json` — Jira field schema definitions (field IDs, status mappings) per Jira instance. Ships with a "Default (Jira Cloud)" schema. Not a generated file — lives alongside source
 
 **Reports output:** `generated/reports/<ISO-timestamp>/report.html` and `report.md`
 
 ## Configuration
 
 All config is via `.env` (see `.env.example`). Required: `JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`. Optional: `JIRA_BOARD_ID`, `JIRA_SPRINT_COUNT` (default 10), `JIRA_STORY_POINTS_FIELD` (default `customfield_10016`), `JIRA_FILTER_ID`.
+
+**Schema system:** `config/jira_schema.json` defines field mappings and status categories per Jira instance. The UI's "Jira Field Schema" card (Filter tab) lets users select or auto-fetch schemas. When a schema is active, `metrics.py` uses its field IDs and status lists instead of hardcoded defaults. The `.env` `JIRA_STORY_POINTS_FIELD` is still respected as a fallback when no schema file exists.
 
 ## Tech Stack
 
@@ -88,6 +113,7 @@ Exact dict shapes crossing module boundaries:
 ```python
 {
     "generated_at": str,          # ISO-8601 UTC
+    "schema_name": str|None,      # active schema name, or None if default
     "velocity": [
         {sprint_id, sprint_name, start_date, end_date, velocity: float, issue_count: int}
     ],
@@ -97,6 +123,27 @@ Exact dict shapes crossing module boundaries:
         values: list[float]
     },
     "custom_trends": list[dict]   # see Extension Patterns below
+}
+```
+
+**Schema dict** (entries in `config/jira_schema.json`, loaded by `app/core/schema.py`):
+```python
+{
+    "schema_name": str,           # unique identifier, e.g. "Default (Jira Cloud)"
+    "description": str,
+    "jira_url_pattern": str,      # optional URL pattern for auto-matching
+    "fields": {
+        "<field_key>": {          # e.g. "story_points", "sprint", "team"
+            "id": str,            # Jira field ID (e.g. "customfield_10016")
+            "type": str,          # "number", "string", "array"
+            "jql_name": str|None, # optional JQL field name (e.g. "Team[Team]")
+            "description": str
+        }
+    },
+    "status_mapping": {
+        "done_statuses": list[str],        # e.g. ["Done", "Closed", "Resolved", "Complete"]
+        "in_progress_statuses": list[str]  # e.g. ["In Progress"]
+    }
 }
 ```
 
@@ -130,14 +177,21 @@ files to `tests/coverage/requirements/` (one file per `*_requirements.md`). Run 
 ## Extension Patterns
 
 **Adding a new metric:**
-1. Add `compute_<name>(sprints, sprint_issues) -> list[dict]` to `app/metrics.py`; each dict must include `sprint_id` and `sprint_name` plus the metric value key. Follow the `compute_custom_trends` signature.
+1. Add `compute_<name>(sprints, sprint_issues) -> list[dict]` to `app/core/metrics.py`; each dict must include `sprint_id` and `sprint_name` plus the metric value key. Follow the `compute_custom_trends` signature. Accept optional schema-driven parameters (e.g. `done_statuses`) if the metric depends on configurable field IDs or status names.
 2. Call it in `build_metrics_dict()` and add result to the returned dict.
-3. Add rendering in `app/report_md.py` (new section after `custom_trends`).
+3. Add rendering in `app/reporters/report_md.py` (new section after `custom_trends`).
 4. Add rendering in `templates/report.html.j2` (metrics context variable).
-5. Add `tests/test_<name>.py` using `make_sprint()` and `make_issue()` factories.
+5. Add `tests/unit/test_<name>.py` using `make_sprint()` and `make_issue()` factories.
+
+**Adding a new Jira field to the schema:**
+1. Add the field entry to `_DEFAULT_SCHEMA["fields"]` in `app/core/schema.py`.
+2. Add the same entry to the default schema in `config/jira_schema.json`.
+3. If the field has a known `schema.custom` identifier, add it to `KNOWN_FIELD_SCHEMAS` in `schema.py`.
+4. If it should be detected by name, add patterns to `KNOWN_NAME_PATTERNS` in `schema.py`.
+5. Add tests in `tests/unit/test_schema.py`.
 
 **Adding a new config var:**
 1. Add to `.env.example` with a comment.
-2. Add `os.getenv()` in `app/config.py` as module-level constant.
+2. Add `os.getenv()` in `app/core/config.py` as module-level constant.
 3. Add to `validate_config()` if required.
-4. Test in `tests/test_config.py` using `monkeypatch` + `importlib.reload(config)` pattern.
+4. Test in `tests/unit/test_config.py` using `monkeypatch` + `importlib.reload(config)` pattern.
