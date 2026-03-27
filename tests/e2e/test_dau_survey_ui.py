@@ -320,9 +320,7 @@ def test_filename_matches_dau_username_timestamp_pattern(page: Page) -> None:
     expect(page.locator("#confirmation")).to_be_visible(timeout=3000)
     filename = page.evaluate("() => Object.keys(window.__savedFiles)[0]")
     assert filename is not None
-    assert re.match(r"^dau_alice123_\d{8}T\d{6}Z\.json$", filename), (
-        f"Unexpected filename: {filename}"
-    )
+    assert re.match(r"^dau_alice123_\d{8}T\d{6}Z\.json$", filename), f"Unexpected filename: {filename}"
 
 
 def test_fs_api_abort_keeps_form_intact(page: Page) -> None:

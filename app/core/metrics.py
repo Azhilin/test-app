@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from app.core import config
@@ -324,7 +325,7 @@ def compute_dau_metrics(responses_dir: str | Path) -> dict[str, Any]:
                 data = json.loads(fpath.read_text(encoding="utf-8"))
                 if isinstance(data, dict):
                     records.append(data)
-            except Exception:
+            except Exception:  # nosec B112
                 continue
 
     if not records:
@@ -343,14 +344,14 @@ def compute_dau_metrics(responses_dir: str | Path) -> dict[str, Any]:
             {"role": role, "avg": round(sum(vals) / len(vals), 2), "count": len(vals)}
             for role, vals in role_data.items()
         ],
-        key=lambda x: x["role"],
+        key=lambda x: str(x.get("role", "")),
     )
 
     # Answer frequency breakdown
     cnt: Counter[str] = Counter(r.get("usage", "") for r in records)
     breakdown = sorted(
         [{"answer": a, "count": c} for a, c in cnt.items()],
-        key=lambda x: -x["count"],
+        key=lambda x: -int(str(x["count"])),
     )
 
     return {

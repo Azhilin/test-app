@@ -27,11 +27,7 @@ def test_report_generation_completes_within_time_limit(tmp_path):
     """build_metrics_dict + generate_html + generate_md finish in under 5 s."""
     sprints = [make_sprint(i, name=f"Sprint {i}") for i in range(1, _SPRINT_COUNT + 1)]
     sprint_issues = {
-        s["id"]: [
-            make_issue(f"PERF-{s['id']}-{j}", points=5.0)
-            for j in range(_ISSUES_PER_SPRINT)
-        ]
-        for s in sprints
+        s["id"]: [make_issue(f"PERF-{s['id']}-{j}", points=5.0) for j in range(_ISSUES_PER_SPRINT)] for s in sprints
     }
 
     start = time.monotonic()
@@ -40,6 +36,4 @@ def test_report_generation_completes_within_time_limit(tmp_path):
     generate_md(metrics, tmp_path / "report.md")
     elapsed = time.monotonic() - start
 
-    assert elapsed < _TIME_LIMIT_S, (
-        f"Report generation took {elapsed:.2f}s, expected < {_TIME_LIMIT_S}s"
-    )
+    assert elapsed < _TIME_LIMIT_S, f"Report generation took {elapsed:.2f}s, expected < {_TIME_LIMIT_S}s"

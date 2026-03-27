@@ -93,9 +93,7 @@ def generate_md(metrics: dict, output_path: Path = DEFAULT_OUTPUT) -> None:
     if dau.get("response_count"):
         parts.append("## Daily Active Usage (DAU)")
         parts.append("")
-        parts.append(
-            f"Team average: **{dau['team_avg']} / 5** across {dau['response_count']} response(s)"
-        )
+        parts.append(f"Team average: **{dau['team_avg']} / 5** across {dau['response_count']} response(s)")
         parts.append("")
         if dau.get("by_role"):
             headers = ["Role", "Avg days/week", "Responses"]

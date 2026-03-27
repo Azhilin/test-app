@@ -585,9 +585,7 @@ def test_required_fields_have_aria_required(page: Page, live_server_url: str):
     _goto(page, live_server_url)
 
     count = page.locator("[aria-required='true']").count()
-    assert count >= 8, (
-        f"Expected at least 8 elements with aria-required='true', found {count}"
-    )
+    assert count >= 8, f"Expected at least 8 elements with aria-required='true', found {count}"
 
 
 def test_decorative_icons_have_aria_hidden(page: Page, live_server_url: str):
@@ -600,6 +598,4 @@ def test_decorative_icons_have_aria_hidden(page: Page, live_server_url: str):
 
     for i in range(star_count):
         attr = stars.nth(i).get_attribute("aria-hidden")
-        assert attr == "true", (
-            f".required-star[{i}] must have aria-hidden='true', got {attr!r}"
-        )
+        assert attr == "true", f".required-star[{i}] must have aria-hidden='true', got {attr!r}"

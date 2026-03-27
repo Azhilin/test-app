@@ -155,8 +155,10 @@ def test_malformed_json_file_is_skipped(tmp_path: Path) -> None:
 def test_build_metrics_dict_includes_dau_key(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DAU_RESPONSES_DIR", str(tmp_path))
     import app.core.config as config
+
     importlib.reload(config)
     from app.core.metrics import build_metrics_dict
+
     result = build_metrics_dict([], {}, [])
     assert "dau" in result
     assert result["dau"]["response_count"] == 0
@@ -166,8 +168,10 @@ def test_dau_responses_dir_env_var_overrides_default(tmp_path: Path, monkeypatch
     _write(tmp_path, "dau_alice_20260327T130340Z.json", _response("alice", "Every day (5 days)"))
     monkeypatch.setenv("DAU_RESPONSES_DIR", str(tmp_path))
     import app.core.config as config
+
     importlib.reload(config)
     from app.core import metrics as metrics_mod
+
     importlib.reload(metrics_mod)
     result = metrics_mod.compute_dau_metrics(config.DAU_RESPONSES_DIR)
     assert result["response_count"] == 1
