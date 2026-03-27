@@ -730,6 +730,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(b"event: close\ndata:\n\n")
                 self.wfile.flush()
             except BrokenPipeError:
+                # Client disconnected before the final SSE "close" event could be sent; safe to ignore.
                 pass
 
 
