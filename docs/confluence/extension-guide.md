@@ -282,7 +282,7 @@ def test_get_pages_in_space_empty():
 
 ## 9. Step 8 — Update Test Coverage
 
-After adding tests, regenerate `tests/test_coverage.md`:
+After adding tests, regenerate `tests/coverage/test_coverage.md`:
 
 ```bash
 python tests/tools/test_coverage.py

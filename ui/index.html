@@ -684,6 +684,7 @@
             autocomplete="off"
             spellcheck="false"
             maxlength="100"
+            aria-required="true"
           />
           <p class="form-helper">A descriptive name for this saved filter. Required when clicking <strong>Save Filter</strong> below.</p>
         </div>
@@ -702,6 +703,7 @@
             spellcheck="false"
             maxlength="1000"
             required
+            aria-required="true"
           />
           <p class="form-helper">Jira project key(s) — required to build a JQL filter. Comma-separate multiple values.</p>
         </div>
@@ -932,6 +934,7 @@
             class="form-input"
             type="text"
             id="schema-name"
+            aria-required="true"
             placeholder="e.g. My Team Schema"
             autocomplete="off"
             spellcheck="false"
@@ -949,6 +952,7 @@
             class="form-input"
             type="text"
             id="schema-projects"
+            aria-required="true"
             placeholder="e.g. MYTEAM or MYTEAM, OPS"
             autocomplete="off"
             spellcheck="false"
@@ -1057,6 +1061,7 @@
             autocomplete="url"
             spellcheck="false"
             maxlength="100"
+            aria-required="true"
           />
           <p class="form-helper">Your Jira Cloud base URL, without a trailing slash.</p>
           <p class="form-error" id="err-jira-url">Please enter a valid URL (e.g. https://your-domain.atlassian.net)</p>
@@ -1073,6 +1078,7 @@
             autocomplete="email"
             spellcheck="false"
             maxlength="100"
+            aria-required="true"
           />
           <p class="form-helper">Atlassian account email address associated with the API token.</p>
           <p class="form-error" id="err-jira-email">Please enter a valid email address.</p>
@@ -1090,6 +1096,7 @@
               autocomplete="current-password"
               spellcheck="false"
               maxlength="1000"
+              aria-required="true"
             />
             <button
               class="toggle-visibility"

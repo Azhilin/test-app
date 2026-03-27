@@ -1,5 +1,5 @@
 @echo off
-cd /d "%~dp0.."
+cd /d "%~dp0..\.."
 
 if exist ".venv\Scripts\python.exe" (
     set PYTHON=.venv\Scripts\python.exe
@@ -13,7 +13,7 @@ if exist ".venv\Scripts\python.exe" (
     set PYTHON=python
 )
 
-echo  Running E2E tests...
+echo  Running UNIT tests...
 echo.
-%PYTHON% -m pytest tests\e2e\ -v -m e2e
+%PYTHON% -m pytest tests\unit\ -v -m unit
 pause

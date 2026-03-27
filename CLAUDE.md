@@ -32,7 +32,7 @@ python server.py 9000             # custom port
 # Run tests (no Jira connection required)
 pytest tests/ -v
 
-# Update tests/test_coverage.md after adding/removing tests (never hand-edit it)
+# Update tests/coverage/test_coverage.md after adding/removing tests (never hand-edit it)
 python tests/tools/test_coverage.py
 python tests/tools/test_coverage.py --dry-run   # preview only
 ```
@@ -111,8 +111,10 @@ Exact dict shapes crossing module boundaries:
 .venv/Scripts/pytest tests/ -v -k "test_velocity"
 ```
 
-**Test coverage stats** in `tests/test_coverage.md` are auto-generated — never edit the
-Test Pyramid block or the Count column by hand. Run the script instead (see `.github/copilot-instructions.md`).
+**Test coverage stats** in `tests/coverage/test_coverage.md` are auto-generated — never edit the
+Test Pyramid block or the Count column by hand. The script also writes per-requirements-source detail
+files to `tests/coverage/requirements/` (one file per `*_requirements.md`). Run the script instead
+(see `.github/copilot-instructions.md`).
 
 **Test factories** in `tests/conftest.py` are plain functions (not fixtures) — call directly in test body:
 - `make_sprint(id, name="", start=None, end=None)` — omit state; metrics don't filter on it

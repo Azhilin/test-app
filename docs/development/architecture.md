@@ -112,7 +112,8 @@ test-app/                          ← project root
 │   ├── integration/               ← multi-module integration tests
 │   ├── e2e/                       ← Playwright browser tests
 │   └── tools/
-│       └── test_coverage.py       ← auto-generates tests/test_coverage.md
+│       └── test_coverage.py       ← auto-generates tests/coverage/test_coverage.md
+│                                     and tests/coverage/requirements/*_coverage.md
 │
 ├── docs/                          ← reference docs (Jira/Confluence API guides)
 ├── certs/                         ← optional TLS bundle (jira_ca_bundle.pem)
@@ -426,7 +427,7 @@ Current counts (run `python tests/tools/test_coverage.py` to refresh):
 # E2E (requires Playwright browsers installed)
 .venv/Scripts/pytest tests/e2e/ -v
 
-# Regenerate tests/test_coverage.md
+# Regenerate tests/coverage/test_coverage.md
 python tests/tools/test_coverage.py
 ```
 
@@ -560,5 +561,6 @@ python server.py 9000                 # custom port
 - [`CLAUDE.md`](../CLAUDE.md) — AI assistant guidance and coding conventions
 - [`docs/jira/`](../docs/jira/) — Jira REST API reference notes
 - [`docs/confluence/`](../docs/confluence/) — Confluence API reference notes
-- [`tests/test_coverage.md`](../tests/test_coverage.md) — auto-generated test count table
+- [`tests/coverage/test_coverage.md`](../tests/coverage/test_coverage.md) — auto-generated test count + requirements summary
+- [`tests/coverage/requirements/`](../tests/coverage/requirements/) — per-requirements-source coverage detail files
 - [`.env.example`](../.env.example) — all configuration variables with comments

@@ -16,51 +16,64 @@ from urllib.parse import urlparse
 
 ROOT = Path(__file__).resolve().parent.parent
 
-# Load .env so the script works even when run independently
-try:
-    from dotenv import load_dotenv
-    load_dotenv(ROOT / ".env")
-except ImportError:
-    pass  # python-dotenv not installed; rely on environment variables
 
-JIRA_URL = os.getenv("JIRA_URL", "").strip().rstrip("/")
+def fetch_and_save_cert(jira_url: str, root: Path | None = None) -> str:
+    """Fetch the TLS certificate for *jira_url* and write it to ``<root>/certs/jira_ca_bundle.pem``.
 
-if not JIRA_URL:
-    print(
-        "ERROR: JIRA_URL is not set.\n"
-        "Add it to your .env file (e.g. JIRA_URL=https://your-domain.atlassian.net)\n"
-        "then re-run this script.",
-        file=sys.stderr,
-    )
-    sys.exit(1)
+    Returns the path to the written PEM file.
+    Raises ``SystemExit`` on any error (missing URL, unparseable host, SSL/OS failure).
+    """
+    root = root or ROOT
 
-parsed = urlparse(JIRA_URL)
-host = parsed.hostname
-port = parsed.port or 443
+    if not jira_url:
+        print(
+            "ERROR: JIRA_URL is not set.\n"
+            "Add it to your .env file (e.g. JIRA_URL=https://your-domain.atlassian.net)\n"
+            "then re-run this script.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
-if not host:
-    print(
-        f"ERROR: Could not parse a hostname from JIRA_URL={JIRA_URL!r}",
-        file=sys.stderr,
-    )
-    sys.exit(1)
+    parsed = urlparse(jira_url)
+    host = parsed.hostname
+    port = parsed.port or 443
 
-print(f"Fetching TLS certificate from {host}:{port} …")
+    if not host:
+        print(
+            f"ERROR: Could not parse a hostname from JIRA_URL={jira_url!r}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
-try:
-    pem = ssl.get_server_certificate((host, port))
-except ssl.SSLError as exc:
-    print(f"ERROR: SSL error while contacting {host}:{port}: {exc}", file=sys.stderr)
-    sys.exit(1)
-except OSError as exc:
-    print(f"ERROR: Could not connect to {host}:{port}: {exc}", file=sys.stderr)
-    sys.exit(1)
+    print(f"Fetching TLS certificate from {host}:{port} ...")
 
-certs_dir = ROOT / "certs"
-certs_dir.mkdir(exist_ok=True)
+    try:
+        pem = ssl.get_server_certificate((host, port))
+    except ssl.SSLError as exc:
+        print(f"ERROR: SSL error while contacting {host}:{port}: {exc}", file=sys.stderr)
+        sys.exit(1)
+    except OSError as exc:
+        print(f"ERROR: Could not connect to {host}:{port}: {exc}", file=sys.stderr)
+        sys.exit(1)
 
-cert_file = certs_dir / "jira_ca_bundle.pem"
-cert_file.write_text(pem, encoding="ascii")
+    certs_dir = root / "certs"
+    certs_dir.mkdir(exist_ok=True)
 
-print(f"Certificate saved → {cert_file}")
-print("Done. The Jira client will use this certificate automatically.")
+    cert_file = certs_dir / "jira_ca_bundle.pem"
+    cert_file.write_text(pem, encoding="ascii")
+
+    print(f"Certificate saved -> {cert_file}")
+    print("Done. The Jira client will use this certificate automatically.")
+    return str(cert_file)
+
+
+if __name__ == "__main__":
+    # Load .env so the script works even when run independently
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(ROOT / ".env")
+    except ImportError:
+        pass  # python-dotenv not installed; rely on environment variables
+
+    url = os.getenv("JIRA_URL", "").strip().rstrip("/")
+    fetch_and_save_cert(url)

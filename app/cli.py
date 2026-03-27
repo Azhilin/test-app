@@ -51,7 +51,7 @@ def main() -> int:
     try:
         sprints, sprint_issues = jira_client.fetch_sprint_data(jira)
     except Exception as e:
-        print(f"Failed to fetch Jira data: {e}", file=sys.stderr)
+        print(f"Failed to fetch Jira data: {jira_client._sanitise_error(str(e))}", file=sys.stderr)
         return 1
 
     issue_keys = metrics.get_done_issue_keys_for_changelog(sprints, sprint_issues, max_count=100)
@@ -67,8 +67,8 @@ def main() -> int:
         try:
             f = jira._session.get(f"{config.JIRA_URL}/rest/api/2/filter/{config.JIRA_FILTER_ID}").json()
             metrics_dict["filter_name"] = f.get("name") or None
-        except Exception:
-            pass
+        except Exception:  # nosec B110
+            pass  # filter name is non-critical metadata; failure is safe to ignore
 
     folder_name = _timestamp_folder_name(metrics_dict["generated_at"])
     report_dir = REPORTS_DIR / folder_name

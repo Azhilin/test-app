@@ -28,6 +28,8 @@ def _get_story_points(issue: dict[str, Any]) -> float:
             if key in raw:
                 raw = raw[key]
                 break
+        else:
+            return 0.0  # dict with no recognised numeric key
     try:
         return float(raw)
     except (TypeError, ValueError):

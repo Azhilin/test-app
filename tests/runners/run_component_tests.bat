@@ -1,5 +1,5 @@
 @echo off
-cd /d "%~dp0.."
+cd /d "%~dp0..\.."
 
 if exist ".venv\Scripts\python.exe" (
     set PYTHON=.venv\Scripts\python.exe
@@ -13,7 +13,7 @@ if exist ".venv\Scripts\python.exe" (
     set PYTHON=python
 )
 
-echo  Running INTEGRATION tests...
+echo  Running COMPONENT tests...
 echo.
-%PYTHON% -m pytest tests\integration\ -v -m integration
+%PYTHON% -m pytest tests\component\ -v -m component
 pause

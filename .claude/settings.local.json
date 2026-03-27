@@ -17,7 +17,8 @@
       "Bash(.venv/Scripts/pip install:*)",
       "Bash(.venv/Scripts/playwright install:*)",
       "Bash(.venv/Scripts/pytest tests/test_e2e_ui.py -v 2>&1)",
-      "Bash(.venv/Scripts/pytest tests/ -v --timeout=120 2>&1)"
+      "Bash(.venv/Scripts/pytest tests/ -v --timeout=120 2>&1)",
+      "Bash(.venv/Scripts/ruff format:*)"
     ]
   }
 }

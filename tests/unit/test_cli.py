@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from concurrent.futures import ThreadPoolExecutor
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -79,3 +80,37 @@ def test_main_keeps_running_when_filter_name_lookup_fails(monkeypatch, tmp_path)
     assert captured_metrics[0]["filter_id"] == 42
     assert captured_metrics[0]["filter_jql"] == "project = TEST"
     assert "filter_name" not in captured_metrics[0]
+
+
+# ---------------------------------------------------------------------------
+# Parallel report generation (NFR-P-002)
+# ---------------------------------------------------------------------------
+
+
+def test_main_generates_reports_in_parallel(monkeypatch, tmp_path):
+    """main() must use ThreadPoolExecutor(max_workers=2) for parallel report generation."""
+    monkeypatch.setattr(cli.config, "validate_config", lambda: [])
+    monkeypatch.setattr(cli.config, "JIRA_FILTER_ID", None)
+    monkeypatch.setattr(cli.jira_client, "create_client", lambda: MagicMock())
+    monkeypatch.setattr(cli.jira_client, "fetch_sprint_data", lambda jira: ([], {}))
+    monkeypatch.setattr(cli.metrics, "get_done_issue_keys_for_changelog", lambda *a, **kw: [])
+    monkeypatch.setattr(
+        cli.metrics,
+        "build_metrics_dict",
+        lambda *a, **kw: {
+            "generated_at": "2026-01-01T00:00:00+00:00",
+            "velocity": [],
+            "cycle_time": {"sample_size": 0, "values": []},
+            "custom_trends": [],
+        },
+    )
+    monkeypatch.setattr(cli.report_html, "generate_html", lambda m, p: None)
+    monkeypatch.setattr(cli.report_md, "generate_md", lambda m, p: None)
+    monkeypatch.setattr(cli, "REPORTS_DIR", tmp_path / "generated" / "reports")
+    monkeypatch.setattr("sys.argv", ["main.py"])
+
+    with patch("app.cli.ThreadPoolExecutor", wraps=ThreadPoolExecutor) as mock_tpe:
+        rc = cli.main()
+
+    assert rc == 0
+    mock_tpe.assert_called_once_with(max_workers=2)
