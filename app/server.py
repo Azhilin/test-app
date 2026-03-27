@@ -700,6 +700,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(b"\n")
                 self.wfile.flush()
             except BrokenPipeError:
+                # Client disconnected from the SSE stream; safe to ignore.
                 pass
 
         try:
