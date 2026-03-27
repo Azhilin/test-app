@@ -533,3 +533,25 @@ def test_multiple_test_connection_attempts_last_result_wins(page: Page, live_ser
     page.locator("#btn-test-conn").click()
     expect(page.locator("#conn-status-badge")).to_have_text("Connected", timeout=10000)
     expect(page.locator("#btn-save-conn")).to_be_enabled()
+
+
+# ---------------------------------------------------------------------------
+# Group 8: Reload persistence (NFR-U-002)
+# ---------------------------------------------------------------------------
+
+
+def test_saved_credentials_prefill_on_reload(page: Page, live_server_url: str):
+    """URL and email fields are re-populated from server config after a page reload."""
+    _goto(page, live_server_url, config=_FULL_CONFIG)
+    _open_connection_tab(page)
+    # Verify initial prefill
+    expect(page.locator("#jira-url")).to_have_value("https://prefilled.atlassian.net")
+    expect(page.locator("#jira-email")).to_have_value("prefilled@example.com")
+
+    # Reload the page — route intercepts remain active so /api/config still returns _FULL_CONFIG
+    page.reload(wait_until="domcontentloaded")
+    _open_connection_tab(page)
+
+    # Fields must still be prefilled from the server config after reload
+    expect(page.locator("#jira-url")).to_have_value("https://prefilled.atlassian.net")
+    expect(page.locator("#jira-email")).to_have_value("prefilled@example.com")

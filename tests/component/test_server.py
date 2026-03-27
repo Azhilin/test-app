@@ -180,6 +180,57 @@ def test_generate_ends_with_close_event(server_url):
 
 
 # ---------------------------------------------------------------------------
+# GET /api/reports
+# ---------------------------------------------------------------------------
+
+
+def test_get_reports_returns_empty_list_when_no_reports(server_url, tmp_path):
+    """GET /api/reports with an empty directory returns {"reports": []}."""
+    import app.server as srv
+
+    reports_dir = tmp_path / "generated" / "reports"
+    reports_dir.mkdir(parents=True)
+
+    orig = srv.ROOT
+    srv.ROOT = tmp_path
+    try:
+        resp = urllib.request.urlopen(f"{server_url}/api/reports")
+        data = json.loads(resp.read())
+    finally:
+        srv.ROOT = orig
+
+    assert data == {"reports": []}
+
+
+def test_get_reports_returns_sorted_list(server_url, tmp_path):
+    """GET /api/reports returns folders sorted newest-first with ts/html/md keys."""
+    import app.server as srv
+
+    reports_dir = tmp_path / "generated" / "reports"
+    reports_dir.mkdir(parents=True)
+    for ts in ("2026-01-01T10-00-00", "2026-03-15T12-00-00", "2025-12-01T08-00-00"):
+        (reports_dir / ts).mkdir()
+
+    orig = srv.ROOT
+    srv.ROOT = tmp_path
+    try:
+        resp = urllib.request.urlopen(f"{server_url}/api/reports")
+        data = json.loads(resp.read())
+    finally:
+        srv.ROOT = orig
+
+    reports = data["reports"]
+    assert len(reports) == 3
+    # Sorted descending by folder name
+    assert reports[0]["ts"] == "2026-03-15T12-00-00"
+    assert reports[1]["ts"] == "2026-01-01T10-00-00"
+    assert reports[2]["ts"] == "2025-12-01T08-00-00"
+    for entry in reports:
+        assert entry["html"] == "report.html"
+        assert entry["md"] == "report.md"
+
+
+# ---------------------------------------------------------------------------
 # GET /api/cert-status
 # ---------------------------------------------------------------------------
 

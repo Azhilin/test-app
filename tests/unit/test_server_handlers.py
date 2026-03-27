@@ -374,3 +374,29 @@ def test_run_defaults_host_to_loopback(monkeypatch):
     srv = _import_app_server_safe()
 
     assert srv.HOST == "127.0.0.1"
+
+
+# ── NFR-R-003: _CLIENT_DISCONNECT covers all disconnect types ───────────
+
+
+def test_client_disconnect_tuple_includes_all_error_types():
+    """_CLIENT_DISCONNECT must catch BrokenPipeError, ConnectionAbortedError, and ConnectionResetError."""
+    srv = _import_app_server_safe()
+    assert BrokenPipeError in srv._CLIENT_DISCONNECT
+    assert ConnectionAbortedError in srv._CLIENT_DISCONNECT
+    assert ConnectionResetError in srv._CLIENT_DISCONNECT
+
+
+@pytest.mark.parametrize("exc_type", [BrokenPipeError, ConnectionAbortedError, ConnectionResetError])
+def test_serve_file_catches_client_disconnect(monkeypatch, tmp_path, exc_type):
+    """_serve_file must suppress all _CLIENT_DISCONNECT exceptions during write."""
+    srv, handler = _make_handler(monkeypatch, tmp_path)
+    target = tmp_path / "test.txt"
+    target.write_text("hello", encoding="utf-8")
+
+    def _exploding_write(data):
+        raise exc_type("client gone")
+
+    handler.wfile.write = _exploding_write
+    # Should not raise
+    handler._serve_file(target)

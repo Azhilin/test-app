@@ -15,7 +15,7 @@ import json
 import os
 import re
 import ssl
-import subprocess
+import subprocess  # nosec B404
 import sys
 import urllib.error
 import urllib.request
@@ -23,6 +23,7 @@ import webbrowser
 from datetime import UTC, datetime
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
+from typing import Any
 from urllib.parse import quote as urlquote
 from urllib.parse import unquote as urlunquote
 from urllib.parse import urlparse
@@ -110,7 +111,10 @@ class Handler(BaseHTTPRequestHandler):
     def _jira_ssl_context() -> ssl.SSLContext | None:
         if config.JIRA_SSL_CERT is True:
             return None
-        return ssl.create_default_context(cafile=config.JIRA_SSL_CERT)
+        cert = config.JIRA_SSL_CERT
+        if not cert:
+            return None
+        return ssl.create_default_context(cafile=str(cert))
 
     def _resolve_report_path(self, requested_path: str) -> Path | None:
         rel = urlunquote(requested_path[len("/generated/reports/") :]).lstrip("/")
@@ -154,6 +158,8 @@ class Handler(BaseHTTPRequestHandler):
             self._handle_get_config()
         elif path == "/api/schemas":
             self._handle_get_schemas()
+        elif path == "/api/reports":
+            self._handle_get_reports()
         elif path.startswith("/api/schema-detail/"):
             filename = path[len("/api/schema-detail/") :]
             self._handle_get_schema_detail(filename)
@@ -218,7 +224,7 @@ class Handler(BaseHTTPRequestHandler):
         )
 
         try:
-            with urllib.request.urlopen(req, timeout=12, context=self._jira_ssl_context()) as resp:
+            with urllib.request.urlopen(req, timeout=12, context=self._jira_ssl_context()) as resp:  # nosec B310
                 data = json.loads(resp.read())
                 self._send_json(
                     200,
@@ -366,7 +372,7 @@ class Handler(BaseHTTPRequestHandler):
     def _handle_fetch_cert(self) -> None:
         """Fetch the TLS certificate from the Jira host and save it locally."""
         body = self._read_json_body() or {}
-        url = (body.get("url") or os.getenv("JIRA_URL", "")).strip().rstrip("/")
+        url = (body.get("url") or os.getenv("JIRA_URL") or "").strip().rstrip("/")
 
         if not url:
             self._send_json(400, {"ok": False, "error": "url is required"})
@@ -434,7 +440,7 @@ class Handler(BaseHTTPRequestHandler):
             f"{url}{endpoint}",
             headers={"Authorization": f"Basic {creds}", "Accept": "application/json"},
         )
-        with urllib.request.urlopen(req, timeout=30, context=self._jira_ssl_context()) as resp:
+        with urllib.request.urlopen(req, timeout=30, context=self._jira_ssl_context()) as resp:  # nosec B310
             return json.loads(resp.read())
 
     def _handle_get_schemas(self) -> None:
@@ -458,6 +464,23 @@ class Handler(BaseHTTPRequestHandler):
                 except (json.JSONDecodeError, OSError):
                     continue
         self._send_json(200, {"schemas": entries[:20]})
+
+    def _handle_get_reports(self) -> None:
+        """Return list of generated report folders, sorted newest-first."""
+        reports_dir = self._reports_dir()
+        entries: list[dict] = []
+        if reports_dir.is_dir():
+            for folder in sorted(reports_dir.iterdir(), reverse=True):
+                if not folder.is_dir():
+                    continue
+                entries.append(
+                    {
+                        "ts": folder.name,
+                        "html": "report.html",
+                        "md": "report.md",
+                    }
+                )
+        self._send_json(200, {"reports": entries})
 
     def _handle_get_schema_detail(self, filename: str) -> None:
         """Return full schema JSON for a specific schema file."""
@@ -515,8 +538,9 @@ class Handler(BaseHTTPRequestHandler):
             self._send_json(200, {"ok": False, "error": f"Could not reach Jira: {exc}"})
             return
 
+        fields_list: list[Any] = fields_raw if isinstance(fields_raw, list) else []
         fields: list[dict] = []
-        for f in fields_raw if isinstance(fields_raw, list) else []:
+        for f in fields_list:
             entry: dict = {
                 "id": f.get("id", ""),
                 "name": f.get("name", ""),
@@ -629,11 +653,11 @@ class Handler(BaseHTTPRequestHandler):
                     self.wfile.write(f"data: {part}\n".encode())
                 self.wfile.write(b"\n")
                 self.wfile.flush()
-            except BrokenPipeError:
+            except _CLIENT_DISCONNECT:
                 pass
 
         try:
-            proc = subprocess.Popen(
+            proc = subprocess.Popen(  # nosec B603
                 [sys.executable, str(ROOT / "main.py")],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -641,6 +665,8 @@ class Handler(BaseHTTPRequestHandler):
                 cwd=str(ROOT),
                 env={**os.environ},
             )
+            if proc.stdout is None:  # should never happen — stdout=PIPE guarantees it
+                raise RuntimeError("stdout pipe unavailable")
             for line in proc.stdout:
                 emit(line.rstrip())
             proc.wait()
@@ -657,7 +683,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 self.wfile.write(b"event: close\ndata:\n\n")
                 self.wfile.flush()
-            except BrokenPipeError:
+            except _CLIENT_DISCONNECT:
                 pass
 
 

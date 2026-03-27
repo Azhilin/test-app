@@ -1,5 +1,6 @@
 # Secrets & local config
 .env
+dau_responses.json
 .vscode/mcp.json
 .claude/settings.local.json
 
@@ -60,3 +61,8 @@ logs/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Misc
+*.bak
+sh.exe.stackdump
+=1.9.0

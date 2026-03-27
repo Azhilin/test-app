@@ -53,4 +53,9 @@ def validate_config() -> list[str]:
         errors.append("JIRA_EMAIL is not set")
     if not JIRA_API_TOKEN:
         errors.append("JIRA_API_TOKEN is not set")
+    # Warn (not block) when raw JIRA_URL had trailing slash(es) — they were
+    # silently stripped by the rstrip("/") above.
+    raw_url = os.getenv("JIRA_URL", "")
+    if raw_url and raw_url != raw_url.rstrip("/"):
+        errors.append("JIRA_URL had a trailing slash (auto-stripped)")
     return errors

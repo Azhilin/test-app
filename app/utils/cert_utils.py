@@ -26,7 +26,11 @@ def validate_cert(cert_path: Path) -> dict:
 
         try:
             cn_attrs = cert.subject.get_attributes_for_oid(NameOID.COMMON_NAME)
-            subject = f"CN={cn_attrs[0].value}" if cn_attrs else cert.subject.rfc4514_string()
+            if cn_attrs:
+                cn_value = cn_attrs[0].value
+                subject = f"CN={cn_value.decode() if isinstance(cn_value, bytes) else cn_value}"
+            else:
+                subject = cert.subject.rfc4514_string()
         except Exception:  # noqa: BLE001
             subject = cert.subject.rfc4514_string()
 

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib
 import os
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -169,8 +170,6 @@ def test_env_path_points_to_project_root():
 
 
 def test_jira_ssl_cert_returns_true_when_no_file():
-    from pathlib import Path
-
     with patch.object(Path, "is_file", return_value=False):
         cfg = _reload_config(
             {
@@ -183,8 +182,6 @@ def test_jira_ssl_cert_returns_true_when_no_file():
 
 
 def test_jira_ssl_cert_returns_path_when_file_exists():
-    from pathlib import Path
-
     with patch.object(Path, "is_file", return_value=True):
         cfg = _reload_config(
             {
@@ -198,6 +195,66 @@ def test_jira_ssl_cert_returns_path_when_file_exists():
 
 
 # ---------------------------------------------------------------------------
+# TR-41: JIRA_URL trailing-slash handling
+# ---------------------------------------------------------------------------
+
+
+def test_jira_url_trailing_slash_stripped():
+    cfg = _reload_config(
+        {
+            "JIRA_URL": "https://example.atlassian.net/",
+            "JIRA_EMAIL": "a@b.com",
+            "JIRA_API_TOKEN": "t",
+        }
+    )
+    assert cfg.JIRA_URL == "https://example.atlassian.net"
+
+
+def test_jira_url_multiple_trailing_slashes_stripped():
+    cfg = _reload_config(
+        {
+            "JIRA_URL": "https://example.atlassian.net///",
+            "JIRA_EMAIL": "a@b.com",
+            "JIRA_API_TOKEN": "t",
+        }
+    )
+    assert cfg.JIRA_URL == "https://example.atlassian.net"
+
+
+def test_jira_url_no_trailing_slash_unchanged():
+    cfg = _reload_config(
+        {
+            "JIRA_URL": "https://example.atlassian.net",
+            "JIRA_EMAIL": "a@b.com",
+            "JIRA_API_TOKEN": "t",
+        }
+    )
+    assert cfg.JIRA_URL == "https://example.atlassian.net"
+
+
+def test_jira_url_empty_string_safe():
+    cfg = _reload_config(
+        {
+            "JIRA_URL": "",
+            "JIRA_EMAIL": "a@b.com",
+            "JIRA_API_TOKEN": "t",
+        }
+    )
+    assert cfg.JIRA_URL == ""
+
+
+def test_validate_config_warns_trailing_slash():
+    env = {
+        "JIRA_URL": "https://example.atlassian.net/",
+        "JIRA_EMAIL": "a@b.com",
+        "JIRA_API_TOKEN": "t",
+    }
+    cfg = _reload_config(env)
+    with patch.dict(os.environ, env, clear=True):
+        errors = cfg.validate_config()
+    assert any("trailing slash" in e.lower() for e in errors)
+
+
 # AI label config vars
 # ---------------------------------------------------------------------------
 

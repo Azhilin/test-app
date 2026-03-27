@@ -29,6 +29,7 @@ def test_create_client_returns_jira_instance(monkeypatch):
             username="user@test.com",
             password="tok123",
             verify_ssl=True,
+            timeout=55,
         )
 
 
@@ -287,3 +288,95 @@ def test_fetch_sprint_data_skips_sprints_without_id(monkeypatch, mock_jira):
     assert len(sprints) == 2
     assert captured_sprint_ids == [12]
     assert sprint_issues == {12: [{"key": "T-12"}]}
+
+
+# ---------------------------------------------------------------------------
+# TR-39: Credentials transmitted only to JIRA_URL, never leaked
+# ---------------------------------------------------------------------------
+
+
+def test_create_client_url_kwarg_matches_config_exactly(monkeypatch):
+    """The 'url' keyword passed to Jira() must be exactly the configured JIRA_URL."""
+    monkeypatch.setattr("app.core.config.JIRA_URL", "https://secure.atlassian.net")
+    monkeypatch.setattr("app.core.config.JIRA_EMAIL", "user@test.com")
+    monkeypatch.setattr("app.core.config.JIRA_API_TOKEN", "tok")
+    monkeypatch.setattr("app.core.config.JIRA_SSL_CERT", True)
+    with patch("app.core.jira_client.Jira") as MockJira:
+        jira_client.create_client()
+        kwargs = MockJira.call_args.kwargs
+        assert kwargs["url"] == "https://secure.atlassian.net"
+
+
+def test_create_client_no_credentials_in_url_kwarg(monkeypatch):
+    """Credentials must NOT appear embedded in the url parameter."""
+    monkeypatch.setattr("app.core.config.JIRA_URL", "https://corp.atlassian.net")
+    monkeypatch.setattr("app.core.config.JIRA_EMAIL", "leaky@test.com")
+    monkeypatch.setattr("app.core.config.JIRA_API_TOKEN", "supersecret")
+    monkeypatch.setattr("app.core.config.JIRA_SSL_CERT", True)
+    with patch("app.core.jira_client.Jira") as MockJira:
+        jira_client.create_client()
+        url_kwarg = MockJira.call_args.kwargs["url"]
+        assert "leaky@test.com" not in url_kwarg
+        assert "supersecret" not in url_kwarg
+
+
+def test_create_client_credentials_in_auth_kwargs_only(monkeypatch):
+    """Username and password must be passed as separate kwargs, not embedded anywhere else."""
+    monkeypatch.setattr("app.core.config.JIRA_URL", "https://corp.atlassian.net")
+    monkeypatch.setattr("app.core.config.JIRA_EMAIL", "user@corp.com")
+    monkeypatch.setattr("app.core.config.JIRA_API_TOKEN", "secret_token_42")
+    monkeypatch.setattr("app.core.config.JIRA_SSL_CERT", True)
+    with patch("app.core.jira_client.Jira") as MockJira:
+        jira_client.create_client()
+        kwargs = MockJira.call_args.kwargs
+        assert kwargs["username"] == "user@corp.com"
+        assert kwargs["password"] == "secret_token_42"
+        # Ensure only the expected keys are passed
+        assert set(kwargs.keys()) == {"url", "username", "password", "verify_ssl", "timeout"}
+
+
+# ── NFR-P-001: Jira client timeout ──────────────────────────────────────
+
+
+def test_create_client_passes_timeout(monkeypatch):
+    """create_client() must pass timeout=55 to the Jira constructor."""
+    monkeypatch.setattr("app.core.config.JIRA_URL", "https://j.atlassian.net")
+    monkeypatch.setattr("app.core.config.JIRA_EMAIL", "a@b.com")
+    monkeypatch.setattr("app.core.config.JIRA_API_TOKEN", "tok")
+    monkeypatch.setattr("app.core.config.JIRA_SSL_CERT", True)
+    with patch("app.core.jira_client.Jira") as MockJira:
+        jira_client.create_client()
+        assert MockJira.call_args.kwargs["timeout"] == 55
+
+
+# ── NFR-S-006: _sanitise_error ──────────────────────────────────────────
+
+
+def test_sanitise_error_replaces_url(monkeypatch):
+    """Jira URL must be masked in error messages."""
+    monkeypatch.setattr("app.core.config.JIRA_URL", "https://corp.atlassian.net")
+    monkeypatch.setattr("app.core.config.JIRA_EMAIL", "")
+    monkeypatch.setattr("app.core.config.JIRA_API_TOKEN", "")
+    result = jira_client._sanitise_error("Cannot reach https://corp.atlassian.net/rest/api")
+    assert "corp.atlassian.net" not in result
+    assert "***" in result
+
+
+def test_sanitise_error_replaces_email_and_token(monkeypatch):
+    """Email and API token must be masked."""
+    monkeypatch.setattr("app.core.config.JIRA_URL", "")
+    monkeypatch.setattr("app.core.config.JIRA_EMAIL", "user@secret.com")
+    monkeypatch.setattr("app.core.config.JIRA_API_TOKEN", "ATATT-xyz-123")
+    msg = "401 Unauthorized for user@secret.com token=ATATT-xyz-123"
+    result = jira_client._sanitise_error(msg)
+    assert "user@secret.com" not in result
+    assert "ATATT-xyz-123" not in result
+
+
+def test_sanitise_error_handles_none_config_values(monkeypatch):
+    """Empty/None config values must not cause errors."""
+    monkeypatch.setattr("app.core.config.JIRA_URL", None)
+    monkeypatch.setattr("app.core.config.JIRA_EMAIL", "")
+    monkeypatch.setattr("app.core.config.JIRA_API_TOKEN", None)
+    result = jira_client._sanitise_error("some error message")
+    assert result == "some error message"

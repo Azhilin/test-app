@@ -31,7 +31,8 @@ def generate_html(
     """
     if section_visibility is None:
         section_visibility = {k: True for k in _SECTION_KEYS}
-    env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))
+    # Template renders trusted Jira metric data — no user-supplied HTML content
+    env = Environment(loader=FileSystemLoader(str(TEMPLATES_DIR)))  # nosec B701
     template = env.get_template("report.html.j2")
     html = template.render(metrics=metrics, section_visibility=section_visibility)
     output_path.write_text(html, encoding="utf-8")

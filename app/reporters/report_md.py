@@ -72,7 +72,7 @@ def generate_md(metrics: dict, output_path: Path = DEFAULT_OUTPUT) -> None:
                     ["Median (days)", ct.get("median_days", "—")],
                     ["Min (days)", ct.get("min_days", "—")],
                     ["Max (days)", ct.get("max_days", "—")],
-                    ["Sample size", sample],
+                    ["Sample size", str(sample)],
                 ],
             )
         )

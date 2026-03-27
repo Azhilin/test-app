@@ -608,3 +608,27 @@ def test_ai_usage_empty_labels():
 
 def test_compute_custom_trends_returns_empty_list():
     assert metrics.compute_custom_trends([], {}) == []
+
+
+# ---------------------------------------------------------------------------
+# build_metrics_dict determinism (NFR-C-004)
+# ---------------------------------------------------------------------------
+
+
+def test_build_metrics_dict_is_deterministic():
+    """Two calls with identical inputs produce identical output (except generated_at)."""
+    from tests.conftest import make_issue, make_sprint
+
+    sprint = make_sprint(1, name="Sprint 1")
+    issue = make_issue("DET-1", points=3.0)
+    sprints = [sprint]
+    sprint_issues = {1: [issue]}
+
+    result_a = metrics.build_metrics_dict(sprints, sprint_issues, [])
+    result_b = metrics.build_metrics_dict(sprints, sprint_issues, [])
+
+    # generated_at is timestamp-based and intentionally differs between calls
+    for result in (result_a, result_b):
+        result.pop("generated_at", None)
+
+    assert result_a == result_b

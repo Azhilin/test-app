@@ -12,6 +12,14 @@ from app.core import config
 logger = logging.getLogger(__name__)
 
 
+def _sanitise_error(msg: str) -> str:
+    """Replace known sensitive config values with *** in error strings."""
+    for sensitive in (config.JIRA_URL, config.JIRA_EMAIL, config.JIRA_API_TOKEN):
+        if sensitive:
+            msg = msg.replace(sensitive, "***")
+    return msg
+
+
 def create_client() -> Jira:
     """Create and return an authenticated Jira client."""
     return Jira(
@@ -19,6 +27,7 @@ def create_client() -> Jira:
         username=config.JIRA_EMAIL,
         password=config.JIRA_API_TOKEN,
         verify_ssl=config.JIRA_SSL_CERT,
+        timeout=55,
     )
 
 
@@ -27,6 +36,8 @@ def get_board_id(jira: Jira) -> int:
     if config.JIRA_BOARD_ID is not None:
         return config.JIRA_BOARD_ID
     result = jira.get_all_agile_boards(start=0, limit=1)
+    if result is None:
+        raise ValueError("No boards found. Set JIRA_BOARD_ID or use an account with board access.")
     values = result.get("values") or []
     if not values:
         raise ValueError("No boards found. Set JIRA_BOARD_ID or use an account with board access.")
@@ -38,8 +49,8 @@ def get_sprints(jira: Jira, board_id: int) -> list[dict[str, Any]]:
     # Fetch closed first, then active
     result_closed = jira.get_all_sprints_from_board(board_id, state="closed", start=0, limit=config.JIRA_SPRINT_COUNT)
     result_active = jira.get_all_sprints_from_board(board_id, state="active", start=0, limit=10)
-    closed = result_closed.get("values") or []
-    active = result_active.get("values") or []
+    closed = (result_closed.get("values") or []) if result_closed is not None else []
+    active = (result_active.get("values") or []) if result_active is not None else []
     ordered = sorted(closed, key=lambda s: s.get("startDate") or "", reverse=True)
     ordered = (ordered + active)[: config.JIRA_SPRINT_COUNT]
     return ordered
@@ -63,6 +74,8 @@ def get_issues_for_sprint(jira: Jira, board_id: int, sprint_id: int, jql: str = 
     limit = 50
     while True:
         result = jira.get_all_issues_for_sprint_in_board(board_id, sprint_id, jql=jql, start=start, limit=limit)
+        if result is None:
+            break
         issues = result.get("issues") or []
         all_issues.extend(issues)
         total = result.get("total", 0)
@@ -84,7 +97,7 @@ def get_issues_with_changelog(jira: Jira, issue_keys: list[str]) -> list[dict[st
         try:
             out.append(get_issue_with_changelog(jira, key))
         except Exception as exc:
-            logger.warning("Failed to fetch changelog for %s: %s", key, exc)
+            logger.warning("Failed to fetch changelog for %s: %s", key, _sanitise_error(str(exc)))
             out.append({})  # Skip failed issues; metrics can tolerate missing
     return out
 

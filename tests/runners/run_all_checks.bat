@@ -1,6 +1,6 @@
 @echo off
 setlocal EnableDelayedExpansion
-cd /d "%~dp0.."
+cd /d "%~dp0..\.."
 
 :: ─────────────────────────────────────────────────────────────────────────────
 ::  run_all_checks.bat  —  local mirror of the full CI pipeline
@@ -54,13 +54,10 @@ echo =========================================================================
 echo.
 
 :: ── 1. Lint ──────────────────────────────────────────────────────────────────
-echo ── [1/7] Lint (ruff) ────────────────────────────────────────────────────
+echo ── [1/7] Lint (ruff + mypy + bandit) ───────────────────────────────────
 echo.
-%PYTHON% -m ruff check app/ tests/
-set EC1=!ERRORLEVEL!
-%PYTHON% -m ruff format --check app/ tests/
-set EC2=!ERRORLEVEL!
-if !EC1! neq 0 ( set R_LINT=FAIL & set ANY_FAILED=1 ) else if !EC2! neq 0 ( set R_LINT=FAIL & set ANY_FAILED=1 ) else ( set R_LINT=PASS )
+call "%~dp0run_lint.bat"
+if !ERRORLEVEL! neq 0 ( set R_LINT=FAIL & set ANY_FAILED=1 ) else ( set R_LINT=PASS )
 echo.
 
 :: ── 2. Unit Tests ─────────────────────────────────────────────────────────────
@@ -135,7 +132,7 @@ echo =========================================================================
 echo.
 echo   Stage                   Result
 echo   ─────────────────────── ──────
-echo   Lint (ruff)             !R_LINT!
+echo   Lint (ruff+mypy+bandit) !R_LINT!
 echo   Unit Tests              !R_UNIT!
 echo   Component Tests         !R_COMPONENT!
 echo   Windows Tests           !R_WINDOWS!

@@ -148,7 +148,6 @@ class TestWriteEnvFields:
         )
         env = tmp_path / ".env"
         assert env.exists(), ".env should be created"
-        assert not example.read_text() != example.read_text(), ".env.example unchanged"
         content = env.read_text()
         assert "JIRA_URL=https://x.atlassian.net" in content
         assert "JIRA_EMAIL=u@x.com" in content
@@ -222,6 +221,70 @@ class TestWriteEnvFields:
         assert "JIRA_EMAIL=new@x.com" in content
         assert "JIRA_API_TOKEN=newtok" in content
         assert "old" not in content
+
+    # -----------------------------------------------------------------------
+    # IR-38: Update process preserves existing .env credentials
+    # -----------------------------------------------------------------------
+
+    def test_preserves_other_credential_keys_when_updating_url(self, tmp_path, monkeypatch):
+        """Updating JIRA_URL must not disturb JIRA_EMAIL or JIRA_API_TOKEN."""
+        env = tmp_path / ".env"
+        env.write_text(
+            "JIRA_URL=https://old.atlassian.net\nJIRA_EMAIL=keep@example.com\nJIRA_API_TOKEN=keep_this_token\n"
+        )
+        h = self._make_handler(tmp_path, monkeypatch)
+        h._write_env_fields({"JIRA_URL": "https://new.atlassian.net"})
+        content = env.read_text()
+        assert "JIRA_URL=https://new.atlassian.net" in content
+        assert "JIRA_EMAIL=keep@example.com" in content
+        assert "JIRA_API_TOKEN=keep_this_token" in content
+
+    def test_partial_update_preserves_untouched_key(self, tmp_path, monkeypatch):
+        """Updating one credential must leave others byte-identical."""
+        env = tmp_path / ".env"
+        env.write_text(
+            "JIRA_URL=https://example.atlassian.net\nJIRA_EMAIL=old@example.com\nJIRA_API_TOKEN=original_tok\n"
+        )
+        h = self._make_handler(tmp_path, monkeypatch)
+        h._write_env_fields({"JIRA_EMAIL": "new@example.com"})
+        content = env.read_text()
+        assert "JIRA_EMAIL=new@example.com" in content
+        assert "JIRA_URL=https://example.atlassian.net" in content
+        assert "JIRA_API_TOKEN=original_tok" in content
+
+    def test_preserves_unrelated_optional_env_vars(self, tmp_path, monkeypatch):
+        """Non-credential env vars (JIRA_BOARD_ID, etc.) must survive credential updates."""
+        env = tmp_path / ".env"
+        env.write_text(
+            "JIRA_URL=https://example.atlassian.net\n"
+            "JIRA_EMAIL=u@x.com\n"
+            "JIRA_API_TOKEN=tok\n"
+            "JIRA_BOARD_ID=42\n"
+            "JIRA_SPRINT_COUNT=5\n"
+        )
+        h = self._make_handler(tmp_path, monkeypatch)
+        h._write_env_fields({"JIRA_API_TOKEN": "new_tok"})
+        content = env.read_text()
+        assert "JIRA_BOARD_ID=42" in content
+        assert "JIRA_SPRINT_COUNT=5" in content
+
+    def test_preserves_comment_lines_and_blanks(self, tmp_path, monkeypatch):
+        """Comments and blank lines must not be removed by _write_env_fields."""
+        env = tmp_path / ".env"
+        env.write_text(
+            "# Jira credentials\n"
+            "JIRA_URL=https://example.atlassian.net\n"
+            "\n"
+            "# Email for authentication\n"
+            "JIRA_EMAIL=u@x.com\n"
+            "JIRA_API_TOKEN=tok\n"
+        )
+        h = self._make_handler(tmp_path, monkeypatch)
+        h._write_env_fields({"JIRA_URL": "https://new.atlassian.net"})
+        content = env.read_text()
+        assert "# Jira credentials" in content
+        assert "# Email for authentication" in content
+        assert "\n\n" in content  # blank line preserved
 
 
 # ---------------------------------------------------------------------------
