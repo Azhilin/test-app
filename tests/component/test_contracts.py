@@ -79,6 +79,7 @@ def test_build_metrics_dict_has_all_expected_keys():
         "filter_id",
         "filter_jql",
         "project_key",
+        "dau",
     }
     assert set(result.keys()) == expected_keys
 
