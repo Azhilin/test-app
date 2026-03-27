@@ -55,6 +55,15 @@ def minimal_metrics_dict() -> dict:
         "filter_id": None,
         "filter_jql": None,
         "project_key": None,
+        "dau": {
+            "team_avg": 3.5,
+            "response_count": 2,
+            "by_role": [{"role": "Developer", "avg": 4.25, "count": 2}],
+            "breakdown": [
+                {"answer": "Every day (5 days)", "count": 1},
+                {"answer": "Most days (3\u20134 days)", "count": 1},
+            ],
+        },
     }
 
 
@@ -84,4 +93,5 @@ def empty_metrics_dict() -> dict:
         "filter_id": None,
         "filter_jql": None,
         "project_key": None,
+        "dau": {"team_avg": None, "response_count": 0, "by_role": [], "breakdown": []},
     }

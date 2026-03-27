@@ -16,6 +16,7 @@ _SECTION_KEYS = [
     "ai_usage_details",
     "cycle_time",
     "custom_trends",
+    "dau",
 ]
 
 

@@ -649,7 +649,7 @@
           <div class="submit-tooltip" id="submit-tooltip" role="tooltip">Please answer all 3 questions first</div>
         </div>
         <span id="submit-hint" style="font-size:0.78rem;color:var(--text-muted);">
-          You will be asked to select the folder where <strong>dau_survey.html</strong> is saved &mdash; <strong>dau_report.json</strong> will be written there
+          You will be asked to select the folder where the response files are saved (e.g. <strong>generated/</strong>) &mdash; a file named <strong>dau_&lt;username&gt;_&lt;timestamp&gt;.json</strong> will be written there
         </span>
       </div>
 
@@ -837,32 +837,43 @@
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
 
+      // ── Build filename from payload ──
+      function makeFilename(payload) {
+        const ts = payload.timestamp
+          .replace(/-/g, '')
+          .replace(/:/g, '')
+          .replace(/\+0000$/, 'Z');
+        return 'dau_' + payload.username + '_' + ts + '.json';
+      }
+
       // ── Fallback: trigger download ──
       function downloadFallback(payload) {
+        const filename = makeFilename(payload);
         const json = JSON.stringify(payload, null, 2);
         const blob = new Blob([json], { type: 'application/json' });
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
         a.href     = url;
-        a.download = 'dau_report.json';
+        a.download = filename;
         document.body.appendChild(a);
         a.click();
         setTimeout(function () {
           document.body.removeChild(a);
           URL.revokeObjectURL(url);
         }, 100);
-        return 'Downloaded as <strong>dau_report.json</strong> to your Downloads folder.';
+        return 'Downloaded as <strong>' + filename + '</strong> to your Downloads folder.';
       }
 
       // ── Save via File System Access API (directory picker) ──
       async function saveWithFSAPI(payload) {
+        const filename = makeFilename(payload);
         const json = JSON.stringify(payload, null, 2);
         const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-        const fileHandle = await dirHandle.getFileHandle('dau_report.json', { create: true });
+        const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
         const writable = await fileHandle.createWritable();
         await writable.write(json);
         await writable.close();
-        return 'Saved as <strong>dau_report.json</strong> in <strong>' + dirHandle.name + '</strong>';
+        return 'Saved as <strong>' + filename + '</strong> in <strong>' + dirHandle.name + '</strong>';
       }
 
       // ── Submit handler ──

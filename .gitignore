@@ -1,6 +1,6 @@
 # Secrets & local config
 .env
-dau_responses.json
+dau_*.json
 .vscode/mcp.json
 .claude/settings.local.json
 

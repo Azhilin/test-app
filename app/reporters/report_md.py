@@ -89,4 +89,23 @@ def generate_md(metrics: dict, output_path: Path = DEFAULT_OUTPUT) -> None:
         parts.append(_md_table(headers, rows))
         parts.append("")
 
+    dau = metrics.get("dau") or {}
+    if dau.get("response_count"):
+        parts.append("## Daily Active Usage (DAU)")
+        parts.append("")
+        parts.append(
+            f"Team average: **{dau['team_avg']} / 5** across {dau['response_count']} response(s)"
+        )
+        parts.append("")
+        if dau.get("by_role"):
+            headers = ["Role", "Avg days/week", "Responses"]
+            rows = [[r["role"], r["avg"], r["count"]] for r in dau["by_role"]]
+            parts.append(_md_table(headers, rows))
+            parts.append("")
+        if dau.get("breakdown"):
+            headers = ["Answer", "Count"]
+            rows = [[b["answer"], b["count"]] for b in dau["breakdown"]]
+            parts.append(_md_table(headers, rows))
+            parts.append("")
+
     output_path.write_text("\n".join(parts), encoding="utf-8")

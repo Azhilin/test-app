@@ -6,6 +6,14 @@ Add a self-hosted DAU survey that team members fill in locally, stores responses
 
 ## Architecture
 
+> **Note (2026-03-27):** The original architecture below describes a server-side `POST /api/survey`
+> route. This approach was superseded in favour of **client-side-only submission**: the survey page
+> saves responses directly to the local filesystem via the File System Access API (with a browser
+> download fallback). No server endpoint is created. The `dau_responses.json` filename shown in the
+> diagram is also superseded; response files now follow the `dau_<username>_<timestamp>.json` naming
+> convention and are stored in `generated/` by default. See
+> [`dau_survey_requirements.md`](../requirements/dau_survey_requirements.md) for the current spec.
+
 ```mermaid
 flowchart LR
     subgraph browser [Browser]

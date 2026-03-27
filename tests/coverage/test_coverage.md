@@ -9,21 +9,22 @@
 | Technical Requirements | 47 | 25 | 0 | 0 | 22 | 100% | [→ detail](requirements/technical_requirements_coverage.md) |
 | Installation Requirements | 38 | 5 | 0 | 0 | 33 | 100% | [→ detail](requirements/installation_requirements_coverage.md) |
 | App Non Functional Requirements | 33 | 23 | 0 | 0 | 10 | 100% | [→ detail](requirements/app_non_functional_requirements_coverage.md) |
-| **All** | **118** | **53** | **0** | **0** | **65** | **100%** |  |
+| Dau Survey Requirements | 31 | 26 | 0 | 3 | 2 | 90% | [→ detail](requirements/dau_survey_requirements_coverage.md) |
+| **All** | **149** | **79** | **0** | **3** | **67** | **96%** |  |
 
 ## Test Pyramid
 
 ```text
-              /  E2E  \              73 tests  (22%)  (subprocess, server, Playwright UI)  → tests/e2e/
+              /  E2E  \              77 tests  (22%)  (subprocess, server, Playwright UI)  → tests/e2e/
              /----------\
-            / Integration \           15 tests   (5%)  (module boundaries, mocked I/O)       → tests/integration/
+            / Integration \           15 tests   (4%)  (module boundaries, mocked I/O)       → tests/integration/
            /----------------\
-          /    Component      \      80 tests  (25%)  (filesystem, HTTP, data shapes)        → tests/component/
+          /    Component      \      88 tests  (25%)  (filesystem, HTTP, data shapes)        → tests/component/
          /--------------------\
-        /        Unit            \   158 tests  (48%)  (pure functions, no I/O)               → tests/unit/
+        /        Unit            \   171 tests  (49%)  (pure functions, no I/O)               → tests/unit/
        /------------------------\
                                      ────────────────
-                                     326 tests total
+                                     351 tests total
 ```
 
 ## Coverage Matrix
@@ -96,5 +97,5 @@ tests\run_e2e_tests.bat
 | `integration/test_integration.py` | Integration |    6  | Full pipeline, filter flow, server  |
 | `integration/test_fetch_ssl_cert.py` | Integration |    9  | fetch_ssl_cert function + CLI smoke |
 | `e2e/test_e2e.py`                 | E2E         |    3  | CLI subprocess, server health       |
-| `e2e/test_e2e_ui.py`              | E2E         |   24  | Playwright browser UI tests         || `e2e/test_dau_survey_ui.py`      | E2E         |   19  | DAU survey form Playwright tests    |
+| `e2e/test_e2e_ui.py`              | E2E         |   24  | Playwright browser UI tests         || `e2e/test_dau_survey_ui.py`      | E2E         |   23  | DAU survey form Playwright tests    |
 | `e2e/test_e2e_connection.py`     | E2E         |   27  | Connection panel Playwright tests   |

@@ -242,8 +242,8 @@ def test_submit_writes_valid_json_to_mocked_fs(page: Page) -> None:
     _fill_all(page, username="charlie99")
     page.locator("#btn-submit").click()
     expect(page.locator("#confirmation")).to_be_visible(timeout=3000)
-    raw = page.evaluate("() => window.__savedFiles['dau_report.json']")
-    assert raw is not None, "dau_report.json was not written to the mocked FS"
+    raw = page.evaluate("() => Object.values(window.__savedFiles)[0]")
+    assert raw is not None, "No file was written to the mocked FS"
     data = json.loads(raw)
     assert data["username"] == "charlie99"
     assert data["role"] == "Developer"
@@ -263,7 +263,7 @@ def test_submit_timestamp_format(page: Page) -> None:
     _fill_all(page)
     page.locator("#btn-submit").click()
     expect(page.locator("#confirmation")).to_be_visible(timeout=3000)
-    raw = page.evaluate("() => window.__savedFiles['dau_report.json']")
+    raw = page.evaluate("() => Object.values(window.__savedFiles)[0]")
     assert raw is not None
     data = json.loads(raw)
     assert re.match(
@@ -278,7 +278,7 @@ def test_submit_week_field_format(page: Page) -> None:
     _fill_all(page)
     page.locator("#btn-submit").click()
     expect(page.locator("#confirmation")).to_be_visible(timeout=3000)
-    raw = page.evaluate("() => window.__savedFiles['dau_report.json']")
+    raw = page.evaluate("() => Object.values(window.__savedFiles)[0]")
     assert raw is not None
     data = json.loads(raw)
     assert "week" in data, "'week' field missing from payload"
@@ -305,3 +305,80 @@ def test_username_restored_from_localstorage_on_page_load(page: Page) -> None:
     page.add_init_script(_MOCK_ONLY + "\nlocalStorage.setItem('dau_username', 'eve88');")
     page.goto(SURVEY_URL, wait_until="domcontentloaded", timeout=15000)
     expect(page.locator("#input-username")).to_have_value("eve88")
+
+
+# ---------------------------------------------------------------------------
+# Group 8: Filename, FS API Fallback & Error Handling (DAU-F-010 to F-014)
+# ---------------------------------------------------------------------------
+
+
+def test_filename_matches_dau_username_timestamp_pattern(page: Page) -> None:
+    """Saved filename follows dau_<username>_<timestamp>.json pattern (DAU-F-014)."""
+    _goto(page)
+    _fill_all(page, username="alice123")
+    page.locator("#btn-submit").click()
+    expect(page.locator("#confirmation")).to_be_visible(timeout=3000)
+    filename = page.evaluate("() => Object.keys(window.__savedFiles)[0]")
+    assert filename is not None
+    assert re.match(r"^dau_alice123_\d{8}T\d{6}Z\.json$", filename), (
+        f"Unexpected filename: {filename}"
+    )
+
+
+def test_fs_api_abort_keeps_form_intact(page: Page) -> None:
+    """AbortError from showDirectoryPicker leaves the form visible (DAU-F-012)."""
+    page.add_init_script(
+        "localStorage.clear();"
+        "window.__savedFiles = {};"
+        "window.showDirectoryPicker = async () => {"
+        "  throw new DOMException('User aborted', 'AbortError');"
+        "};"
+    )
+    page.goto(SURVEY_URL, wait_until="domcontentloaded", timeout=15000)
+    _fill_all(page)
+    page.locator("#btn-submit").click()
+    page.wait_for_timeout(500)
+    expect(page.locator("#survey-form")).to_be_visible()
+    expect(page.locator("#confirmation")).to_be_hidden()
+
+
+def test_fs_api_non_abort_error_falls_back_to_download(page: Page) -> None:
+    """Non-AbortError from showDirectoryPicker silently falls back to download (DAU-F-013)."""
+    page.add_init_script(
+        "localStorage.clear();"
+        "window.__savedFiles = {};"
+        "window.__downloadClicked = false;"
+        "window.showDirectoryPicker = async () => { throw new Error('disk full'); };"
+        "var _origClick = HTMLAnchorElement.prototype.click;"
+        "HTMLAnchorElement.prototype.click = function() {"
+        "  window.__downloadClicked = true;"
+        "  _origClick.call(this);"
+        "};"
+    )
+    page.goto(SURVEY_URL, wait_until="domcontentloaded", timeout=15000)
+    _fill_all(page)
+    page.locator("#btn-submit").click()
+    expect(page.locator("#confirmation")).to_be_visible(timeout=3000)
+    clicked = page.evaluate("() => window.__downloadClicked")
+    assert clicked is True, "Browser download fallback was not triggered"
+
+
+def test_fs_api_unavailable_falls_back_to_download(page: Page) -> None:
+    """When showDirectoryPicker is undefined the app uses browser download (DAU-F-011)."""
+    page.add_init_script(
+        "localStorage.clear();"
+        "window.__savedFiles = {};"
+        "window.__downloadClicked = false;"
+        "delete window.showDirectoryPicker;"
+        "var _origClick = HTMLAnchorElement.prototype.click;"
+        "HTMLAnchorElement.prototype.click = function() {"
+        "  window.__downloadClicked = true;"
+        "  _origClick.call(this);"
+        "};"
+    )
+    page.goto(SURVEY_URL, wait_until="domcontentloaded", timeout=15000)
+    _fill_all(page)
+    page.locator("#btn-submit").click()
+    expect(page.locator("#confirmation")).to_be_visible(timeout=3000)
+    clicked = page.evaluate("() => window.__downloadClicked")
+    assert clicked is True, "Browser download fallback was not triggered"
