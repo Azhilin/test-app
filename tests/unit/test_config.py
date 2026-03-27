@@ -27,7 +27,7 @@ def _restore_config():
 
 def _reload_config(env: dict):
     """Reload app.core.config with a patched environment, return the module."""
-    with patch.dict(os.environ, env, clear=True):
+    with patch.dict(os.environ, env, clear=True), patch("dotenv.load_dotenv", lambda *args, **kwargs: None):
         import app.core.config as cfg
 
         importlib.reload(cfg)
@@ -291,6 +291,11 @@ def test_ai_action_labels_parsed():
     assert cfg.AI_ACTION_LABELS == ["AI_Case_CodeGen", "AI_Case_Review"]
 
 
-def test_jira_story_points_field_custom():
-    cfg = _reload_config({**_BASE_ENV, "JIRA_STORY_POINTS_FIELD": "customfield_99999"})
-    assert cfg.JIRA_STORY_POINTS_FIELD == "customfield_99999"
+def test_jira_schema_name_default():
+    cfg = _reload_config(_BASE_ENV)
+    assert cfg.JIRA_SCHEMA_NAME is None
+
+
+def test_jira_schema_name_custom():
+    cfg = _reload_config({**_BASE_ENV, "JIRA_SCHEMA_NAME": "My Schema"})
+    assert cfg.JIRA_SCHEMA_NAME == "My Schema"

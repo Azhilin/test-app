@@ -1,5 +1,4 @@
-"""End-to-end tests: exercise via subprocess, no mocking."""
-
+"""Integration tests for CLI and server subprocess flows."""
 from __future__ import annotations
 
 import os
@@ -12,10 +11,10 @@ from pathlib import Path
 
 import pytest
 
-pytestmark = pytest.mark.e2e
+pytestmark = pytest.mark.integration
 
 PYTHON = sys.executable
-# __file__ is tests/e2e/test_e2e.py → parents[2] is the project root
+# __file__ is tests/integration/test_cli_server.py → parents[2] is the project root
 PROJECT_ROOT = str(Path(__file__).resolve().parents[2])
 
 
@@ -70,7 +69,9 @@ def test_server_health_check():
         resp = None
         while time.monotonic() < deadline:
             try:
-                resp = urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=2)
+                resp = urllib.request.urlopen(
+                    f"http://127.0.0.1:{port}/", timeout=2
+                )
                 break
             except (urllib.error.URLError, OSError):
                 time.sleep(0.25)

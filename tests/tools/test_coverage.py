@@ -68,13 +68,13 @@ LAYERS: list[dict] = [
     {
         "name": "Integration",
         "folder": TESTS_DIR / "integration",
-        "description": "(module boundaries, mocked I/O)",
+        "description": "(cross-module flows, subprocess)",
         "path_label": "→ tests/integration/",
     },
     {
         "name": "E2E",
         "folder": TESTS_DIR / "e2e",
-        "description": "(subprocess, server, Playwright UI)",
+        "description": "(Playwright browser UI)",
         "path_label": "→ tests/e2e/",
     },
 ]

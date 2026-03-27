@@ -72,15 +72,15 @@ Key modules (all under `app/`):
 - `app/server.py` — stdlib HTTP server serving `ui/index.html`, with `/api/test-connection` (POST), `/api/generate` (SSE), `/api/schemas` (GET/POST/DELETE)
 
 **Config files:**
-- `config/jira_schema.json` — Jira field schema definitions (field IDs, status mappings) per Jira instance. Ships with a "Default (Jira Cloud)" schema. Not a generated file — lives alongside source
+- `config/jira_schema.json` — Jira field schema definitions (field IDs, status mappings) per Jira instance. Ships with a `Default_Jira_Cloud` entry. Not a generated file — lives alongside source
 
 **Reports output:** `generated/reports/<ISO-timestamp>/report.html` and `report.md`
 
 ## Configuration
 
-All config is via `.env` (see `.env.example`). Required: `JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`. Optional: `JIRA_BOARD_ID`, `JIRA_SPRINT_COUNT` (default 10), `JIRA_STORY_POINTS_FIELD` (default `customfield_10016`), `JIRA_FILTER_ID`.
+All config is via `.env` (see `.env.example`). Required: `JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`. Optional: `JIRA_BOARD_ID`, `JIRA_SPRINT_COUNT` (default 10), `JIRA_SCHEMA_NAME` (which entry in `config/jira_schema.json` to use for CLI), `JIRA_FILTER_ID`.
 
-**Schema system:** `config/jira_schema.json` defines field mappings and status categories per Jira instance. The UI's "Jira Field Schema" card (Filter tab) lets users select or auto-fetch schemas. When a schema is active, `metrics.py` uses its field IDs and status lists instead of hardcoded defaults. The `.env` `JIRA_STORY_POINTS_FIELD` is still respected as a fallback when no schema file exists.
+**Schema system:** `config/jira_schema.json` defines field mappings and status categories per Jira instance. The UI's "Jira Field Schema" card (Filter tab) lets users select or auto-fetch schemas. `metrics.py` reads story points and other field IDs from the active schema; if the JSON file is missing, a built-in default schema is used (`schema.DEFAULT_STORY_POINTS_FIELD_ID` for bare `_get_story_points` calls without a schema).
 
 ## Tech Stack
 
@@ -129,7 +129,7 @@ Exact dict shapes crossing module boundaries:
 **Schema dict** (entries in `config/jira_schema.json`, loaded by `app/core/schema.py`):
 ```python
 {
-    "schema_name": str,           # unique identifier, e.g. "Default (Jira Cloud)"
+    "schema_name": str,           # unique identifier, e.g. "Default_Jira_Cloud"
     "description": str,
     "jira_url_pattern": str,      # optional URL pattern for auto-matching
     "fields": {

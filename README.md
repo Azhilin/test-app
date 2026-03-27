@@ -25,7 +25,7 @@ Open `.env` and fill in:
 - `JIRA_API_TOKEN` – create at [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
 
 Optional settings (see `.env.example` for details):
-`JIRA_BOARD_ID`, `JIRA_SPRINT_COUNT`, `JIRA_STORY_POINTS_FIELD`, `JIRA_FILTER_ID`,
+`JIRA_BOARD_ID`, `JIRA_SPRINT_COUNT`, `JIRA_SCHEMA_NAME`, `JIRA_FILTER_ID`,
 `AI_ASSISTED_LABEL`, `AI_EXCLUDE_LABELS`, `AI_TOOL_LABELS`, `AI_ACTION_LABELS`
 
 ## Run

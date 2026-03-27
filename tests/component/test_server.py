@@ -10,6 +10,8 @@ from unittest.mock import patch, MagicMock
 
 import pytest
 
+from app.core import schema as schema_mod
+
 pytestmark = pytest.mark.component
 
 
@@ -362,12 +364,12 @@ def test_get_schemas_returns_list(server_url):
     data = json.loads(resp.read())
     assert data["ok"] is True
     assert isinstance(data["schemas"], list)
-    assert "Default (Jira Cloud)" in data["schemas"]
+    assert schema_mod.DEFAULT_SCHEMA_NAME in data["schemas"]
 
 
 def test_get_schema_by_name(server_url):
-    """GET /api/schemas?name=Default (Jira Cloud) returns the full schema."""
-    name = "Default (Jira Cloud)"
+    """GET /api/schemas?name=<default> returns the full schema."""
+    name = schema_mod.DEFAULT_SCHEMA_NAME
     resp = urllib.request.urlopen(f"{server_url}/api/schemas?name={urllib.parse.quote(name)}")
     data = json.loads(resp.read())
     assert data["ok"] is True
@@ -449,8 +451,8 @@ def test_delete_schema_no_name_returns_400(server_url):
 
 
 def test_delete_default_schema_returns_400(server_url):
-    """DELETE /api/schemas?name=Default (Jira Cloud) refuses deletion."""
-    name = "Default (Jira Cloud)"
+    """DELETE /api/schemas?name=<default> refuses deletion."""
+    name = schema_mod.DEFAULT_SCHEMA_NAME
     req = urllib.request.Request(
         f"{server_url}/api/schemas?name={urllib.parse.quote(name)}", method="DELETE",
     )

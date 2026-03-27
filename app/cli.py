@@ -55,7 +55,7 @@ def main() -> int:
         print(f"Failed to fetch Jira data: {jira_client._sanitise_error(str(e))}", file=sys.stderr)
         return 1
 
-    active_schema = schema_mod.get_active_schema()
+    active_schema = schema_mod.get_active_schema(schema_name=config.JIRA_SCHEMA_NAME)
     _, done_fs, _ = metrics._resolve_schema_params(active_schema)
 
     issue_keys = metrics.get_done_issue_keys_for_changelog(

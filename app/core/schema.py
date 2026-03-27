@@ -5,11 +5,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-from app.core import config
-
 SCHEMA_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "jira_schema.json"
 
-DEFAULT_SCHEMA_NAME = "Default (Jira Cloud)"
+DEFAULT_SCHEMA_NAME = "Default_Jira_Cloud"
 
 _DEFAULT_SCHEMA: dict[str, Any] = {
     "schema_name": DEFAULT_SCHEMA_NAME,
@@ -25,13 +23,24 @@ _DEFAULT_SCHEMA: dict[str, Any] = {
         "labels": {"id": "labels", "type": "array", "description": "Issue labels"},
         "issue_type": {"id": "issuetype", "type": "string", "description": "Issue type"},
         "status": {"id": "status", "type": "string", "description": "Issue status"},
-        "resolution": {"id": "resolution", "type": "string", "description": "Resolution field"},
+        "resolution": {"id": "resolution", "type": "object", "description": "Resolution object (name: Done/Fixed/etc.); use resolution_date for time-based metrics"},
+        "assignee": {"id": "assignee", "type": "object", "description": "Issue assignee (user object with displayName, accountId); use for per-assignee breakdowns"},
+        "components": {"id": "components", "type": "array", "description": "Jira components assigned to the issue; use for component-level delivery trends"},
+        "fix_version": {"id": "fixVersions", "type": "array", "description": "Fix version(s) / release tags; use for release-based delivery metrics"},
+        "parent": {"id": "parent", "type": "object", "description": "Parent issue (epic or task); alternative to epic_link for Next-gen projects"},
+        "due_date": {"id": "duedate", "type": "string", "description": "Issue due date (ISO-8601 date string)"},
+        "resolution_date": {"id": "resolutiondate", "type": "string", "description": "Timestamp when the issue was resolved (ISO-8601); reliable cycle-time endpoint"},
+        # start_date is a custom field whose ID varies by instance; customfield_10015 is the Jira Cloud default
+        "start_date": {"id": "customfield_10015", "type": "string", "description": "Issue start date (custom field; ID varies by instance — verify via auto-detect)"},
     },
     "status_mapping": {
         "done_statuses": ["Done", "Closed", "Resolved", "Complete"],
         "in_progress_statuses": ["In Progress"],
     },
 }
+
+# Built-in story points field when no schema dict supplies one (matches _DEFAULT_SCHEMA)
+DEFAULT_STORY_POINTS_FIELD_ID: str = _DEFAULT_SCHEMA["fields"]["story_points"]["id"]
 
 
 def _read_file(path: Path | None = None) -> dict[str, Any]:
@@ -67,8 +76,7 @@ def get_active_schema(schema_name: str | None = None, path: Path | None = None) 
 
     1. If schema_name is given, look it up.
     2. Otherwise try the default schema from file.
-    3. If nothing found, return a hardcoded default that uses config.JIRA_STORY_POINTS_FIELD
-       so .env overrides still work.
+    3. If nothing found, return the built-in default (same shape as shipped jira_schema.json).
     """
     if schema_name:
         found = get_schema(schema_name, path)
@@ -79,10 +87,7 @@ def get_active_schema(schema_name: str | None = None, path: Path | None = None) 
     if default:
         return default
 
-    # Hardcoded fallback incorporating the .env story-points override
-    fallback = json.loads(json.dumps(_DEFAULT_SCHEMA))
-    fallback["fields"]["story_points"]["id"] = config.JIRA_STORY_POINTS_FIELD
-    return fallback
+    return json.loads(json.dumps(_DEFAULT_SCHEMA))
 
 
 def save_schema(schema: dict[str, Any], path: Path | None = None) -> None:
@@ -151,6 +156,8 @@ KNOWN_FIELD_SCHEMAS: dict[str, str] = {
     "com.pyxis.greenhopper.jira:gh-epic-label": "epic_name",
     "com.atlassian.jira.plugin.system.customfieldtypes:float": "story_points",
     "com.atlassian.teams:rm-teams-custom-field-team": "team",
+    # datepicker is used for "Start date" on Jira Cloud; other date custom fields may match too
+    "com.atlassian.jira.plugin.system.customfieldtypes:datepicker": "start_date",
 }
 
 # Name patterns used as secondary heuristic when schema.custom is absent
@@ -160,6 +167,7 @@ KNOWN_NAME_PATTERNS: dict[str, list[str]] = {
     "epic_link": ["epic link"],
     "epic_name": ["epic name"],
     "team": ["team"],
+    "start_date": ["start date", "start_date"],
 }
 
 

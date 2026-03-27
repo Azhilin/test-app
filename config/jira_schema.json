@@ -1,7 +1,7 @@
 {
   "schemas": [
     {
-      "schema_name": "Default (Jira Cloud)",
+      "schema_name": "Default_Jira_Cloud",
       "description": "Standard Jira Cloud field mapping",
       "jira_url_pattern": "",
       "fields": {
@@ -53,8 +53,43 @@
         },
         "resolution": {
           "id": "resolution",
+          "type": "object",
+          "description": "Resolution object (name: Done/Fixed/etc.); use resolution_date for time-based metrics"
+        },
+        "assignee": {
+          "id": "assignee",
+          "type": "object",
+          "description": "Issue assignee (user object with displayName, accountId); use for per-assignee breakdowns"
+        },
+        "components": {
+          "id": "components",
+          "type": "array",
+          "description": "Jira components assigned to the issue; use for component-level delivery trends"
+        },
+        "fix_version": {
+          "id": "fixVersions",
+          "type": "array",
+          "description": "Fix version(s) / release tags; use for release-based delivery metrics"
+        },
+        "parent": {
+          "id": "parent",
+          "type": "object",
+          "description": "Parent issue (epic or task); alternative to epic_link for Next-gen projects"
+        },
+        "due_date": {
+          "id": "duedate",
           "type": "string",
-          "description": "Resolution field"
+          "description": "Issue due date (ISO-8601 date string)"
+        },
+        "resolution_date": {
+          "id": "resolutiondate",
+          "type": "string",
+          "description": "Timestamp when the issue was resolved (ISO-8601); reliable cycle-time endpoint"
+        },
+        "start_date": {
+          "id": "customfield_10015",
+          "type": "string",
+          "description": "Issue start date (custom field; ID varies by instance — verify via auto-detect)"
         }
       },
       "status_mapping": {
