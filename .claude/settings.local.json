@@ -18,7 +18,14 @@
       "Bash(.venv/Scripts/playwright install:*)",
       "Bash(.venv/Scripts/pytest tests/test_e2e_ui.py -v 2>&1)",
       "Bash(.venv/Scripts/pytest tests/ -v --timeout=120 2>&1)",
-      "Bash(.venv/Scripts/ruff format:*)"
+      "Bash(.venv/Scripts/ruff format:*)",
+      "Bash(.venv/Scripts/ruff check:*)",
+      "Bash(.venv/Scripts/mypy app/ --ignore-missing-imports --python-version 3.12)",
+      "Bash(.venv/Scripts/bandit -r app/ -q)",
+      "Bash(echo \"bandit exit: $?\")",
+      "Bash(.venv/Scripts/python tests/tools/test_coverage.py 2>&1)",
+      "Bash(PYTHONPATH=. .venv/Scripts/python tests/tools/test_coverage.py 2>&1)",
+      "Bash(echo \"Exit code: $?\")"
     ]
   }
 }
