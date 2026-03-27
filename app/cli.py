@@ -59,7 +59,10 @@ def main() -> int:
     _, done_fs, _ = metrics._resolve_schema_params(active_schema)
 
     issue_keys = metrics.get_done_issue_keys_for_changelog(
-        sprints, sprint_issues, max_count=100, done_statuses=done_fs,
+        sprints,
+        sprint_issues,
+        max_count=100,
+        done_statuses=done_fs,
     )
     issues_with_changelog = jira_client.get_issues_with_changelog(jira, issue_keys) if issue_keys else []
     metrics_dict = metrics.build_metrics_dict(sprints, sprint_issues, issues_with_changelog, schema=active_schema)

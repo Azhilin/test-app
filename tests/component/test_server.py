@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
+import sys
 import urllib.error
 import urllib.parse
 import urllib.request
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -355,8 +356,39 @@ def test_fetch_cert_unreachable_host_returns_error(server_url):
 
 
 # ---------------------------------------------------------------------------
+# Windows-specific: socket error suppression
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.windows_only
+@pytest.mark.skipif(
+    sys.platform != "win32",
+    reason="ConnectionAbortedError maps to WSAECONNABORTED on Windows only",
+)
+def test_handle_error_swallows_connection_aborted_error():
+    """Server.handle_error must swallow ConnectionAbortedError on Windows."""
+    import server as srv
+
+    server_instance = srv.Server(("127.0.0.1", 0), srv.Handler)
+    try:
+        mock_request = MagicMock()
+        propagated = []
+        try:
+            raise ConnectionAbortedError("simulated WSAECONNABORTED")
+        except ConnectionAbortedError:
+            try:
+                server_instance.handle_error(mock_request, ("127.0.0.1", 0))
+            except Exception as exc:  # noqa: BLE001
+                propagated.append(exc)
+        assert not propagated, f"Server.handle_error must swallow ConnectionAbortedError; got: {propagated}"
+    finally:
+        server_instance.server_close()
+
+
+# ---------------------------------------------------------------------------
 # GET /api/schemas
 # ---------------------------------------------------------------------------
+
 
 def test_get_schemas_returns_list(server_url):
     """GET /api/schemas returns ok:true with a schemas list."""
@@ -390,6 +422,7 @@ def test_get_schema_not_found(server_url):
 # POST /api/schemas
 # ---------------------------------------------------------------------------
 
+
 def test_post_schema_missing_name(server_url):
     """POST /api/schemas without schema_name returns 400."""
     body = json.dumps({"jira_url": "https://x.atlassian.net", "jira_email": "a@b", "jira_token": "t"}).encode()
@@ -420,12 +453,14 @@ def test_post_schema_missing_credentials(server_url):
 
 def test_post_schema_unreachable_jira(server_url):
     """POST /api/schemas with unreachable Jira returns ok:false."""
-    body = json.dumps({
-        "schema_name": "Test",
-        "jira_url": "https://nonexistent-jira-12345.invalid",
-        "jira_email": "a@b.com",
-        "jira_token": "tok",
-    }).encode()
+    body = json.dumps(
+        {
+            "schema_name": "Test",
+            "jira_url": "https://nonexistent-jira-12345.invalid",
+            "jira_email": "a@b.com",
+            "jira_token": "tok",
+        }
+    ).encode()
     req = urllib.request.Request(
         f"{server_url}/api/schemas",
         data=body,
@@ -442,6 +477,7 @@ def test_post_schema_unreachable_jira(server_url):
 # DELETE /api/schemas
 # ---------------------------------------------------------------------------
 
+
 def test_delete_schema_no_name_returns_400(server_url):
     """DELETE /api/schemas without ?name= returns 400."""
     req = urllib.request.Request(f"{server_url}/api/schemas", method="DELETE")
@@ -454,7 +490,8 @@ def test_delete_default_schema_returns_400(server_url):
     """DELETE /api/schemas?name=<default> refuses deletion."""
     name = schema_mod.DEFAULT_SCHEMA_NAME
     req = urllib.request.Request(
-        f"{server_url}/api/schemas?name={urllib.parse.quote(name)}", method="DELETE",
+        f"{server_url}/api/schemas?name={urllib.parse.quote(name)}",
+        method="DELETE",
     )
     with pytest.raises(urllib.error.HTTPError) as exc_info:
         urllib.request.urlopen(req)
@@ -464,7 +501,8 @@ def test_delete_default_schema_returns_400(server_url):
 def test_delete_nonexistent_schema_returns_404(server_url):
     """DELETE /api/schemas?name=Ghost returns 404."""
     req = urllib.request.Request(
-        f"{server_url}/api/schemas?name=Ghost", method="DELETE",
+        f"{server_url}/api/schemas?name=Ghost",
+        method="DELETE",
     )
     with pytest.raises(urllib.error.HTTPError) as exc_info:
         urllib.request.urlopen(req)

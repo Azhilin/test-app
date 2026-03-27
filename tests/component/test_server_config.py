@@ -15,22 +15,22 @@ The ``temp_root`` fixture applies ``monkeypatch.setattr`` *after* the
 ``server_url`` fixture has reloaded the module, so the live request handler
 sees the patched ``ROOT``.
 """
+
 from __future__ import annotations
 
 import importlib
 import json
 import sys
-import threading
 import urllib.error
 import urllib.request
 from pathlib import Path
 
 import pytest
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _get(url: str) -> dict:
     resp = urllib.request.urlopen(url)
@@ -66,10 +66,12 @@ def _post_expect_error(url: str, payload: dict | None = None, raw: bytes | None 
 # Fixture: redirect server.ROOT to a temp directory
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def temp_root(tmp_path, monkeypatch):
     """Redirect app.server.ROOT to a fresh tmp_path so real .env is never touched."""
     import app.server as srv
+
     monkeypatch.setattr(srv, "ROOT", tmp_path)
     return tmp_path
 
@@ -78,6 +80,7 @@ def temp_root(tmp_path, monkeypatch):
 # _write_env_fields — direct unit tests (no HTTP)
 # ---------------------------------------------------------------------------
 
+
 def _import_server_safe():
     """Import (or return cached) server module without letting server.py parse sys.argv."""
     orig_argv = sys.argv
@@ -85,6 +88,7 @@ def _import_server_safe():
     sys.modules.pop("server", None)
     try:
         import server as srv
+
         importlib.reload(srv)
     finally:
         sys.argv = orig_argv
@@ -98,6 +102,7 @@ class TestWriteEnvFields:
         """Return a Handler instance with ROOT pointing to tmp_path."""
         _import_server_safe()
         import app.server as srv
+
         monkeypatch.setattr(srv, "ROOT", tmp_path)
         # Instantiate without a real socket by bypassing __init__
         handler = object.__new__(srv.Handler)
@@ -136,11 +141,13 @@ class TestWriteEnvFields:
         example = tmp_path / ".env.example"
         example.write_text("# JIRA_URL=\n# JIRA_EMAIL=\n# JIRA_API_TOKEN=\n")
         h = self._make_handler(tmp_path, monkeypatch)
-        h._write_env_fields({
-            "JIRA_URL":       "https://x.atlassian.net",
-            "JIRA_EMAIL":     "u@x.com",
-            "JIRA_API_TOKEN": "tok123",
-        })
+        h._write_env_fields(
+            {
+                "JIRA_URL": "https://x.atlassian.net",
+                "JIRA_EMAIL": "u@x.com",
+                "JIRA_API_TOKEN": "tok123",
+            }
+        )
         env = tmp_path / ".env"
         assert env.exists(), ".env should be created"
         assert not example.read_text() != example.read_text(), ".env.example unchanged"
@@ -172,7 +179,7 @@ class TestWriteEnvFields:
         h = self._make_handler(tmp_path, monkeypatch)
         h._write_env_fields({"JIRA_URL": "https://replaced.atlassian.net"})
         content = env.read_text()
-        lines = [l for l in content.splitlines() if l.startswith("JIRA_URL=")]
+        lines = [line for line in content.splitlines() if line.startswith("JIRA_URL=")]
         # First occurrence replaced, second left as-is
         assert lines[0] == "JIRA_URL=https://replaced.atlassian.net"
         assert lines[1] == "JIRA_URL=https://second.atlassian.net"
@@ -205,11 +212,13 @@ class TestWriteEnvFields:
         env = tmp_path / ".env"
         env.write_text("JIRA_URL=old\nJIRA_EMAIL=old@x.com\nJIRA_API_TOKEN=oldtok\n")
         h = self._make_handler(tmp_path, monkeypatch)
-        h._write_env_fields({
-            "JIRA_URL":       "https://new.atlassian.net",
-            "JIRA_EMAIL":     "new@x.com",
-            "JIRA_API_TOKEN": "newtok",
-        })
+        h._write_env_fields(
+            {
+                "JIRA_URL": "https://new.atlassian.net",
+                "JIRA_EMAIL": "new@x.com",
+                "JIRA_API_TOKEN": "newtok",
+            }
+        )
         content = env.read_text()
         assert "JIRA_URL=https://new.atlassian.net" in content
         assert "JIRA_EMAIL=new@x.com" in content
@@ -221,14 +230,12 @@ class TestWriteEnvFields:
 # GET /api/config — HTTP-level tests
 # ---------------------------------------------------------------------------
 
-class TestGetConfig:
 
+class TestGetConfig:
     def test_returns_configured_true_when_all_fields_set(self, server_url, temp_root):
         env = temp_root / ".env"
         env.write_text(
-            "JIRA_URL=https://example.atlassian.net\n"
-            "JIRA_EMAIL=user@example.com\n"
-            "JIRA_API_TOKEN=supersecrettoken\n"
+            "JIRA_URL=https://example.atlassian.net\nJIRA_EMAIL=user@example.com\nJIRA_API_TOKEN=supersecrettoken\n"
         )
         data = _get(f"{server_url}/api/config")
         assert data["configured"] is True
@@ -239,9 +246,7 @@ class TestGetConfig:
     def test_token_always_masked_as_stars(self, server_url, temp_root):
         env = temp_root / ".env"
         env.write_text(
-            "JIRA_URL=https://example.atlassian.net\n"
-            "JIRA_EMAIL=user@example.com\n"
-            "JIRA_API_TOKEN=my-very-secret-token\n"
+            "JIRA_URL=https://example.atlassian.net\nJIRA_EMAIL=user@example.com\nJIRA_API_TOKEN=my-very-secret-token\n"
         )
         data = _get(f"{server_url}/api/config")
         assert data["config"]["JIRA_API_TOKEN"] == "***", "Raw token must never be returned"
@@ -261,10 +266,7 @@ class TestGetConfig:
 
     def test_commented_out_lines_not_returned(self, server_url, temp_root):
         env = temp_root / ".env"
-        env.write_text(
-            "# JIRA_URL=https://commented.atlassian.net\n"
-            "JIRA_EMAIL=user@example.com\n"
-        )
+        env.write_text("# JIRA_URL=https://commented.atlassian.net\nJIRA_EMAIL=user@example.com\n")
         data = _get(f"{server_url}/api/config")
         assert "JIRA_URL" not in data["config"]
         assert data["config"].get("JIRA_EMAIL") == "user@example.com"
@@ -312,20 +314,19 @@ class TestGetConfig:
 # POST /api/config — HTTP-level tests
 # ---------------------------------------------------------------------------
 
-class TestPostConfig:
 
+class TestPostConfig:
     def test_overwrites_existing_env_fields(self, server_url, temp_root):
         env = temp_root / ".env"
-        env.write_text(
-            "JIRA_URL=https://old.atlassian.net\n"
-            "JIRA_EMAIL=old@example.com\n"
-            "JIRA_API_TOKEN=oldtoken\n"
+        env.write_text("JIRA_URL=https://old.atlassian.net\nJIRA_EMAIL=old@example.com\nJIRA_API_TOKEN=oldtoken\n")
+        data = _post(
+            f"{server_url}/api/config",
+            {
+                "JIRA_URL": "https://new.atlassian.net",
+                "JIRA_EMAIL": "new@example.com",
+                "JIRA_API_TOKEN": "newtoken",
+            },
         )
-        data = _post(f"{server_url}/api/config", {
-            "JIRA_URL":       "https://new.atlassian.net",
-            "JIRA_EMAIL":     "new@example.com",
-            "JIRA_API_TOKEN": "newtoken",
-        })
         assert data["ok"] is True
         content = env.read_text()
         assert "JIRA_URL=https://new.atlassian.net" in content
@@ -335,11 +336,14 @@ class TestPostConfig:
     def test_creates_env_from_example_template(self, server_url, temp_root):
         example = temp_root / ".env.example"
         example.write_text("# JIRA_URL=\n# JIRA_EMAIL=\n# JIRA_API_TOKEN=\n")
-        data = _post(f"{server_url}/api/config", {
-            "JIRA_URL":       "https://x.atlassian.net",
-            "JIRA_EMAIL":     "u@x.com",
-            "JIRA_API_TOKEN": "tok123",
-        })
+        data = _post(
+            f"{server_url}/api/config",
+            {
+                "JIRA_URL": "https://x.atlassian.net",
+                "JIRA_EMAIL": "u@x.com",
+                "JIRA_API_TOKEN": "tok123",
+            },
+        )
         assert data["ok"] is True
         env = temp_root / ".env"
         assert env.exists()
@@ -352,25 +356,29 @@ class TestPostConfig:
         original = "# JIRA_URL=\n# JIRA_EMAIL=\n# JIRA_API_TOKEN=\n"
         example = temp_root / ".env.example"
         example.write_text(original)
-        _post(f"{server_url}/api/config", {
-            "JIRA_URL": "https://x.atlassian.net",
-            "JIRA_EMAIL": "u@x.com",
-            "JIRA_API_TOKEN": "tok",
-        })
+        _post(
+            f"{server_url}/api/config",
+            {
+                "JIRA_URL": "https://x.atlassian.net",
+                "JIRA_EMAIL": "u@x.com",
+                "JIRA_API_TOKEN": "tok",
+            },
+        )
         assert example.read_text() == original
 
     def test_star_token_not_overwritten(self, server_url, temp_root):
         env = temp_root / ".env"
         env.write_text(
-            "JIRA_URL=https://example.atlassian.net\n"
-            "JIRA_EMAIL=user@example.com\n"
-            "JIRA_API_TOKEN=existing-secret\n"
+            "JIRA_URL=https://example.atlassian.net\nJIRA_EMAIL=user@example.com\nJIRA_API_TOKEN=existing-secret\n"
         )
-        data = _post(f"{server_url}/api/config", {
-            "JIRA_URL":       "https://example.atlassian.net",
-            "JIRA_EMAIL":     "user@example.com",
-            "JIRA_API_TOKEN": "***",
-        })
+        data = _post(
+            f"{server_url}/api/config",
+            {
+                "JIRA_URL": "https://example.atlassian.net",
+                "JIRA_EMAIL": "user@example.com",
+                "JIRA_API_TOKEN": "***",
+            },
+        )
         assert data["ok"] is True
         content = env.read_text()
         assert "JIRA_API_TOKEN=existing-secret" in content
@@ -393,11 +401,14 @@ class TestPostConfig:
         assert "JIRA_SPRINT_COUNT=10" in content
 
     def test_creates_env_from_scratch_when_both_absent(self, server_url, temp_root):
-        data = _post(f"{server_url}/api/config", {
-            "JIRA_URL":       "https://x.atlassian.net",
-            "JIRA_EMAIL":     "u@x.com",
-            "JIRA_API_TOKEN": "tok",
-        })
+        data = _post(
+            f"{server_url}/api/config",
+            {
+                "JIRA_URL": "https://x.atlassian.net",
+                "JIRA_EMAIL": "u@x.com",
+                "JIRA_API_TOKEN": "tok",
+            },
+        )
         assert data["ok"] is True
         env = temp_root / ".env"
         assert env.exists()
@@ -426,11 +437,14 @@ class TestPostConfig:
 
     def test_round_trip_url_email_token(self, server_url, temp_root):
         """POST then GET should reflect saved values (token masked)."""
-        _post(f"{server_url}/api/config", {
-            "JIRA_URL":       "https://round.atlassian.net",
-            "JIRA_EMAIL":     "round@trip.com",
-            "JIRA_API_TOKEN": "tripsecret",
-        })
+        _post(
+            f"{server_url}/api/config",
+            {
+                "JIRA_URL": "https://round.atlassian.net",
+                "JIRA_EMAIL": "round@trip.com",
+                "JIRA_API_TOKEN": "tripsecret",
+            },
+        )
         data = _get(f"{server_url}/api/config")
         assert data["configured"] is True
         assert data["config"]["JIRA_URL"] == "https://round.atlassian.net"
@@ -440,11 +454,14 @@ class TestPostConfig:
     def test_token_with_equals_sign_round_trip(self, server_url, temp_root):
         """Token values containing '=' must survive a write/read cycle."""
         token = "base64tokenABC==XYZ"
-        _post(f"{server_url}/api/config", {
-            "JIRA_URL":       "https://x.atlassian.net",
-            "JIRA_EMAIL":     "u@x.com",
-            "JIRA_API_TOKEN": token,
-        })
+        _post(
+            f"{server_url}/api/config",
+            {
+                "JIRA_URL": "https://x.atlassian.net",
+                "JIRA_EMAIL": "u@x.com",
+                "JIRA_API_TOKEN": token,
+            },
+        )
         content = (temp_root / ".env").read_text()
         assert f"JIRA_API_TOKEN={token}" in content
 
@@ -456,11 +473,14 @@ class TestPostConfig:
     def test_post_saves_filter_fields_to_env(self, server_url, temp_root):
         env = temp_root / ".env"
         env.write_text("JIRA_URL=https://x.atlassian.net\n")
-        _post(f"{server_url}/api/config", {
-            "JIRA_SPRINT_COUNT": "5",
-            "JIRA_FILTER_ID":    "10033",
-            "JIRA_PROJECT":      "MYTEAM",
-        })
+        _post(
+            f"{server_url}/api/config",
+            {
+                "JIRA_SPRINT_COUNT": "5",
+                "JIRA_FILTER_ID": "10033",
+                "JIRA_PROJECT": "MYTEAM",
+            },
+        )
         content = env.read_text()
         assert "JIRA_SPRINT_COUNT=5" in content
         assert "JIRA_FILTER_ID=10033" in content
@@ -470,12 +490,15 @@ class TestPostConfig:
     def test_post_saves_ai_labels_to_env(self, server_url, temp_root):
         env = temp_root / ".env"
         env.write_text("")
-        _post(f"{server_url}/api/config", {
-            "AI_ASSISTED_LABEL": "AI_help",
-            "AI_EXCLUDE_LABELS": "Infra,Ops",
-            "AI_TOOL_LABELS":    "Copilot,ChatGPT",
-            "AI_ACTION_LABELS":  "CodeGen,Review",
-        })
+        _post(
+            f"{server_url}/api/config",
+            {
+                "AI_ASSISTED_LABEL": "AI_help",
+                "AI_EXCLUDE_LABELS": "Infra,Ops",
+                "AI_TOOL_LABELS": "Copilot,ChatGPT",
+                "AI_ACTION_LABELS": "CodeGen,Review",
+            },
+        )
         content = env.read_text()
         assert "AI_ASSISTED_LABEL=AI_help" in content
         assert "AI_EXCLUDE_LABELS=Infra,Ops" in content
@@ -493,23 +516,23 @@ class TestPostConfig:
         """POST every supported field, then GET and verify each one."""
         (temp_root / ".env").write_text("")
         payload = {
-            "JIRA_URL":               "https://rt.atlassian.net",
-            "JIRA_EMAIL":             "rt@x.com",
-            "JIRA_API_TOKEN":         "tok",
-            "JIRA_BOARD_ID":          "7",
-            "JIRA_SPRINT_COUNT":      "3",
-            "JIRA_SCHEMA_NAME":       "Custom_Schema",
-            "JIRA_FILTER_ID":         "555",
-            "JIRA_PROJECT":           "PROJ",
-            "JIRA_TEAM_ID":           "abc-123",
-            "JIRA_ISSUE_TYPES":       "Bug,Story",
-            "JIRA_FILTER_STATUS":     "Done,Closed",
+            "JIRA_URL": "https://rt.atlassian.net",
+            "JIRA_EMAIL": "rt@x.com",
+            "JIRA_API_TOKEN": "tok",
+            "JIRA_BOARD_ID": "7",
+            "JIRA_SPRINT_COUNT": "3",
+            "JIRA_SCHEMA_NAME": "Custom_Schema",
+            "JIRA_FILTER_ID": "555",
+            "JIRA_PROJECT": "PROJ",
+            "JIRA_TEAM_ID": "abc-123",
+            "JIRA_ISSUE_TYPES": "Bug,Story",
+            "JIRA_FILTER_STATUS": "Done,Closed",
             "JIRA_CLOSED_SPRINTS_ONLY": "false",
-            "JIRA_FILTER_PAGE_SIZE":  "50",
-            "AI_ASSISTED_LABEL":      "AI_yes",
-            "AI_EXCLUDE_LABELS":      "Exclude1",
-            "AI_TOOL_LABELS":         "Tool1,Tool2",
-            "AI_ACTION_LABELS":       "Act1",
+            "JIRA_FILTER_PAGE_SIZE": "50",
+            "AI_ASSISTED_LABEL": "AI_yes",
+            "AI_EXCLUDE_LABELS": "Exclude1",
+            "AI_TOOL_LABELS": "Tool1,Tool2",
+            "AI_ACTION_LABELS": "Act1",
         }
         _post(f"{server_url}/api/config", payload)
         data = _get(f"{server_url}/api/config")
@@ -536,10 +559,13 @@ class TestPostConfig:
         """Unknown keys in the POST body must not be written to .env."""
         env = temp_root / ".env"
         env.write_text("JIRA_URL=https://x.atlassian.net\n")
-        _post(f"{server_url}/api/config", {
-            "SOME_RANDOM_KEY": "should_not_appear",
-            "SECRET_SAUCE":    "nope",
-        })
+        _post(
+            f"{server_url}/api/config",
+            {
+                "SOME_RANDOM_KEY": "should_not_appear",
+                "SECRET_SAUCE": "nope",
+            },
+        )
         content = env.read_text()
         assert "SOME_RANDOM_KEY" not in content
         assert "SECRET_SAUCE" not in content
@@ -549,15 +575,12 @@ class TestPostConfig:
 # GET /api/config — AI label and board ID tests
 # ---------------------------------------------------------------------------
 
-class TestGetConfigExtended:
 
+class TestGetConfigExtended:
     def test_ai_label_fields_returned_when_present(self, server_url, temp_root):
         env = temp_root / ".env"
         env.write_text(
-            "AI_ASSISTED_LABEL=AI_help\n"
-            "AI_EXCLUDE_LABELS=Infra,Ops\n"
-            "AI_TOOL_LABELS=Copilot\n"
-            "AI_ACTION_LABELS=CodeGen\n"
+            "AI_ASSISTED_LABEL=AI_help\nAI_EXCLUDE_LABELS=Infra,Ops\nAI_TOOL_LABELS=Copilot\nAI_ACTION_LABELS=CodeGen\n"
         )
         data = _get(f"{server_url}/api/config")
         cfg = data["config"]
@@ -600,11 +623,7 @@ class TestGetConfigExtended:
     def test_only_whitelisted_keys_returned(self, server_url, temp_root):
         """Arbitrary keys in .env must not leak through GET /api/config."""
         env = temp_root / ".env"
-        env.write_text(
-            "JIRA_URL=https://x.atlassian.net\n"
-            "DB_PASSWORD=super_secret\n"
-            "AWS_SECRET_KEY=nope\n"
-        )
+        env.write_text("JIRA_URL=https://x.atlassian.net\nDB_PASSWORD=super_secret\nAWS_SECRET_KEY=nope\n")
         data = _get(f"{server_url}/api/config")
         cfg = data["config"]
         assert "DB_PASSWORD" not in cfg
