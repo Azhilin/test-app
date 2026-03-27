@@ -506,6 +506,86 @@
           }
         }
       });
+  {% if section_visibility.dau %}
+  <section>
+    <h2>Daily Active Usage (DAU)</h2>
+    {% set dau = metrics.dau or {} %}
+    {% if dau.response_count %}
+    <p style="color:#666;font-size:0.85rem;margin:0 0 0.75rem 0">
+      Team average: <strong>{{ dau.team_avg }} / 5</strong> across {{ dau.response_count }} response(s).
+    </p>
+    {% if dau.by_role %}
+    <div class="chart-container" style="height:220px;margin-bottom:1rem;">
+      <canvas id="dauRoleChart" aria-label="DAU average score per role bar chart"></canvas>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Role</th>
+          <th class="number">Avg days/week</th>
+          <th class="number">Responses</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in dau.by_role %}
+        <tr>
+          <td>{{ row.role }}</td>
+          <td class="number">{{ row.avg }}</td>
+          <td class="number">{{ row.count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    {% else %}
+    <p class="empty">No DAU survey responses found in the responses directory.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+
+  {% if section_visibility.dau and metrics.dau and metrics.dau.by_role %}
+  <script>
+    (function() {
+      var dauData = {{ metrics.dau | tojson }};
+      var ctx = document.getElementById('dauRoleChart').getContext('2d');
+      var roles = dauData.by_role.map(function(r) { return r.role; });
+      var avgs = dauData.by_role.map(function(r) { return r.avg; });
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: roles,
+          datasets: [{
+            label: 'Avg days/week (0–5)',
+            data: avgs,
+            backgroundColor: 'rgba(41, 182, 246, 0.75)',
+            borderColor: 'rgb(2, 136, 209)',
+            borderWidth: 1.5,
+            borderRadius: 4
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(ctx) { return ' ' + ctx.parsed.x + ' / 5'; }
+              }
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              max: 5,
+              ticks: { stepSize: 1 },
+              grid: { borderDash: [4, 4] }
+            },
+            y: { grid: { display: false } }
+          }
+        }
+      });
     })();
   </script>
   {% endif %}

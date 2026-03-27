@@ -297,6 +297,70 @@ def compute_custom_trends(
     return []
 
 
+# Mapping from survey `usage` answer text to its numeric score
+_DAU_SCORE_MAP: dict[str, float] = {
+    "Every day (5 days)": 5.0,
+    "Most days (3–4 days)": 3.5,
+    "Rarely (1–2 days)": 1.5,
+    "Not used": 0.0,
+}
+
+
+def compute_dau_metrics(responses_dir: str | Path) -> dict[str, Any]:
+    """
+    Load all dau_*.json response files from responses_dir and compute team DAU metrics.
+
+    Returns {team_avg, response_count, by_role, breakdown}.
+    Returns safe zero-state when directory is empty or missing.
+    """
+    import json
+    from collections import Counter
+
+    path = Path(responses_dir)
+    records: list[dict[str, Any]] = []
+    if path.is_dir():
+        for fpath in sorted(path.glob("dau_*.json")):
+            try:
+                data = json.loads(fpath.read_text(encoding="utf-8"))
+                if isinstance(data, dict):
+                    records.append(data)
+            except Exception:
+                continue
+
+    if not records:
+        return {"team_avg": None, "response_count": 0, "by_role": [], "breakdown": []}
+
+    scores = [_DAU_SCORE_MAP.get(r.get("usage", ""), 0.0) for r in records]
+    team_avg = round(sum(scores) / len(scores), 2)
+
+    # Per-role averages
+    role_data: dict[str, list[float]] = {}
+    for r, s in zip(records, scores):
+        role = r.get("role") or "Unknown"
+        role_data.setdefault(role, []).append(s)
+    by_role = sorted(
+        [
+            {"role": role, "avg": round(sum(vals) / len(vals), 2), "count": len(vals)}
+            for role, vals in role_data.items()
+        ],
+        key=lambda x: x["role"],
+    )
+
+    # Answer frequency breakdown
+    cnt: Counter[str] = Counter(r.get("usage", "") for r in records)
+    breakdown = sorted(
+        [{"answer": a, "count": c} for a, c in cnt.items()],
+        key=lambda x: -x["count"],
+    )
+
+    return {
+        "team_avg": team_avg,
+        "response_count": len(records),
+        "by_role": by_role,
+        "breakdown": breakdown,
+    }
+
+
 def build_metrics_dict(
     sprints: list[dict[str, Any]],
     sprint_issues: dict[int, list[dict[str, Any]]],
@@ -308,6 +372,7 @@ def build_metrics_dict(
     custom = compute_custom_trends(sprints, sprint_issues)
     ai_trend = compute_ai_assistance_trend(sprints, sprint_issues)
     ai_usage = compute_ai_usage_details(sprints, sprint_issues)
+    dau = compute_dau_metrics(config.DAU_RESPONSES_DIR)
     return {
         "velocity": velocity,
         "cycle_time": cycle_time,
@@ -316,6 +381,7 @@ def build_metrics_dict(
         "ai_usage_details": ai_usage,
         "ai_assisted_label": config.AI_ASSISTED_LABEL,
         "ai_exclude_labels": config.AI_EXCLUDE_LABELS,
+        "dau": dau,
         # Metadata fields enriched by main.py after Jira fetch
         "filter_name": None,
         "filter_id": None,

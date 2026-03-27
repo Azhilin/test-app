@@ -1054,10 +1054,313 @@ NON_FUNCTIONAL_REQUIREMENTS: list[dict] = [
     },
 ]
 
+# ── DAU Survey Requirements ─────────────────────────────────────────────────
+
+DAU_SURVEY_REQUIREMENTS: list[dict] = [
+    # --- 1. Survey UI ---
+    {
+        "id": "DAU-F-001",
+        "description": "Username is a required text field",
+        "type": FUNCTIONAL,
+        "section": "Survey UI",
+        "tests": [
+            "e2e/test_dau_survey_ui.py::test_submit_button_initially_disabled",
+            "e2e/test_dau_survey_ui.py::test_submit_enabled_only_when_all_fields_are_valid",
+        ],
+    },
+    {
+        "id": "DAU-F-002",
+        "description": "Username accepts only alphanumeric characters, minimum 2 characters",
+        "type": FUNCTIONAL,
+        "section": "Survey UI",
+        "tests": [
+            "e2e/test_dau_survey_ui.py::test_username_rejects_underscore",
+            "e2e/test_dau_survey_ui.py::test_username_rejects_space",
+            "e2e/test_dau_survey_ui.py::test_username_too_short_shows_error",
+            "e2e/test_dau_survey_ui.py::test_username_valid_input_applies_valid_class",
+        ],
+    },
+    {
+        "id": "DAU-F-003",
+        "description": "Username is persisted across sessions via localStorage",
+        "type": FUNCTIONAL,
+        "section": "Survey UI",
+        "tests": [
+            "e2e/test_dau_survey_ui.py::test_username_saved_to_localstorage_after_submit",
+            "e2e/test_dau_survey_ui.py::test_username_restored_from_localstorage_on_page_load",
+        ],
+    },
+    {
+        "id": "DAU-F-004",
+        "description": "Role is a required dropdown with exactly 5 options",
+        "type": FUNCTIONAL,
+        "section": "Survey UI",
+        "tests": [
+            "e2e/test_dau_survey_ui.py::test_submit_enabled_only_when_all_fields_are_valid",
+            "e2e/test_dau_survey_ui.py::test_confirmation_displays_submitted_data",
+        ],
+    },
+    {
+        "id": "DAU-F-005",
+        "description": "Usage frequency is a required radio selection with exactly 4 options",
+        "type": FUNCTIONAL,
+        "section": "Survey UI",
+        "tests": [
+            "e2e/test_dau_survey_ui.py::test_radio_card_click_marks_it_selected",
+            "e2e/test_dau_survey_ui.py::test_submit_enabled_only_when_all_fields_are_valid",
+        ],
+    },
+    {
+        "id": "DAU-F-006",
+        "description": "Progress bar reflects number of completed fields out of 3",
+        "type": FUNCTIONAL,
+        "section": "Survey UI",
+        "tests": [
+            "e2e/test_dau_survey_ui.py::test_progress_starts_at_zero",
+            "e2e/test_dau_survey_ui.py::test_progress_increments_with_each_field",
+        ],
+    },
+    {
+        "id": "DAU-F-007",
+        "description": "Submit button is disabled until all 3 fields are valid",
+        "type": FUNCTIONAL,
+        "section": "Survey UI",
+        "tests": [
+            "e2e/test_dau_survey_ui.py::test_submit_button_initially_disabled",
+            "e2e/test_dau_survey_ui.py::test_submit_enabled_only_when_all_fields_are_valid",
+        ],
+    },
+    {
+        "id": "DAU-F-008",
+        "description": "Confirmation screen is shown after a successful save",
+        "type": FUNCTIONAL,
+        "section": "Survey UI",
+        "tests": [
+            "e2e/test_dau_survey_ui.py::test_submit_hides_form_and_shows_confirmation",
+            "e2e/test_dau_survey_ui.py::test_confirmation_displays_submitted_data",
+        ],
+    },
+    {
+        "id": "DAU-F-009",
+        "description": "Keyboard navigation works within the radio group",
+        "type": FUNCTIONAL,
+        "section": "Survey UI",
+        "tests": [
+            "e2e/test_dau_survey_ui.py::test_radio_card_keyboard_navigation",
+        ],
+    },
+    # --- 2. Submission and Storage ---
+    {
+        "id": "DAU-F-010",
+        "description": "Survey data is saved via the File System Access API when supported",
+        "type": FUNCTIONAL,
+        "section": "Submission and Storage",
+        "tests": [
+            "e2e/test_dau_survey_ui.py::test_submit_writes_valid_json_to_mocked_fs",
+        ],
+    },
+    {
+        "id": "DAU-F-011",
+        "description": "Survey data falls back to a browser download when the FS API is unavailable",
+        "type": FUNCTIONAL,
+        "section": "Submission and Storage",
+        "tests": [
+            "e2e/test_dau_survey_ui.py::test_fs_api_unavailable_falls_back_to_download",
+        ],
+    },
+    {
+        "id": "DAU-F-012",
+        "description": "If the FS API directory picker is cancelled, the form remains intact",
+        "type": FUNCTIONAL,
+        "section": "Submission and Storage",
+        "tests": [
+            "e2e/test_dau_survey_ui.py::test_fs_api_abort_keeps_form_intact",
+        ],
+    },
+    {
+        "id": "DAU-F-013",
+        "description": "If the FS API call fails for a non-cancel reason, the app falls back to download",
+        "type": FUNCTIONAL,
+        "section": "Submission and Storage",
+        "tests": [
+            "e2e/test_dau_survey_ui.py::test_fs_api_non_abort_error_falls_back_to_download",
+        ],
+    },
+    {
+        "id": "DAU-F-014",
+        "description": "Output filename encodes the respondent and submission time",
+        "type": FUNCTIONAL,
+        "section": "Submission and Storage",
+        "tests": [
+            "e2e/test_dau_survey_ui.py::test_filename_matches_dau_username_timestamp_pattern",
+        ],
+    },
+    {
+        "id": "DAU-F-015",
+        "description": "Submission payload matches the defined schema",
+        "type": FUNCTIONAL,
+        "section": "Submission and Storage",
+        "tests": [
+            "e2e/test_dau_survey_ui.py::test_submit_writes_valid_json_to_mocked_fs",
+            "e2e/test_dau_survey_ui.py::test_submit_timestamp_format",
+            "e2e/test_dau_survey_ui.py::test_submit_week_field_format",
+        ],
+    },
+    {
+        "id": "DAU-F-016",
+        "description": "Response files are saved to generated/ by default",
+        "type": FUNCTIONAL,
+        "section": "Submission and Storage",
+        "tests": [],
+    },
+    # --- 3. Metrics Computation ---
+    {
+        "id": "DAU-F-017",
+        "description": "compute_dau_metrics() reads all dau_*.json files from the given directory",
+        "type": FUNCTIONAL,
+        "section": "Metrics Computation",
+        "tests": [
+            "unit/test_dau_metrics.py::test_empty_dir_returns_zero_count",
+            "unit/test_dau_metrics.py::test_missing_dir_returns_zero_count",
+            "unit/test_dau_metrics.py::test_three_response_files_counted",
+            "unit/test_dau_metrics.py::test_non_dau_files_are_ignored",
+            "unit/test_dau_metrics.py::test_malformed_json_file_is_skipped",
+        ],
+    },
+    {
+        "id": "DAU-F-018",
+        "description": "compute_dau_metrics maps each usage answer to its score and computes the team average",
+        "type": FUNCTIONAL,
+        "section": "Metrics Computation",
+        "tests": [
+            "unit/test_dau_metrics.py::test_mixed_scores_correct_avg",
+            "unit/test_dau_metrics.py::test_all_not_used_avg_is_zero",
+            "unit/test_dau_metrics.py::test_unknown_usage_falls_back_to_zero",
+        ],
+    },
+    {
+        "id": "DAU-F-019",
+        "description": "compute_dau_metrics returns a by_role list with per-role averages and counts",
+        "type": FUNCTIONAL,
+        "section": "Metrics Computation",
+        "tests": [
+            "unit/test_dau_metrics.py::test_by_role_sorted_alphabetically",
+            "unit/test_dau_metrics.py::test_by_role_correct_avg_and_count",
+        ],
+    },
+    {
+        "id": "DAU-F-020",
+        "description": "compute_dau_metrics returns a breakdown list with per-answer counts",
+        "type": FUNCTIONAL,
+        "section": "Metrics Computation",
+        "tests": [
+            "unit/test_dau_metrics.py::test_breakdown_sorted_descending_by_count",
+        ],
+    },
+    {
+        "id": "DAU-F-021",
+        "description": "build_metrics_dict() includes a dau key",
+        "type": FUNCTIONAL,
+        "section": "Metrics Computation",
+        "tests": [
+            "unit/test_dau_metrics.py::test_build_metrics_dict_includes_dau_key",
+        ],
+    },
+    {
+        "id": "DAU-F-022",
+        "description": "The responses directory is configurable via DAU_RESPONSES_DIR environment variable",
+        "type": FUNCTIONAL,
+        "section": "Metrics Computation",
+        "tests": [
+            "unit/test_dau_metrics.py::test_dau_responses_dir_env_var_overrides_default",
+        ],
+    },
+    # --- 4. Report Rendering ---
+    {
+        "id": "DAU-F-023",
+        "description": "The HTML report includes a DAU section",
+        "type": FUNCTIONAL,
+        "section": "Report Rendering",
+        "tests": [
+            "component/test_dau_report.py::test_html_has_dau_section_when_data_present",
+            "component/test_dau_report.py::test_html_dau_shows_team_avg",
+        ],
+    },
+    {
+        "id": "DAU-F-024",
+        "description": "The HTML report DAU section is omitted when there are no responses",
+        "type": FUNCTIONAL,
+        "section": "Report Rendering",
+        "tests": [
+            "component/test_dau_report.py::test_html_dau_section_absent_when_no_responses",
+            "component/test_dau_report.py::test_html_dau_section_hidden_when_visibility_false",
+        ],
+    },
+    {
+        "id": "DAU-F-025",
+        "description": "The Markdown report includes a ## Daily Active Usage (DAU) section",
+        "type": FUNCTIONAL,
+        "section": "Report Rendering",
+        "tests": [
+            "component/test_dau_report.py::test_md_has_dau_heading_when_data_present",
+            "component/test_dau_report.py::test_md_dau_shows_team_avg",
+            "component/test_dau_report.py::test_md_dau_shows_role_in_table",
+        ],
+    },
+    {
+        "id": "DAU-F-026",
+        "description": "The Markdown DAU section is omitted when there are no responses",
+        "type": FUNCTIONAL,
+        "section": "Report Rendering",
+        "tests": [
+            "component/test_dau_report.py::test_md_dau_section_absent_when_no_responses",
+        ],
+    },
+    # --- 5. Non-Functional Requirements ---
+    {
+        "id": "DAU-NFR-001",
+        "description": "All survey data is stored locally; no data is sent to any external service",
+        "type": FUNCTIONAL,
+        "section": "Non-Functional Requirements",
+        "tests": [],
+    },
+    {
+        "id": "DAU-NFR-002",
+        "description": "Response files are excluded from version control",
+        "type": OPERATIONAL,
+        "section": "Non-Functional Requirements",
+        "tests": [],
+    },
+    {
+        "id": "DAU-NFR-003",
+        "description": "No server process is required to submit the survey",
+        "type": FUNCTIONAL,
+        "section": "Non-Functional Requirements",
+        "tests": [
+            "e2e/test_dau_survey_ui.py::test_survey_page_loads_with_title",
+        ],
+    },
+    {
+        "id": "DAU-NFR-004",
+        "description": "Survey page styling is consistent with the existing report aesthetic",
+        "type": OPERATIONAL,
+        "section": "Non-Functional Requirements",
+        "tests": [],
+    },
+    {
+        "id": "DAU-NFR-005",
+        "description": "Form fields carry ARIA labels and the confirmation screen uses a live region",
+        "type": FUNCTIONAL,
+        "section": "Non-Functional Requirements",
+        "tests": [],
+    },
+]
+
 # ── All requirements combined ──────────────────────────────────────────────
 
 ALL_REQUIREMENTS: dict[str, list[dict]] = {
     "technical_requirements": TECHNICAL_REQUIREMENTS,
     "installation_requirements": INSTALLATION_REQUIREMENTS,
     "app_non_functional_requirements": NON_FUNCTIONAL_REQUIREMENTS,
+    "dau_survey_requirements": DAU_SURVEY_REQUIREMENTS,
 }

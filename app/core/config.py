@@ -33,6 +33,12 @@ JIRA_STORY_POINTS_FIELD = os.getenv("JIRA_STORY_POINTS_FIELD", "customfield_1001
 _filter_id = os.getenv("JIRA_FILTER_ID", "").strip()
 JIRA_FILTER_ID = int(_filter_id) if _filter_id.isdigit() else None
 
+# DAU survey responses directory (default: generated/ in project root)
+DAU_RESPONSES_DIR: str = os.getenv(
+    "DAU_RESPONSES_DIR",
+    str(Path(__file__).resolve().parent.parent.parent / "generated"),
+)
+
 # AI Adoption metrics labels
 # Label that marks an issue as AI-assisted (default: AI_assistance)
 AI_ASSISTED_LABEL = os.getenv("AI_ASSISTED_LABEL", "AI_assistance").strip() or "AI_assistance"

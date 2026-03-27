@@ -40,6 +40,7 @@ _DETAIL_FILES: dict[str, Path] = {
     "technical_requirements": COVERAGE_REQS_DIR / "technical_requirements_coverage.md",
     "installation_requirements": COVERAGE_REQS_DIR / "installation_requirements_coverage.md",
     "app_non_functional_requirements": COVERAGE_REQS_DIR / "app_non_functional_requirements_coverage.md",
+    "dau_survey_requirements": COVERAGE_REQS_DIR / "dau_survey_requirements_coverage.md",
 }
 
 # Mapping: ALL_REQUIREMENTS key → source document (relative to repo root)
@@ -47,6 +48,7 @@ _SOURCE_DOCS: dict[str, str] = {
     "technical_requirements": "docs/product/requirements/technical_requirements.md",
     "installation_requirements": "docs/product/requirements/installation_requirements.md",
     "app_non_functional_requirements": "docs/product/requirements/app_non_functional_requirements.md",
+    "dau_survey_requirements": "docs/product/requirements/dau_survey_requirements.md",
 }
 
 # Layer name → folder (relative to TESTS_DIR), description, path label

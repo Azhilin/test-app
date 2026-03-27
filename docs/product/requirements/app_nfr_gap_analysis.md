@@ -12,7 +12,7 @@ This document records the results of a review of [`app_non_functional_requiremen
 |---------|-------|-----|
 | ✓ Met | 29 | NFR-P-001/002/003/004/005, NFR-S-001/002/003/004/005/006, NFR-U-001/003/004/005, NFR-R-001/002/003/004/005, NFR-D-001/002/003/004, NFR-C-001/002/003/004, NFR-A-001/002/003/004 |
 | ⚠ Partial | 1 | NFR-U-002 |
-| ✗ Not met | 1 | — (all addressed; NFR-D-002 backend pending) |
+| ✗ Not met | 0 | — |
 
 All previously identified gaps have been addressed. The fixes below were applied on 2026-03-28 using only the existing Python stdlib, the current package set, and minor HTML changes — no additional libraries were added.
 
@@ -109,31 +109,32 @@ def emit(data: str, event: str = "message") -> None:
 
 ---
 
-### NFR-D-002 — DAU survey responses are stored locally only ✓ FIXED (.gitignore)
+### NFR-D-002 — DAU survey responses are stored locally only ✓ FIXED
 
 **Requirement:** Survey responses are written to a local JSON file listed in `.gitignore` and never sent externally.
 
-**Current behaviour:**
-The DAU survey feature is not yet implemented:
+**Previous behaviour:**
+The DAU survey feature was not yet fully wired up. The `.gitignore` entry was missing, meaning that
+if anyone manually created `dau_responses.json` it could be accidentally committed. No backend
+handler existed and the initial plan described a `POST /api/survey` server route.
 
-- No `/api/survey` POST handler exists in `app/server.py`.
-- `dau_responses.json` is not listed in `.gitignore`.
-- The survey form at `ui/dau_survey.html` exists but has no wired-up backend.
+**Resolution:**
+The submission model was changed to **client-side only** — the survey page (`ui/dau_survey.html`)
+saves responses directly to the local filesystem via the File System Access API, with a browser
+download fallback. No server endpoint is required. Key changes applied:
 
-**Gap:** Feature is pending implementation. The `.gitignore` entry is missing proactively, meaning that if anyone manually creates `dau_responses.json` it could be accidentally committed.
+1. `.gitignore` updated from `dau_responses.json` to `dau_*.json`, covering all per-user response
+   files regardless of timestamp suffix.
+2. `saveWithFSAPI()` and `downloadFallback()` in `dau_survey.html` updated to produce dynamic
+   filenames in the format `dau_<username>_<timestamp>.json` (e.g.
+   `dau_alice123_20260327T130340Z.json`) so each submission is uniquely named.
+3. No outgoing network requests are made during survey submission.
 
-**Recommended fix — two steps:**
+**Affected files:** `.gitignore`, `ui/dau_survey.html`
 
-1. **Immediate (proactive):** Add `dau_responses.json` to `.gitignore` now, before the feature is implemented.
-
-2. **When implementing the DAU feature** (per `docs/product/metrics/dau-survey-and-metric.md`):
-   - Add `_handle_submit_survey()` in `app/server.py` that reads the JSON body and appends `{role, usage, timestamp}` to `dau_responses.json` using `json.load` / `json.dump` (stdlib only).
-   - Route `POST /api/survey` to the handler in `do_POST`.
-   - Keep `dau_responses.json` in the project root (alongside `.env`) — local-only, gitignored.
-
-**Affected files:** `.gitignore`, `app/server.py` (when implementing the feature)
-
-**Status:** ⚠ Partially fixed — `dau_responses.json` added to `.gitignore`. Backend `POST /api/survey` handler still pending.
+**Status:** ✓ Fixed — all `dau_*.json` files are gitignored; survey data is stored locally and never
+transmitted externally. Verified: `git check-ignore -v generated/dau_alice_20260327T130340Z.json`
+confirms the file is ignored.
 
 ---
 

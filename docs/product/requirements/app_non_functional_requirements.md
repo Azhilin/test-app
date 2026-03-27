@@ -70,7 +70,7 @@ This document defines the quality attributes the AI Adoption Metrics Report tool
 | ID | Requirement | Acceptance Criterion | Status |
 |----|-------------|----------------------|--------|
 | NFR-D-001 | All user credentials are stored on the local machine only | `JIRA_URL`, `JIRA_EMAIL`, and `JIRA_API_TOKEN` are written only to `.env` on the local filesystem; no credential value is transmitted to any service other than the configured Jira Cloud instance | ✓ Met |
-| NFR-D-002 | DAU survey responses are stored locally only | Survey responses are written to a local JSON file that is listed in `.gitignore` and never sent to any external service | ✗ Not met |
+| NFR-D-002 | DAU survey responses are stored locally only | Survey responses are written to a local JSON file that is listed in `.gitignore` and never sent to any external service | ✓ Met |
 | NFR-D-003 | The application collects no usage telemetry | No analytics, crash reporting, or usage data is sent anywhere; the only outbound network connections are to the Jira Cloud instance configured in `JIRA_URL` | ✓ Met |
 | NFR-D-004 | Credential backup files are excluded from version control | Any `.env.backup-*` files created during setup or reinstall are covered by `.gitignore` patterns and cannot be accidentally committed | ✓ Met |
 
