@@ -550,14 +550,6 @@
       >Jira Connection</button>
       <button
         role="tab"
-        id="tab-schema"
-        aria-controls="panel-schema"
-        aria-selected="false"
-        tabindex="-1"
-        class="tab-btn"
-      >Jira Schema</button>
-      <button
-        role="tab"
         id="tab-filter"
         aria-controls="panel-filter"
         aria-selected="false"
@@ -852,7 +844,7 @@
           <select class="form-input" id="filter-schema-select">
             <option value="">— No schema selected —</option>
           </select>
-          <p class="form-helper">Select a saved schema to auto-fill the Story Points Field below. Create schemas in the <strong>Jira Schema</strong> tab.</p>
+          <p class="form-helper">Select a saved schema to auto-fill the Story Points Field below, or fetch a new schema from the controls above.</p>
           <div id="schema-field-info" hidden style="margin-top:10px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);font-size:0.78rem;max-height:160px;overflow-y:auto;">
             <!-- Populated by JS when a schema is selected -->
           </div>
@@ -936,122 +928,6 @@
       </div>
 
     </div><!-- /panel-filter -->
-
-    <!-- ── Tab 2: Jira Schema ── -->
-    <div role="tabpanel" id="panel-schema" aria-labelledby="tab-schema" class="tab-panel" hidden>
-
-      <!-- Description -->
-      <div class="report-desc" role="note">
-        <span class="report-desc-icon" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0747A6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-        </span>
-        <p>
-          Discover exact Jira <strong>field IDs</strong> for your project(s) without admin permissions.
-          The schema is fetched live from Jira using the
-          <code>GET /rest/api/2/field</code> endpoint and a sample issue search.
-          Saved schemas can be used in the <strong>Jira Filter</strong> tab to auto-fill field mappings
-          like the Story Points custom field ID.
-        </p>
-      </div>
-
-      <!-- Discover Schema card -->
-      <div class="card">
-        <div class="card-title">Discover Jira Schema</div>
-        <div class="card-subtitle">
-          Enter a name and at least one project key, then click <strong>Fetch &amp; Save Schema</strong>.
-          The app will retrieve all available fields from your Jira instance and save the mapping locally.
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="schema-name">
-            Schema Name <span class="required-star" aria-hidden="true">*</span>
-          </label>
-          <input
-            class="form-input"
-            type="text"
-            id="schema-name"
-            aria-required="true"
-            placeholder="e.g. My Team Schema"
-            autocomplete="off"
-            spellcheck="false"
-            maxlength="100"
-          />
-          <p class="form-helper">A descriptive name for this schema. Used as the filename when saving.</p>
-          <p class="form-error" id="err-schema-name">Schema name is required.</p>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="schema-projects">
-            Project Key(s) <span class="required-star" aria-hidden="true">*</span>
-          </label>
-          <input
-            class="form-input"
-            type="text"
-            id="schema-projects"
-            aria-required="true"
-            placeholder="e.g. MYTEAM or MYTEAM, OPS"
-            autocomplete="off"
-            spellcheck="false"
-            maxlength="1000"
-          />
-          <p class="form-helper">Comma-separated Jira project keys. A sample issue from these projects will be fetched to identify populated fields.</p>
-          <p class="form-error" id="err-schema-projects">At least one project key is required.</p>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="schema-filter-id">
-            Filter ID <span class="optional">optional</span>
-          </label>
-          <input
-            class="form-input"
-            type="number"
-            id="schema-filter-id"
-            min="1"
-            placeholder="e.g. 10042"
-            autocomplete="off"
-          />
-          <p class="form-helper">ID of a saved Jira filter. If provided, the filter's JQL is included in the schema for reference.</p>
-        </div>
-
-        <div class="btn-row">
-          <button class="btn btn-primary" id="btn-fetch-schema" type="button" disabled>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
-            </svg>
-            Fetch &amp; Save Schema
-          </button>
-          <p class="form-error" id="err-schema-creds" style="margin:0;">
-            Jira credentials not configured. <a href="#" id="goto-connection-from-schema" style="color:var(--accent);font-weight:500;">Go to Jira Connection tab &rarr;</a>
-          </p>
-        </div>
-
-        <div class="log-wrap" aria-live="polite" aria-label="Schema fetch output" style="margin-top:16px;">
-          <div class="log-toolbar">
-            <span class="log-toolbar-label">Output</span>
-            <button class="log-clear-btn" id="btn-clear-schema-log" type="button" title="Clear log">Clear</button>
-          </div>
-          <div class="log-output" id="schema-log-output" role="log" aria-live="polite"></div>
-        </div>
-      </div>
-
-      <!-- Saved Schemas list -->
-      <div class="card">
-        <div class="card-title">Saved Schemas</div>
-        <div class="card-subtitle">Previously fetched Jira field schemas in <code>docs/product/schemas/</code>. Showing last 20 by creation date.</div>
-
-        <ul class="reports-list" id="schemas-list" aria-label="Previously saved schemas">
-          <!-- Populated by JS -->
-        </ul>
-        <p class="reports-empty" id="schemas-empty" hidden>
-          No schemas saved yet. Enter a Schema Name and Project Key above and click &ldquo;Fetch &amp; Save Schema&rdquo; to create the first one.
-        </p>
-      </div>
-
-    </div><!-- /panel-schema -->
 
     <!-- ── Tab 1: Jira Connection ── -->
     <div role="tabpanel" id="panel-connection" aria-labelledby="tab-connection" class="tab-panel" hidden>

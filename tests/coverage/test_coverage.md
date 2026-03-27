@@ -15,16 +15,16 @@
 ## Test Pyramid
 
 ```text
-              /  E2E  \              77 tests  (22%)  (subprocess, server, Playwright UI)  → tests/e2e/
+              /  E2E  \              74 tests  (17%)  (Playwright browser UI)  → tests/e2e/
              /----------\
-            / Integration \           15 tests   (4%)  (module boundaries, mocked I/O)       → tests/integration/
+            / Integration \           18 tests   (4%)  (cross-module flows, subprocess)       → tests/integration/
            /----------------\
-          /    Component      \      88 tests  (25%)  (filesystem, HTTP, data shapes)        → tests/component/
+          /    Component      \      140 tests  (32%)  (filesystem, HTTP, data shapes)        → tests/component/
          /--------------------\
-        /        Unit            \   171 tests  (49%)  (pure functions, no I/O)               → tests/unit/
+        /        Unit            \   208 tests  (47%)  (pure functions, no I/O)               → tests/unit/
        /------------------------\
                                      ────────────────
-                                     351 tests total
+                                     440 tests total
 ```
 
 ## Coverage Matrix
@@ -82,17 +82,17 @@ tests\run_e2e_tests.bat
 
 | File                              | Layer       | Count | Covers                              |
 |-----------------------------------|-------------|-------|-------------------------------------|
-| `unit/test_config.py`             | Unit        |   26  | Config loading, validation          |
+| `unit/test_config.py`             | Unit        |   27  | Config loading, validation          |
 | `unit/test_cert_validation.py`    | Unit        |    5  | Certificate validation helpers      |
 | `unit/test_cli.py`                | Unit        |    4  | `app.cli.main()` orchestration      |
-| `unit/test_metrics.py`            | Unit        |   61  | All metrics functions incl. AI      |
+| `unit/test_metrics.py`            | Unit        |   71  | All metrics functions incl. AI      |
 | `unit/test_main_helpers.py`       | Unit        |    5  | `_timestamp_folder_name()`          |
 | `unit/test_jira_client.py`        | Unit        |   28  | All jira_client functions (mocked)  |
 | `unit/test_server_handlers.py`    | Unit        |   22  | Internal `app.server` handler logic |
 | `unit/test_imports.py`            | Unit        |    7  | Module imports (smoke)              |
 | `component/test_report_html.py`   | Component   |   31  | HTML template rendering, visibility |
 | `component/test_report_md.py`     | Component   |   16  | Markdown generation                 |
-| `component/test_server.py`        | Component   |   20  | HTTP routes, CORS, SSE              |
+| `component/test_server.py`        | Component   |   29  | HTTP routes, CORS, SSE              |
 | `component/test_contracts.py`     | Component   |   12  | Data shapes across boundaries       |
 | `integration/test_integration.py` | Integration |    6  | Full pipeline, filter flow, server  |
 | `integration/test_fetch_ssl_cert.py` | Integration |    9  | fetch_ssl_cert function + CLI smoke |

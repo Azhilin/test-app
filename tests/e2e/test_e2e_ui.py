@@ -570,7 +570,14 @@ def test_dynamic_regions_have_aria_live(page: Page, live_server_url: str):
     """Key dynamic regions carry aria-live so screen readers announce updates (NFR-A-002)."""
     _goto(page, live_server_url)
 
-    live_ids = ["log-output", "filter-log-output", "schema-log-output", "conn-status-badge", "cert-status-badge"]
+    live_ids = [
+        "log-output",
+        "filter-log-output",
+        "schema-status",
+        "conn-status-badge",
+        "save-confirm-conn",
+        "cert-status-badge",
+    ]
     for element_id in live_ids:
         locator = page.locator(f"#{element_id}")
         attr = locator.get_attribute("aria-live")
@@ -583,8 +590,16 @@ def test_required_fields_have_aria_required(page: Page, live_server_url: str):
     """All required form inputs carry aria-required='true' (NFR-A-003)."""
     _goto(page, live_server_url)
 
-    count = page.locator("[aria-required='true']").count()
-    assert count >= 8, f"Expected at least 8 elements with aria-required='true', found {count}"
+    required_ids = [
+        "generate-filter-select",
+        "filter-name",
+        "jira-project",
+        "jira-url",
+        "jira-email",
+        "jira-token",
+    ]
+    for element_id in required_ids:
+        expect(page.locator(f"#{element_id}")).to_have_attribute("aria-required", "true")
 
 
 def test_decorative_icons_have_aria_hidden(page: Page, live_server_url: str):
