@@ -1,10 +1,10 @@
 """Tests for app.jira_client: Jira API wrapper (all Jira calls mocked)."""
+
 from __future__ import annotations
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
-from atlassian import Jira
 
 from app.core import jira_client
 from tests.conftest import make_sprint
@@ -15,6 +15,7 @@ pytestmark = pytest.mark.unit
 # ---------------------------------------------------------------------------
 # create_client
 # ---------------------------------------------------------------------------
+
 
 def test_create_client_returns_jira_instance(monkeypatch):
     monkeypatch.setattr("app.core.config.JIRA_URL", "https://test.atlassian.net")
@@ -58,6 +59,7 @@ def test_create_client_passes_verify_ssl(monkeypatch):
 # get_board_id
 # ---------------------------------------------------------------------------
 
+
 def test_get_board_id_from_config(monkeypatch, mock_jira):
     monkeypatch.setattr("app.core.config.JIRA_BOARD_ID", 42)
     assert jira_client.get_board_id(mock_jira) == 42
@@ -81,13 +83,16 @@ def test_get_board_id_no_boards_raises(monkeypatch, mock_jira):
 # get_sprints
 # ---------------------------------------------------------------------------
 
+
 def test_get_sprints_sorted_desc_by_start_date(monkeypatch, mock_jira):
     monkeypatch.setattr("app.core.config.JIRA_SPRINT_COUNT", 10)
     mock_jira.get_all_sprints_from_board.side_effect = [
-        {"values": [
-            {"id": 1, "name": "S1", "startDate": "2026-01-01"},
-            {"id": 2, "name": "S2", "startDate": "2026-02-01"},
-        ]},
+        {
+            "values": [
+                {"id": 1, "name": "S1", "startDate": "2026-01-01"},
+                {"id": 2, "name": "S2", "startDate": "2026-02-01"},
+            ]
+        },
         {"values": []},
     ]
     result = jira_client.get_sprints(mock_jira, 1)
@@ -98,10 +103,7 @@ def test_get_sprints_sorted_desc_by_start_date(monkeypatch, mock_jira):
 def test_get_sprints_capped_at_sprint_count(monkeypatch, mock_jira):
     monkeypatch.setattr("app.core.config.JIRA_SPRINT_COUNT", 2)
     mock_jira.get_all_sprints_from_board.side_effect = [
-        {"values": [
-            {"id": i, "name": f"S{i}", "startDate": f"2026-0{i}-01"}
-            for i in range(1, 6)
-        ]},
+        {"values": [{"id": i, "name": f"S{i}", "startDate": f"2026-0{i}-01"} for i in range(1, 6)]},
         {"values": []},
     ]
     result = jira_client.get_sprints(mock_jira, 1)
@@ -120,6 +122,7 @@ def test_get_sprints_empty(monkeypatch, mock_jira):
 # ---------------------------------------------------------------------------
 # get_filter_jql
 # ---------------------------------------------------------------------------
+
 
 def test_get_filter_jql_none(monkeypatch, mock_jira):
     monkeypatch.setattr("app.core.config.JIRA_FILTER_ID", None)
@@ -141,6 +144,7 @@ def test_get_filter_jql_api_error(monkeypatch, mock_jira):
 # ---------------------------------------------------------------------------
 # get_issues_for_sprint
 # ---------------------------------------------------------------------------
+
 
 def test_get_issues_for_sprint_single_page(mock_jira):
     mock_jira.get_all_issues_for_sprint_in_board.return_value = {
@@ -169,6 +173,7 @@ def test_get_issues_for_sprint_empty(mock_jira):
 # get_issue_with_changelog
 # ---------------------------------------------------------------------------
 
+
 def test_get_issue_with_changelog_expand_param(mock_jira):
     jira_client.get_issue_with_changelog(mock_jira, "TEST-1")
     mock_jira.get_issue.assert_called_once_with("TEST-1", expand="changelog")
@@ -177,6 +182,7 @@ def test_get_issue_with_changelog_expand_param(mock_jira):
 # ---------------------------------------------------------------------------
 # get_issues_with_changelog
 # ---------------------------------------------------------------------------
+
 
 def test_get_issues_with_changelog_multiple_keys(mock_jira):
     mock_jira.get_issue.side_effect = [
@@ -205,6 +211,7 @@ def test_get_issues_with_changelog_skips_failures(mock_jira):
 # fetch_sprint_data
 # ---------------------------------------------------------------------------
 
+
 def test_fetch_sprint_data_orchestration(monkeypatch, mock_jira):
     monkeypatch.setattr("app.core.config.JIRA_BOARD_ID", 5)
     monkeypatch.setattr("app.core.config.JIRA_FILTER_ID", None)
@@ -214,7 +221,8 @@ def test_fetch_sprint_data_orchestration(monkeypatch, mock_jira):
         {"values": []},
     ]
     mock_jira.get_all_issues_for_sprint_in_board.return_value = {
-        "issues": [{"key": "T-1"}], "total": 1,
+        "issues": [{"key": "T-1"}],
+        "total": 1,
     }
 
     sprints, sprint_issues = jira_client.fetch_sprint_data(mock_jira)

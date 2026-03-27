@@ -1,4 +1,5 @@
 """Smoke tests: confirm all app.* modules import cleanly and expose expected callables."""
+
 from __future__ import annotations
 
 import importlib
@@ -12,11 +13,13 @@ pytestmark = pytest.mark.unit
 
 def test_import_app_config():
     from app.core import config
+
     assert callable(config.validate_config)
 
 
 def test_import_app_metrics():
     from app.core import metrics
+
     assert callable(metrics.compute_velocity)
     assert callable(metrics.compute_cycle_time)
     assert callable(metrics.build_metrics_dict)
@@ -25,24 +28,28 @@ def test_import_app_metrics():
 
 def test_import_app_report_md():
     from app.reporters import report_md
+
     assert callable(report_md.generate_md)
     assert callable(report_md._md_table)
 
 
 def test_import_app_report_html():
     from app.reporters import report_html
+
     assert callable(report_html.generate_html)
     assert report_html.TEMPLATES_DIR.is_dir()
 
 
 def test_import_app_jira_client():
     from app.core import jira_client
+
     assert callable(jira_client.create_client)
     assert callable(jira_client.fetch_sprint_data)
 
 
 def test_import_app_cert_utils():
     from app.utils.cert_utils import validate_cert
+
     assert callable(validate_cert)
 
 

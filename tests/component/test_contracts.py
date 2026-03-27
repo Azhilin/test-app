@@ -1,4 +1,5 @@
 """Contract tests: verify data shapes crossing module boundaries."""
+
 from __future__ import annotations
 
 import re
@@ -8,10 +9,10 @@ import pytest
 from app.core import metrics
 from app.reporters.report_html import TEMPLATES_DIR
 from tests.conftest import (
-    make_sprint,
     make_issue,
-    make_issue_with_labels,
     make_issue_with_changelog,
+    make_issue_with_labels,
+    make_sprint,
 )
 
 pytestmark = pytest.mark.component
@@ -20,6 +21,7 @@ pytestmark = pytest.mark.component
 # ---------------------------------------------------------------------------
 # Sprint dict shape
 # ---------------------------------------------------------------------------
+
 
 def test_sprint_factory_has_keys_used_by_compute_velocity():
     sprint = make_sprint(1, "Sprint 1", "2026-01-01", "2026-01-14")
@@ -40,6 +42,7 @@ def test_sprint_factory_has_keys_used_by_ai_trend():
 # Issue dict shape
 # ---------------------------------------------------------------------------
 
+
 def test_issue_factory_matches_is_done_expectations():
     issue = make_issue("X-1", "Done", 5.0)
     assert metrics._is_done(issue) is True
@@ -57,16 +60,25 @@ def test_issue_with_labels_factory_matches_get_labels():
 # metrics_dict shape
 # ---------------------------------------------------------------------------
 
+
 def test_build_metrics_dict_has_all_expected_keys():
     sprint = make_sprint(1)
     issue = make_issue("X-1", "Done", 5.0)
     cl = make_issue_with_changelog("X-1", "2026-03-01T00:00:00+00:00", "2026-03-03T00:00:00+00:00")
     result = metrics.build_metrics_dict([sprint], {1: [issue]}, [cl])
     expected_keys = {
-        "velocity", "cycle_time", "custom_trends", "generated_at",
-        "ai_assistance_trend", "ai_usage_details",
-        "ai_assisted_label", "ai_exclude_labels",
-        "filter_name", "filter_id", "filter_jql", "project_key",
+        "velocity",
+        "cycle_time",
+        "custom_trends",
+        "generated_at",
+        "ai_assistance_trend",
+        "ai_usage_details",
+        "ai_assisted_label",
+        "ai_exclude_labels",
+        "filter_name",
+        "filter_id",
+        "filter_jql",
+        "project_key",
     }
     assert set(result.keys()) == expected_keys
 
@@ -93,6 +105,7 @@ def test_ai_trend_row_has_required_keys():
 # cycle_time dict shape
 # ---------------------------------------------------------------------------
 
+
 def test_cycle_time_has_exact_keys():
     result = metrics.compute_cycle_time([])
     expected = {"mean_days", "median_days", "min_days", "max_days", "sample_size", "values"}
@@ -103,11 +116,13 @@ def test_cycle_time_has_exact_keys():
 # ai_usage_details shape
 # ---------------------------------------------------------------------------
 
+
 def test_ai_usage_details_shape():
     sprint = make_sprint(1)
     issue = make_issue_with_labels("X-1", "Done", 5.0, ["AI_assistance", "AI_Tool_Copilot"])
     result = metrics.compute_ai_usage_details(
-        [sprint], {1: [issue]},
+        [sprint],
+        {1: [issue]},
         ai_assisted_label="AI_assistance",
         ai_tool_labels=["AI_Tool_Copilot"],
         ai_action_labels=["AI_Case_CodeGen"],
@@ -123,6 +138,7 @@ def test_ai_usage_details_shape():
 # ---------------------------------------------------------------------------
 # Template contract: metrics.* references match build_metrics_dict output
 # ---------------------------------------------------------------------------
+
 
 def test_template_variables_exist_in_metrics_dict():
     """Parse report.html.j2 for metrics.X references and verify they exist in build_metrics_dict output."""
@@ -147,19 +163,22 @@ def test_template_variables_exist_in_metrics_dict():
 # cert_utils.validate_cert response shape
 # ---------------------------------------------------------------------------
 
+
 def _make_test_pem(days: int = 90) -> bytes:
     import datetime
+
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import ec
     from cryptography.x509.oid import NameOID
 
     key = ec.generate_private_key(ec.SECP256R1())
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "test.example.com")])
     cert = (
         x509.CertificateBuilder()
-        .subject_name(name).issuer_name(name)
+        .subject_name(name)
+        .issuer_name(name)
         .public_key(key.public_key())
         .serial_number(x509.random_serial_number())
         .not_valid_before(now - datetime.timedelta(days=1))

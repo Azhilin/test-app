@@ -1,7 +1,8 @@
 """Utility for parsing and validating a local PEM certificate file."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -20,7 +21,7 @@ def validate_cert(cert_path: Path) -> dict:
         cert = x509.load_pem_x509_certificate(pem_bytes)
 
         expires_utc = cert.not_valid_after_utc
-        now_utc = datetime.now(timezone.utc)
+        now_utc = datetime.now(UTC)
         days_remaining = (expires_utc - now_utc).days
 
         try:
@@ -30,16 +31,16 @@ def validate_cert(cert_path: Path) -> dict:
             subject = cert.subject.rfc4514_string()
 
         return {
-            "valid":          days_remaining >= 0,
-            "expires_at":     expires_utc.date().isoformat(),
+            "valid": days_remaining >= 0,
+            "expires_at": expires_utc.date().isoformat(),
             "days_remaining": days_remaining,
-            "subject":        subject,
+            "subject": subject,
         }
     except Exception as exc:  # noqa: BLE001
         return {
-            "valid":          False,
-            "expires_at":     None,
+            "valid": False,
+            "expires_at": None,
             "days_remaining": None,
-            "subject":        None,
-            "error":          str(exc),
+            "subject": None,
+            "error": str(exc),
         }

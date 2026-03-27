@@ -1,9 +1,10 @@
 """Tests for app.report_html: Jinja2 template rendering."""
+
 from __future__ import annotations
 
 import pytest
 
-from app.reporters.report_html import generate_html, TEMPLATES_DIR
+from app.reporters.report_html import TEMPLATES_DIR, generate_html
 
 pytestmark = pytest.mark.component
 
@@ -94,6 +95,7 @@ def test_chart_script_absent_when_velocity_empty(tmp_path, empty_metrics_dict):
 # Velocity totals row
 # ---------------------------------------------------------------------------
 
+
 def test_velocity_totals_row_present(tmp_path, minimal_metrics_dict):
     out = tmp_path / "report.html"
     generate_html(minimal_metrics_dict, out)
@@ -104,6 +106,7 @@ def test_velocity_totals_row_present(tmp_path, minimal_metrics_dict):
 # ---------------------------------------------------------------------------
 # AI Assistance trend section
 # ---------------------------------------------------------------------------
+
 
 def test_ai_assistance_section_present(tmp_path, minimal_metrics_dict):
     out = tmp_path / "report.html"
@@ -128,13 +131,17 @@ def test_ai_assistance_sprint_and_pct_present(tmp_path, minimal_metrics_dict):
 
 def test_ai_assistance_section_hidden_when_section_visibility_false(tmp_path, minimal_metrics_dict):
     out = tmp_path / "report.html"
-    generate_html(minimal_metrics_dict, out, section_visibility={
-        "velocity_trend": True,
-        "ai_assistance_trend": False,
-        "ai_usage_details": False,
-        "cycle_time": True,
-        "custom_trends": False,
-    })
+    generate_html(
+        minimal_metrics_dict,
+        out,
+        section_visibility={
+            "velocity_trend": True,
+            "ai_assistance_trend": False,
+            "ai_usage_details": False,
+            "cycle_time": True,
+            "custom_trends": False,
+        },
+    )
     content = out.read_text(encoding="utf-8")
     assert "AI Assistance trend" not in content
 
@@ -149,6 +156,7 @@ def test_ai_assistance_no_data_message_when_empty(tmp_path, empty_metrics_dict):
 # ---------------------------------------------------------------------------
 # AI Usage Details section
 # ---------------------------------------------------------------------------
+
 
 def test_ai_usage_details_section_present(tmp_path, minimal_metrics_dict):
     out = tmp_path / "report.html"
@@ -173,13 +181,17 @@ def test_ai_usage_cases_canvas_present(tmp_path, minimal_metrics_dict):
 
 def test_ai_usage_section_hidden_when_section_visibility_false(tmp_path, minimal_metrics_dict):
     out = tmp_path / "report.html"
-    generate_html(minimal_metrics_dict, out, section_visibility={
-        "velocity_trend": True,
-        "ai_assistance_trend": True,
-        "ai_usage_details": False,
-        "cycle_time": True,
-        "custom_trends": False,
-    })
+    generate_html(
+        minimal_metrics_dict,
+        out,
+        section_visibility={
+            "velocity_trend": True,
+            "ai_assistance_trend": True,
+            "ai_usage_details": False,
+            "cycle_time": True,
+            "custom_trends": False,
+        },
+    )
     content = out.read_text(encoding="utf-8")
     assert "AI Usage Details" not in content
 
@@ -188,15 +200,20 @@ def test_ai_usage_section_hidden_when_section_visibility_false(tmp_path, minimal
 # section_visibility — velocity hidden
 # ---------------------------------------------------------------------------
 
+
 def test_velocity_section_hidden_when_section_visibility_false(tmp_path, minimal_metrics_dict):
     out = tmp_path / "report.html"
-    generate_html(minimal_metrics_dict, out, section_visibility={
-        "velocity_trend": False,
-        "ai_assistance_trend": False,
-        "ai_usage_details": False,
-        "cycle_time": False,
-        "custom_trends": False,
-    })
+    generate_html(
+        minimal_metrics_dict,
+        out,
+        section_visibility={
+            "velocity_trend": False,
+            "ai_assistance_trend": False,
+            "ai_usage_details": False,
+            "cycle_time": False,
+            "custom_trends": False,
+        },
+    )
     content = out.read_text(encoding="utf-8")
     assert "velocityChart" not in content
     assert "Velocity trend" not in content
@@ -205,6 +222,7 @@ def test_velocity_section_hidden_when_section_visibility_false(tmp_path, minimal
 # ---------------------------------------------------------------------------
 # Filter metadata in header
 # ---------------------------------------------------------------------------
+
 
 def test_filter_name_shown_when_present(tmp_path, minimal_metrics_dict):
     minimal_metrics_dict["filter_name"] = "My Filter"
@@ -228,6 +246,7 @@ def test_project_key_shown_when_present(tmp_path, minimal_metrics_dict):
 # Cycle time section rendering
 # ---------------------------------------------------------------------------
 
+
 def test_cycle_time_section_present(tmp_path, minimal_metrics_dict):
     out = tmp_path / "report.html"
     generate_html(minimal_metrics_dict, out)
@@ -239,13 +258,17 @@ def test_cycle_time_section_present(tmp_path, minimal_metrics_dict):
 
 def test_cycle_time_section_hidden_when_visibility_false(tmp_path, minimal_metrics_dict):
     out = tmp_path / "report.html"
-    generate_html(minimal_metrics_dict, out, section_visibility={
-        "velocity_trend": True,
-        "ai_assistance_trend": True,
-        "ai_usage_details": True,
-        "cycle_time": False,
-        "custom_trends": True,
-    })
+    generate_html(
+        minimal_metrics_dict,
+        out,
+        section_visibility={
+            "velocity_trend": True,
+            "ai_assistance_trend": True,
+            "ai_usage_details": True,
+            "cycle_time": False,
+            "custom_trends": True,
+        },
+    )
     content = out.read_text(encoding="utf-8")
     # Section heading should not appear, but "Cycle" might appear elsewhere — check for the data table
     assert "mean_days" not in content.lower() or "Cycle time" not in content
@@ -262,10 +285,9 @@ def test_cycle_time_no_data_message(tmp_path, empty_metrics_dict):
 # Custom trends section rendering
 # ---------------------------------------------------------------------------
 
+
 def test_custom_trends_section_present_when_data(tmp_path, minimal_metrics_dict):
-    minimal_metrics_dict["custom_trends"] = [
-        {"sprint_id": 1, "sprint_name": "Sprint Alpha", "custom_metric": 42}
-    ]
+    minimal_metrics_dict["custom_trends"] = [{"sprint_id": 1, "sprint_name": "Sprint Alpha", "custom_metric": 42}]
     out = tmp_path / "report.html"
     generate_html(minimal_metrics_dict, out)
     content = out.read_text(encoding="utf-8")
@@ -273,16 +295,18 @@ def test_custom_trends_section_present_when_data(tmp_path, minimal_metrics_dict)
 
 
 def test_custom_trends_section_hidden_when_visibility_false(tmp_path, minimal_metrics_dict):
-    minimal_metrics_dict["custom_trends"] = [
-        {"sprint_id": 1, "sprint_name": "Sprint Alpha", "custom_metric": 42}
-    ]
+    minimal_metrics_dict["custom_trends"] = [{"sprint_id": 1, "sprint_name": "Sprint Alpha", "custom_metric": 42}]
     out = tmp_path / "report.html"
-    generate_html(minimal_metrics_dict, out, section_visibility={
-        "velocity_trend": True,
-        "ai_assistance_trend": True,
-        "ai_usage_details": True,
-        "cycle_time": True,
-        "custom_trends": False,
-    })
+    generate_html(
+        minimal_metrics_dict,
+        out,
+        section_visibility={
+            "velocity_trend": True,
+            "ai_assistance_trend": True,
+            "ai_usage_details": True,
+            "cycle_time": True,
+            "custom_trends": False,
+        },
+    )
     content = out.read_text(encoding="utf-8")
     assert "Custom trends" not in content

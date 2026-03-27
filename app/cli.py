@@ -1,6 +1,7 @@
 """
 Jira metrics report: fetch data from Jira Cloud, compute metrics, generate HTML and MD reports in parallel.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -18,8 +19,7 @@ REPORTS_DIR = PROJECT_ROOT / "generated" / "reports"
 
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser()
-    p.add_argument("--clean", action="store_true",
-                   help="Delete the generated/reports/ directory and exit")
+    p.add_argument("--clean", action="store_true", help="Delete the generated/reports/ directory and exit")
     return p.parse_args()
 
 

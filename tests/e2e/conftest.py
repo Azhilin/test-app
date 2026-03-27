@@ -1,4 +1,5 @@
 """E2E-layer fixtures."""
+
 from __future__ import annotations
 
 import sys
@@ -26,6 +27,7 @@ def live_server_url():
     sys.modules.pop("server", None)
     try:
         import server as srv_mod
+
         importlib.reload(srv_mod)
     finally:
         sys.argv = orig_argv

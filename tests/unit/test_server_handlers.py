@@ -1,4 +1,5 @@
 """Unit-style tests for internal app.server handler branches."""
+
 from __future__ import annotations
 
 import importlib
@@ -21,6 +22,7 @@ def _import_app_server_safe():
     sys.modules.pop("app.server", None)
     try:
         import app.server as srv
+
         importlib.reload(srv)
     finally:
         sys.argv = orig_argv
@@ -70,9 +72,7 @@ def test_slugify_returns_safe_filename(monkeypatch, tmp_path, name, expected):
 def test_read_env_credentials_reads_values_from_env_file(monkeypatch, tmp_path):
     (_, handler) = _make_handler(monkeypatch, tmp_path)
     (tmp_path / ".env").write_text(
-        "JIRA_URL=https://example.atlassian.net/\n"
-        "JIRA_EMAIL=user@example.com\n"
-        "JIRA_API_TOKEN=secret-token\n",
+        "JIRA_URL=https://example.atlassian.net/\nJIRA_EMAIL=user@example.com\nJIRA_API_TOKEN=secret-token\n",
         encoding="utf-8",
     )
 
@@ -151,9 +151,7 @@ def test_post_schema_fetches_and_saves_schema(monkeypatch, tmp_path):
         body={"name": "Team Schema", "projects": "TEAM, CORE", "filter_id": "42"},
     )
     (tmp_path / ".env").write_text(
-        "JIRA_URL=https://example.atlassian.net\n"
-        "JIRA_EMAIL=user@example.com\n"
-        "JIRA_API_TOKEN=secret-token\n",
+        "JIRA_URL=https://example.atlassian.net\nJIRA_EMAIL=user@example.com\nJIRA_API_TOKEN=secret-token\n",
         encoding="utf-8",
     )
 
@@ -216,9 +214,7 @@ def test_post_schema_returns_jira_error_when_fields_request_fails(monkeypatch, t
         body={"name": "Team Schema", "projects": "TEAM"},
     )
     (tmp_path / ".env").write_text(
-        "JIRA_URL=https://example.atlassian.net\n"
-        "JIRA_EMAIL=user@example.com\n"
-        "JIRA_API_TOKEN=secret-token\n",
+        "JIRA_URL=https://example.atlassian.net\nJIRA_EMAIL=user@example.com\nJIRA_API_TOKEN=secret-token\n",
         encoding="utf-8",
     )
 
@@ -361,7 +357,11 @@ def test_handle_test_connection_uses_custom_ssl_context(monkeypatch, tmp_path):
 
     monkeypatch.setattr(srv.config, "JIRA_SSL_CERT", "/tmp/jira_ca_bundle.pem")
     monkeypatch.setattr(srv.ssl, "create_default_context", lambda cafile=None: context_calls.append(cafile) or object())
-    monkeypatch.setattr(srv.urllib.request, "urlopen", lambda *args, **kwargs: urlopen_calls.append(kwargs["context"]) or mock_response)
+    monkeypatch.setattr(
+        srv.urllib.request,
+        "urlopen",
+        lambda *args, **kwargs: urlopen_calls.append(kwargs["context"]) or mock_response,
+    )
 
     handler._handle_test_connection()
 

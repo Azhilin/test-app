@@ -1,10 +1,11 @@
 """Tests for server.py: HTTP server routes (real server on random port)."""
+
 from __future__ import annotations
 
 import json
 import sys
-import urllib.request
 import urllib.error
+import urllib.request
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -15,6 +16,7 @@ pytestmark = pytest.mark.component
 # ---------------------------------------------------------------------------
 # GET routes
 # ---------------------------------------------------------------------------
+
 
 def test_get_root_returns_200(server_url):
     resp = urllib.request.urlopen(f"{server_url}/")
@@ -38,6 +40,7 @@ def test_get_unknown_returns_404(server_url):
 # OPTIONS (CORS)
 # ---------------------------------------------------------------------------
 
+
 def test_options_returns_204_with_cors(server_url):
     req = urllib.request.Request(f"{server_url}/api/test-connection", method="OPTIONS")
     resp = urllib.request.urlopen(req)
@@ -49,6 +52,7 @@ def test_options_returns_204_with_cors(server_url):
 # ---------------------------------------------------------------------------
 # POST /api/test-connection
 # ---------------------------------------------------------------------------
+
 
 def test_test_connection_missing_fields(server_url):
     body = json.dumps({"url": "https://test.atlassian.net"}).encode()
@@ -88,7 +92,7 @@ def test_test_connection_valid_creds(server_url):
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with patch("urllib.request.urlopen", return_value=mock_resp) as mock_urlopen:
+    with patch("urllib.request.urlopen", return_value=mock_resp):
         # The server's urlopen is in its own module scope, so we patch it there
         pass
 
@@ -106,11 +110,13 @@ def test_test_connection_valid_creds(server_url):
 
 
 def test_test_connection_http_error(server_url):
-    body = json.dumps({
-        "url": "https://nonexistent-jira-host-12345.atlassian.net",
-        "email": "t@t.com",
-        "token": "badtok",
-    }).encode()
+    body = json.dumps(
+        {
+            "url": "https://nonexistent-jira-host-12345.atlassian.net",
+            "email": "t@t.com",
+            "token": "badtok",
+        }
+    ).encode()
     req = urllib.request.Request(
         f"{server_url}/api/test-connection",
         data=body,
@@ -139,6 +145,7 @@ def test_test_connection_empty_body(server_url):
 # POST unknown route
 # ---------------------------------------------------------------------------
 
+
 def test_post_unknown_returns_404(server_url):
     req = urllib.request.Request(
         f"{server_url}/api/unknown",
@@ -154,6 +161,7 @@ def test_post_unknown_returns_404(server_url):
 # ---------------------------------------------------------------------------
 # GET /api/generate (SSE)
 # ---------------------------------------------------------------------------
+
 
 def test_generate_returns_sse_content_type(server_url):
     req = urllib.request.Request(f"{server_url}/api/generate")
@@ -175,19 +183,22 @@ def test_generate_ends_with_close_event(server_url):
 # GET /api/cert-status
 # ---------------------------------------------------------------------------
 
+
 def _make_test_pem(days: int = 90) -> bytes:
     import datetime
+
     from cryptography import x509
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import ec
     from cryptography.x509.oid import NameOID
 
     key = ec.generate_private_key(ec.SECP256R1())
-    now = datetime.datetime.now(datetime.timezone.utc)
+    now = datetime.datetime.now(datetime.UTC)
     name = x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "test.example.com")])
     cert = (
         x509.CertificateBuilder()
-        .subject_name(name).issuer_name(name)
+        .subject_name(name)
+        .issuer_name(name)
         .public_key(key.public_key())
         .serial_number(x509.random_serial_number())
         .not_valid_before(now - datetime.timedelta(days=1))
@@ -202,7 +213,7 @@ def test_cert_status_no_cert_returns_exists_false(server_url, tmp_path):
     import app.server as srv
 
     orig = srv.ROOT
-    srv.ROOT = tmp_path          # temp dir has no certs/ subdirectory
+    srv.ROOT = tmp_path  # temp dir has no certs/ subdirectory
     try:
         resp = urllib.request.urlopen(f"{server_url}/api/cert-status")
         data = json.loads(resp.read())
@@ -242,6 +253,7 @@ def test_cert_status_with_valid_cert_returns_enriched_fields(server_url, tmp_pat
 # ---------------------------------------------------------------------------
 # POST /api/fetch-cert
 # ---------------------------------------------------------------------------
+
 
 def test_fetch_cert_missing_url_returns_400(server_url, monkeypatch):
     """POST /api/fetch-cert with empty url and no JIRA_URL fallback returns HTTP 400."""
@@ -293,6 +305,7 @@ def test_fetch_cert_unreachable_host_returns_error(server_url):
 # Windows-specific: socket error suppression
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.windows_only
 @pytest.mark.skipif(
     sys.platform != "win32",
@@ -325,9 +338,6 @@ def test_handle_error_swallows_connection_aborted_error():
             except Exception as exc:  # noqa: BLE001
                 propagated.append(exc)
 
-        assert not propagated, (
-            "Server.handle_error must swallow ConnectionAbortedError; "
-            f"got: {propagated}"
-        )
+        assert not propagated, f"Server.handle_error must swallow ConnectionAbortedError; got: {propagated}"
     finally:
         server_instance.server_close()

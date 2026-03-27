@@ -1,4 +1,5 @@
 """Generate Markdown report from metrics dict."""
+
 from __future__ import annotations
 
 from pathlib import Path
@@ -35,6 +36,7 @@ def generate_md(metrics: dict, output_path: Path = DEFAULT_OUTPUT) -> None:
             bar = "█" * bar_len
             parts.append(f"- **{row.get('sprint_name', '')}**: {bar} {v}")
         parts.append("")
+
         def _date_fmt(s: str | None) -> str:
             return ((s or "")[:10] or "—").strip() or "—"
 
@@ -62,16 +64,18 @@ def generate_md(metrics: dict, output_path: Path = DEFAULT_OUTPUT) -> None:
     parts.append("## Cycle time")
     parts.append("")
     if sample > 0:
-        parts.append(_md_table(
-            ["Metric", "Value"],
-            [
-                ["Mean (days)", ct.get("mean_days", "—")],
-                ["Median (days)", ct.get("median_days", "—")],
-                ["Min (days)", ct.get("min_days", "—")],
-                ["Max (days)", ct.get("max_days", "—")],
-                ["Sample size", sample],
-            ],
-        ))
+        parts.append(
+            _md_table(
+                ["Metric", "Value"],
+                [
+                    ["Mean (days)", ct.get("mean_days", "—")],
+                    ["Median (days)", ct.get("median_days", "—")],
+                    ["Min (days)", ct.get("min_days", "—")],
+                    ["Max (days)", ct.get("max_days", "—")],
+                    ["Sample size", sample],
+                ],
+            )
+        )
     else:
         parts.append("*No cycle time data (need issues with changelog).*")
     parts.append("")

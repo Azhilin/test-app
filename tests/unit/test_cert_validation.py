@@ -1,8 +1,8 @@
 """Unit tests for app.cert_utils.validate_cert."""
+
 from __future__ import annotations
 
 import datetime
-from pathlib import Path
 
 import pytest
 
@@ -15,6 +15,7 @@ pytestmark = pytest.mark.unit
 # Helpers — generate synthetic PEM certs without touching the filesystem
 # ---------------------------------------------------------------------------
 
+
 def _make_pem(common_name: str, days_from_now: int) -> bytes:
     """Build a self-signed PEM certificate valid for *days_from_now* days."""
     from cryptography import x509
@@ -23,10 +24,12 @@ def _make_pem(common_name: str, days_from_now: int) -> bytes:
     from cryptography.x509.oid import NameOID
 
     key = ec.generate_private_key(ec.SECP256R1())
-    now = datetime.datetime.now(datetime.timezone.utc)
-    subject = issuer = x509.Name([
-        x509.NameAttribute(NameOID.COMMON_NAME, common_name),
-    ])
+    now = datetime.datetime.now(datetime.UTC)
+    subject = issuer = x509.Name(
+        [
+            x509.NameAttribute(NameOID.COMMON_NAME, common_name),
+        ]
+    )
     cert = (
         x509.CertificateBuilder()
         .subject_name(subject)
@@ -43,6 +46,7 @@ def _make_pem(common_name: str, days_from_now: int) -> bytes:
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 def test_validate_cert_valid_future(tmp_path):
     pem = _make_pem("*.atlassian.net", 365)
@@ -83,8 +87,8 @@ def test_validate_cert_expiring_soon(tmp_path):
 
     result = validate_cert(cert_file)
 
-    assert result["valid"] is True          # cert is not expired
-    assert result["days_remaining"] <= 7    # UI will render badge-warning for this
+    assert result["valid"] is True  # cert is not expired
+    assert result["days_remaining"] <= 7  # UI will render badge-warning for this
 
 
 def test_validate_cert_missing_file(tmp_path):

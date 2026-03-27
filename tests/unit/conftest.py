@@ -1,4 +1,5 @@
 """Unit-layer fixtures."""
+
 from __future__ import annotations
 
 import pytest
@@ -8,6 +9,7 @@ import pytest
 def mock_jira():
     """Return a MagicMock with spec=Jira and common stubs."""
     from unittest.mock import MagicMock
+
     from atlassian import Jira
 
     jira = MagicMock(spec=Jira)

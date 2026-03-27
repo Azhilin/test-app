@@ -8,6 +8,7 @@ Run:
     pytest tests/e2e/test_e2e_ui.py -v            # headless
     pytest tests/e2e/test_e2e_ui.py -v --headed   # visual debug
 """
+
 from __future__ import annotations
 
 import json
@@ -23,18 +24,27 @@ pytestmark = pytest.mark.e2e
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _goto(page: Page, url: str) -> None:
     """Navigate with domcontentloaded wait and retry for flaky server."""
     # Mock API endpoints that don't exist on the dev server to avoid
     # blocking the single-threaded HTTP server with 404 round-trips.
-    page.route("**/api/config", lambda route: route.fulfill(
-        status=200, content_type="application/json",
-        body=json.dumps({"ok": True, "configured": True, "config": {}}),
-    ))
-    page.route("**/api/reports", lambda route: route.fulfill(
-        status=200, content_type="application/json",
-        body=json.dumps({"reports": []}),
-    ))
+    page.route(
+        "**/api/config",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({"ok": True, "configured": True, "config": {}}),
+        ),
+    )
+    page.route(
+        "**/api/reports",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({"reports": []}),
+        ),
+    )
     for attempt in range(3):
         try:
             page.goto(url, wait_until="domcontentloaded", timeout=15000)
@@ -50,6 +60,7 @@ def _mock_filters_api(page: Page) -> None:
     The dev server doesn't implement /api/filters, so tests that save
     filters would get a 404 without this mock.
     """
+
     def _handle_post(route):
         body = route.request.post_data_json
         name = body.get("name", "filter") if body else "filter"
@@ -60,13 +71,15 @@ def _mock_filters_api(page: Page) -> None:
         route.fulfill(
             status=200,
             content_type="application/json",
-            body=json.dumps({
-                "ok": True,
-                "updated": False,
-                "jql": jql,
-                "filename": f"{name.lower().replace(' ', '_')}.json",
-                "created_at": "2026-03-25T12-00-00",
-            }),
+            body=json.dumps(
+                {
+                    "ok": True,
+                    "updated": False,
+                    "jql": jql,
+                    "filename": f"{name.lower().replace(' ', '_')}.json",
+                    "created_at": "2026-03-25T12-00-00",
+                }
+            ),
         )
 
     def _handle_get(route):
@@ -83,16 +96,16 @@ def _mock_filters_api(page: Page) -> None:
             body=json.dumps({"ok": True}),
         )
 
-    page.route("**/api/filters", lambda route: (
-        _handle_post(route) if route.request.method == "POST"
-        else _handle_get(route)
-    ))
+    page.route(
+        "**/api/filters", lambda route: _handle_post(route) if route.request.method == "POST" else _handle_get(route)
+    )
     page.route("**/api/filters/*", _handle_delete)
 
 
 # ---------------------------------------------------------------------------
 # Group 1: Page Load & Layout
 # ---------------------------------------------------------------------------
+
 
 def test_page_loads_with_title(page: Page, live_server_url: str):
     """Page loads with correct title and heading."""
@@ -123,6 +136,7 @@ def test_all_four_tabs_visible(page: Page, live_server_url: str):
 # ---------------------------------------------------------------------------
 # Group 2: Tab Navigation
 # ---------------------------------------------------------------------------
+
 
 def test_click_connection_tab(page: Page, live_server_url: str):
     """Clicking Connection tab shows its panel and hides others."""
@@ -162,14 +176,18 @@ def test_keyboard_arrow_right_navigation(page: Page, live_server_url: str):
 # Group 3: Connection Tab — Form & Validation
 # ---------------------------------------------------------------------------
 
+
 def test_save_connection_valid_inputs(page: Page, live_server_url: str):
     """Filling valid inputs, testing connection, then clicking Save shows confirmation flash."""
     # Mock Test Connection to return success so Save button becomes enabled
-    page.route("**/api/test-connection", lambda route: route.fulfill(
-        status=200,
-        content_type="application/json",
-        body=json.dumps({"ok": True, "displayName": "Test User", "emailAddress": "user@example.com"}),
-    ))
+    page.route(
+        "**/api/test-connection",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({"ok": True, "displayName": "Test User", "emailAddress": "user@example.com"}),
+        ),
+    )
     _goto(page, live_server_url)
     page.get_by_role("tab", name="Jira Connection").click()
 
@@ -250,6 +268,7 @@ def test_token_show_hide_toggle(page: Page, live_server_url: str):
 # Group 4: Connection Tab — Test Connection
 # ---------------------------------------------------------------------------
 
+
 def test_test_connection_missing_fields(page: Page, live_server_url: str):
     """Test Connection with empty fields shows error in badge."""
     _goto(page, live_server_url)
@@ -286,6 +305,7 @@ def test_test_connection_unreachable_server(page: Page, live_server_url: str):
 # ---------------------------------------------------------------------------
 # Group 5: Filter Tab — Save & List
 # ---------------------------------------------------------------------------
+
 
 def test_save_filter_missing_required_fields(page: Page, live_server_url: str):
     """Save Filter with empty fields shows error in filter log."""
@@ -353,6 +373,7 @@ def test_remove_filter(page: Page, live_server_url: str):
 # ---------------------------------------------------------------------------
 # Group 6: Generate Tab — Report Generation
 # ---------------------------------------------------------------------------
+
 
 def test_generate_without_filter_selected(page: Page, live_server_url: str):
     """Generate without a filter selected shows error and marks dropdown invalid."""
@@ -445,13 +466,17 @@ def test_log_clear_button(page: Page, live_server_url: str):
 # Group 7: SSL Certificate Panel
 # ---------------------------------------------------------------------------
 
+
 def _mock_cert_status(page: Page, payload: dict) -> None:
     """Register a route mock for /api/cert-status returning *payload*."""
-    page.route("**/api/cert-status", lambda route: route.fulfill(
-        status=200,
-        content_type="application/json",
-        body=json.dumps(payload),
-    ))
+    page.route(
+        "**/api/cert-status",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(payload),
+        ),
+    )
 
 
 def test_cert_status_badge_no_cert(page: Page, live_server_url: str):
@@ -466,14 +491,17 @@ def test_cert_status_badge_no_cert(page: Page, live_server_url: str):
 
 def test_cert_status_badge_valid_cert(page: Page, live_server_url: str):
     """When /api/cert-status reports a valid cert, the badge shows 'Valid'."""
-    _mock_cert_status(page, {
-        "exists": True,
-        "path": "certs/jira_ca_bundle.pem",
-        "valid": True,
-        "expires_at": "2027-01-01T00:00:00+00:00",
-        "days_remaining": 90,
-        "subject": "CN=test.atlassian.net",
-    })
+    _mock_cert_status(
+        page,
+        {
+            "exists": True,
+            "path": "certs/jira_ca_bundle.pem",
+            "valid": True,
+            "expires_at": "2027-01-01T00:00:00+00:00",
+            "days_remaining": 90,
+            "subject": "CN=test.atlassian.net",
+        },
+    )
     _goto(page, live_server_url)
     page.get_by_role("tab", name="Jira Connection").click()
 
@@ -498,22 +526,27 @@ def test_fetch_cert_button_success(page: Page, live_server_url: str):
             route.fulfill(
                 status=200,
                 content_type="application/json",
-                body=json.dumps({
-                    "exists": True,
-                    "path": "certs/jira_ca_bundle.pem",
-                    "valid": True,
-                    "expires_at": "2027-01-01T00:00:00+00:00",
-                    "days_remaining": 90,
-                    "subject": "CN=test.atlassian.net",
-                }),
+                body=json.dumps(
+                    {
+                        "exists": True,
+                        "path": "certs/jira_ca_bundle.pem",
+                        "valid": True,
+                        "expires_at": "2027-01-01T00:00:00+00:00",
+                        "days_remaining": 90,
+                        "subject": "CN=test.atlassian.net",
+                    }
+                ),
             )
 
     page.route("**/api/cert-status", _cert_status_handler)
-    page.route("**/api/fetch-cert", lambda route: route.fulfill(
-        status=200,
-        content_type="application/json",
-        body=json.dumps({"ok": True, "path": "certs/jira_ca_bundle.pem", "host": "test.atlassian.net"}),
-    ))
+    page.route(
+        "**/api/fetch-cert",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({"ok": True, "path": "certs/jira_ca_bundle.pem", "host": "test.atlassian.net"}),
+        ),
+    )
 
     _goto(page, live_server_url)
     page.get_by_role("tab", name="Jira Connection").click()

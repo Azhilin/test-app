@@ -13,6 +13,7 @@ Run:
     pytest tests/test_e2e_connection.py -v
     pytest tests/test_e2e_connection.py -v --headed   # visual debug
 """
+
 from __future__ import annotations
 
 import json
@@ -33,28 +34,43 @@ _FULL_CONFIG = {
     "ok": True,
     "configured": True,
     "config": {
-        "JIRA_URL":       "https://prefilled.atlassian.net",
-        "JIRA_EMAIL":     "prefilled@example.com",
+        "JIRA_URL": "https://prefilled.atlassian.net",
+        "JIRA_EMAIL": "prefilled@example.com",
         "JIRA_API_TOKEN": "***",
     },
 }
 _TEST_CONN_SUCCESS = {"ok": True, "displayName": "Alice Smith", "emailAddress": "alice@example.com"}
-_TEST_CONN_401     = {"ok": False, "httpStatus": 401, "error": "Unauthorized"}
-_TEST_CONN_403     = {"ok": False, "httpStatus": 403, "error": "Forbidden"}
+_TEST_CONN_401 = {"ok": False, "httpStatus": 401, "error": "Unauthorized"}
+_TEST_CONN_403 = {"ok": False, "httpStatus": 403, "error": "Forbidden"}
 
 
 def _goto(page: Page, url: str, config: dict | None = None) -> None:
     """Navigate to the app, mocking /api/config and /api/reports."""
     cfg = config if config is not None else _EMPTY_CONFIG
-    page.route("**/api/config", lambda route: route.fulfill(
-        status=200, content_type="application/json", body=json.dumps(cfg),
-    ))
-    page.route("**/api/reports", lambda route: route.fulfill(
-        status=200, content_type="application/json", body=json.dumps({"reports": []}),
-    ))
-    page.route("**/api/filters", lambda route: route.fulfill(
-        status=200, content_type="application/json", body=json.dumps({"filters": []}),
-    ))
+    page.route(
+        "**/api/config",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(cfg),
+        ),
+    )
+    page.route(
+        "**/api/reports",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({"reports": []}),
+        ),
+    )
+    page.route(
+        "**/api/filters",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({"filters": []}),
+        ),
+    )
     for attempt in range(3):
         try:
             page.goto(url, wait_until="domcontentloaded", timeout=15000)
@@ -69,15 +85,19 @@ def _open_connection_tab(page: Page) -> None:
 
 
 def _mock_test_conn(page: Page, response: dict, status: int = 200) -> None:
-    page.route("**/api/test-connection", lambda route: route.fulfill(
-        status=status, content_type="application/json", body=json.dumps(response),
-    ))
+    page.route(
+        "**/api/test-connection",
+        lambda route: route.fulfill(
+            status=status,
+            content_type="application/json",
+            body=json.dumps(response),
+        ),
+    )
 
 
-def _fill_credentials(page: Page,
-                      url: str = "https://test.atlassian.net",
-                      email: str = "user@example.com",
-                      token: str = "test-token-abc") -> None:
+def _fill_credentials(
+    page: Page, url: str = "https://test.atlassian.net", email: str = "user@example.com", token: str = "test-token-abc"
+) -> None:
     page.locator("#jira-url").fill(url)
     page.locator("#jira-email").fill(email)
     page.locator("#jira-token").fill(token)
@@ -91,6 +111,7 @@ def _run_test_connection_and_wait_success(page: Page) -> None:
 # ---------------------------------------------------------------------------
 # Group 1: Required-field asterisks
 # ---------------------------------------------------------------------------
+
 
 def test_required_star_visible_on_jira_url_label(page: Page, live_server_url: str):
     """The Jira URL label has a visible red asterisk marking it as required."""
@@ -123,6 +144,7 @@ def test_required_star_visible_on_token_label(page: Page, live_server_url: str):
 # Group 2: Save button — disabled on load
 # ---------------------------------------------------------------------------
 
+
 def test_save_button_disabled_on_load_with_empty_config(page: Page, live_server_url: str):
     """Save is disabled on page load when no config is set."""
     _goto(page, live_server_url)
@@ -141,6 +163,7 @@ def test_save_button_disabled_on_load_even_with_prefilled_config(page: Page, liv
 # ---------------------------------------------------------------------------
 # Group 3: Pre-population from GET /api/config
 # ---------------------------------------------------------------------------
+
 
 def test_fields_prepopulated_from_server_config(page: Page, live_server_url: str):
     """URL and email fields are populated from the server config on load."""
@@ -175,7 +198,8 @@ def test_fields_empty_when_config_not_configured(page: Page, live_server_url: st
 def test_partial_config_populates_only_present_fields(page: Page, live_server_url: str):
     """Only fields present in the server config are filled; absent fields remain empty."""
     partial_config = {
-        "ok": True, "configured": False,
+        "ok": True,
+        "configured": False,
         "config": {"JIRA_URL": "https://partial.atlassian.net"},
     }
     _goto(page, live_server_url, config=partial_config)
@@ -187,6 +211,7 @@ def test_partial_config_populates_only_present_fields(page: Page, live_server_ur
 # ---------------------------------------------------------------------------
 # Group 4: Test Connection → status badge transitions
 # ---------------------------------------------------------------------------
+
 
 def test_badge_shows_connected_on_success(page: Page, live_server_url: str):
     """Badge transitions to 'Connected' after a successful Test Connection."""
@@ -236,6 +261,7 @@ def test_badge_shows_error_when_fields_empty(page: Page, live_server_url: str):
 # ---------------------------------------------------------------------------
 # Group 5: Save button gate — enabled / disabled logic
 # ---------------------------------------------------------------------------
+
 
 def test_save_enabled_after_successful_test_connection(page: Page, live_server_url: str):
     """Save button becomes enabled after all fields filled and Test Connection succeeds."""
@@ -305,7 +331,7 @@ def test_save_not_enabled_when_token_missing_despite_success(page: Page, live_se
     _open_connection_tab(page)
     page.locator("#jira-url").fill("https://test.atlassian.net")
     page.locator("#jira-email").fill("user@example.com")
-    page.locator("#jira-token").fill("")   # token empty
+    page.locator("#jira-token").fill("")  # token empty
     page.locator("#btn-test-conn").click()
     # Test Connection is blocked client-side when fields are missing
     expect(page.locator("#conn-status-badge")).to_have_text("Error")
@@ -315,6 +341,7 @@ def test_save_not_enabled_when_token_missing_despite_success(page: Page, live_se
 # ---------------------------------------------------------------------------
 # Group 6: Save button → POST to /api/config + flash confirmation
 # ---------------------------------------------------------------------------
+
 
 def test_save_posts_correct_payload(page: Page, live_server_url: str):
     """Clicking Save sends the correct JIRA_URL, JIRA_EMAIL, JIRA_API_TOKEN to POST /api/config."""
@@ -329,17 +356,21 @@ def test_save_posts_correct_payload(page: Page, live_server_url: str):
     _goto(page, live_server_url)
 
     # Override the config route for POSTs only (GET already mocked by _goto)
-    page.route("**/api/config", lambda route: (
-        _intercept_config_post(route) if route.request.method == "POST"
-        else route.fulfill(
-            status=200, content_type="application/json",
-            body=json.dumps(_EMPTY_CONFIG),
-        )
-    ))
+    page.route(
+        "**/api/config",
+        lambda route: (
+            _intercept_config_post(route)
+            if route.request.method == "POST"
+            else route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps(_EMPTY_CONFIG),
+            )
+        ),
+    )
 
     _open_connection_tab(page)
-    _fill_credentials(page, url="https://save-test.atlassian.net",
-                      email="save@test.com", token="savetoken123")
+    _fill_credentials(page, url="https://save-test.atlassian.net", email="save@test.com", token="savetoken123")
     _run_test_connection_and_wait_success(page)
     page.locator("#btn-save-conn").click()
 
@@ -387,13 +418,18 @@ def test_save_with_server_token_sends_star_token(page: Page, live_server_url: st
 
     # Config returns token as *** (token exists on server, not shown in UI)
     _goto(page, live_server_url, config=_FULL_CONFIG)
-    page.route("**/api/config", lambda route: (
-        _intercept_config_post(route) if route.request.method == "POST"
-        else route.fulfill(
-            status=200, content_type="application/json",
-            body=json.dumps(_FULL_CONFIG),
-        )
-    ))
+    page.route(
+        "**/api/config",
+        lambda route: (
+            _intercept_config_post(route)
+            if route.request.method == "POST"
+            else route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps(_FULL_CONFIG),
+            )
+        ),
+    )
 
     _open_connection_tab(page)
     # URL and email are pre-filled from server config; type the token to pass Test Connection
@@ -424,6 +460,7 @@ def test_save_with_server_token_sends_star_token(page: Page, live_server_url: st
 # Group 7: Corner cases
 # ---------------------------------------------------------------------------
 
+
 def test_can_re_test_after_field_edit_to_re_enable_save(page: Page, live_server_url: str):
     """After editing a field (disabling Save), running Test Connection again re-enables Save."""
     _mock_test_conn(page, _TEST_CONN_SUCCESS)
@@ -448,8 +485,7 @@ def test_save_persists_values_to_localstorage(page: Page, live_server_url: str):
     _mock_test_conn(page, _TEST_CONN_SUCCESS)
     _goto(page, live_server_url)
     _open_connection_tab(page)
-    _fill_credentials(page, url="https://ls-test.atlassian.net",
-                      email="ls@test.com", token="lstoken")
+    _fill_credentials(page, url="https://ls-test.atlassian.net", email="ls@test.com", token="lstoken")
     _run_test_connection_and_wait_success(page)
     page.locator("#btn-save-conn").click()
     expect(page.locator("#save-confirm-conn")).to_have_class(re.compile(r"visible"), timeout=3000)
@@ -479,11 +515,9 @@ def test_multiple_test_connection_attempts_last_result_wins(page: Page, live_ser
     def _flaky(route):
         call_count[0] += 1
         if call_count[0] == 1:
-            route.fulfill(status=200, content_type="application/json",
-                          body=json.dumps(_TEST_CONN_401))
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(_TEST_CONN_401))
         else:
-            route.fulfill(status=200, content_type="application/json",
-                          body=json.dumps(_TEST_CONN_SUCCESS))
+            route.fulfill(status=200, content_type="application/json", body=json.dumps(_TEST_CONN_SUCCESS))
 
     page.route("**/api/test-connection", _flaky)
     _goto(page, live_server_url)

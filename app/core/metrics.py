@@ -1,7 +1,8 @@
 """Compute velocity, cycle time, and custom metric trends from Jira data."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from app.core import config
@@ -61,14 +62,16 @@ def compute_velocity(
             if _is_done(iss):
                 points += _get_story_points(iss)
                 count += 1
-        rows.append({
-            "sprint_id": sid,
-            "sprint_name": sprint.get("name") or f"Sprint {sid}",
-            "start_date": sprint.get("startDate"),
-            "end_date": sprint.get("endDate"),
-            "velocity": round(points, 1),
-            "issue_count": count,
-        })
+        rows.append(
+            {
+                "sprint_id": sid,
+                "sprint_name": sprint.get("name") or f"Sprint {sid}",
+                "start_date": sprint.get("startDate"),
+                "end_date": sprint.get("endDate"),
+                "velocity": round(points, 1),
+                "issue_count": count,
+            }
+        )
     return rows
 
 
@@ -82,7 +85,7 @@ def _cycle_time_from_changelog(issue: dict[str, Any]) -> float | None:
     done_at: datetime | None = None
     done_statuses = {"done", "closed", "resolved", "complete"}
 
-    for h in sorted(histories, key=lambda item: _parse_iso(item.get("created")) or datetime.max.replace(tzinfo=timezone.utc)):
+    for h in sorted(histories, key=lambda item: _parse_iso(item.get("created")) or datetime.max.replace(tzinfo=UTC)):
         created = _parse_iso(h.get("created"))
         if not created:
             continue
@@ -90,10 +93,7 @@ def _cycle_time_from_changelog(issue: dict[str, Any]) -> float | None:
             if item.get("field") != "status":
                 continue
             to_val = (item.get("toString") or "").lower()
-            from_val = (item.get("fromString") or "").lower()
-            if in_progress_at is None and (
-                "progress" in to_val or "in progress" in to_val or to_val == "in progress"
-            ):
+            if in_progress_at is None and ("progress" in to_val or "in progress" in to_val or to_val == "in progress"):
                 in_progress_at = created
             if in_progress_at is not None and to_val in done_statuses:
                 done_at = created
@@ -213,15 +213,17 @@ def compute_ai_assistance_trend(
             if ai_assisted_label in labels:
                 ai_sp += pts
         ai_pct = round(ai_sp / total_sp * 100, 1) if total_sp > 0 else 0.0
-        rows.append({
-            "sprint_id": sid,
-            "sprint_name": sprint.get("name") or f"Sprint {sid}",
-            "start_date": sprint.get("startDate"),
-            "end_date": sprint.get("endDate"),
-            "total_sp": round(total_sp, 1),
-            "ai_sp": round(ai_sp, 1),
-            "ai_pct": ai_pct,
-        })
+        rows.append(
+            {
+                "sprint_id": sid,
+                "sprint_name": sprint.get("name") or f"Sprint {sid}",
+                "start_date": sprint.get("startDate"),
+                "end_date": sprint.get("endDate"),
+                "total_sp": round(total_sp, 1),
+                "ai_sp": round(ai_sp, 1),
+                "ai_pct": ai_pct,
+            }
+        )
     return rows
 
 
@@ -317,5 +319,5 @@ def build_metrics_dict(
         "filter_id": None,
         "filter_jql": None,
         "project_key": None,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
     }

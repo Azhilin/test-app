@@ -204,7 +204,6 @@ def build_pyramid(stats: list[dict], grand_total: int) -> str:
 def _update_pyramid_block(md: str, new_pyramid: str) -> str:
     """Replace the fenced code block that immediately follows '## Test Pyramid'."""
     pattern = r"(## Test Pyramid\s+)```.*?```"
-    replacement_parts = [None]  # capture for closure
 
     def _replacer(m: re.Match) -> str:
         return m.group(1) + new_pyramid
@@ -218,15 +217,12 @@ def _update_pyramid_block(md: str, new_pyramid: str) -> str:
 def _update_file_table_counts(md: str, stats: list[dict]) -> str:
     """Update Count cells in the '## Test Files' table for every tracked file."""
     for layer in stats:
-        folder: Path = layer["folder"]
         for filepath, count in layer["files"].items():
             # The table uses paths like `unit/test_foo.py` (relative to tests/)
             rel = filepath.relative_to(TESTS_DIR).as_posix()
             # Match the table row:  | `unit/test_foo.py`  | Layer  |  <count>  |
             # We replace the count cell (third pipe-delimited cell on that row).
-            pattern = (
-                r"(\|\s+`" + re.escape(rel) + r"`[^|]*\|[^|]*\|)\s*[~\d]+\s*(\|)"
-            )
+            pattern = r"(\|\s+`" + re.escape(rel) + r"`[^|]*\|[^|]*\|)\s*[~\d]+\s*(\|)"
             replacement = rf"\g<1> {count:>4}  \2"
             md = re.sub(pattern, replacement, md)
     return md
