@@ -570,8 +570,9 @@ class Handler(BaseHTTPRequestHandler):
                 try:
                     filter_data = self._jira_api_get(f"/rest/api/2/filter/{filter_id}", url, email, token)
                     filter_jql = filter_data.get("jql")
-                except (urllib.error.HTTPError, urllib.error.URLError, OSError):
-                    pass
+                except (urllib.error.HTTPError, urllib.error.URLError, OSError) as exc:
+                    # Failure to load filter details is non-fatal; continue without filter JQL.
+                    print(f"Warning: could not fetch Jira filter {filter_id}: {exc}", file=sys.stderr)
 
             created_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S")
             filename = f"{self._slugify(legacy_name)}.json"
