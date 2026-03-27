@@ -1,4 +1,5 @@
 """Component-layer fixtures."""
+
 from __future__ import annotations
 
 import pytest

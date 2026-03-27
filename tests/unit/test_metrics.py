@@ -1,10 +1,11 @@
 """Tests for app.metrics: pure computation, no Jira connection required."""
+
 from __future__ import annotations
 
 import pytest
 
 from app.core import metrics
-from tests.conftest import make_sprint, make_issue, make_issue_with_changelog, make_issue_with_labels
+from tests.conftest import make_issue, make_issue_with_changelog, make_issue_with_labels, make_sprint
 
 pytestmark = pytest.mark.unit
 
@@ -13,16 +14,20 @@ pytestmark = pytest.mark.unit
 # _is_done
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("status,expected", [
-    ("Done", True),
-    ("done", True),
-    ("Closed", True),
-    ("Resolved", True),
-    ("Complete", True),
-    ("In Progress", False),
-    ("To Do", False),
-    ("", False),
-])
+
+@pytest.mark.parametrize(
+    "status,expected",
+    [
+        ("Done", True),
+        ("done", True),
+        ("Closed", True),
+        ("Resolved", True),
+        ("Complete", True),
+        ("In Progress", False),
+        ("To Do", False),
+        ("", False),
+    ],
+)
 def test_is_done(status, expected):
     issue = make_issue("X-1", status=status)
     assert metrics._is_done(issue) is expected
@@ -37,6 +42,7 @@ def test_is_done_missing_fields():
 # ---------------------------------------------------------------------------
 # _get_story_points
 # ---------------------------------------------------------------------------
+
 
 def test_get_story_points_numeric_float():
     issue = make_issue("X-1", points=8.0)
@@ -79,6 +85,7 @@ def test_get_story_points_nested_value_dict():
 # ---------------------------------------------------------------------------
 # compute_velocity
 # ---------------------------------------------------------------------------
+
 
 def test_compute_velocity_all_done():
     sprint = make_sprint(1, "Sprint 1")
@@ -136,6 +143,7 @@ def test_compute_velocity_preserves_sprint_name():
 # ---------------------------------------------------------------------------
 # compute_cycle_time
 # ---------------------------------------------------------------------------
+
 
 def test_compute_cycle_time_empty():
     result = metrics.compute_cycle_time([])
@@ -216,6 +224,7 @@ def test_cycle_time_uses_first_done_after_in_progress():
 # get_done_issue_keys_for_changelog
 # ---------------------------------------------------------------------------
 
+
 def test_get_done_issue_keys_filters_non_done():
     sprint = make_sprint(1)
     issues = [make_issue("X-1", "Done"), make_issue("X-2", "In Progress")]
@@ -241,22 +250,32 @@ def test_get_done_issue_keys_respects_max_count():
 # build_metrics_dict
 # ---------------------------------------------------------------------------
 
+
 def test_build_metrics_dict_keys():
     sprint = make_sprint(1)
     issue = make_issue("X-1", "Done", 5.0)
     issue_cl = make_issue_with_changelog("X-1", "2026-03-01T00:00:00+00:00", "2026-03-03T00:00:00+00:00")
     result = metrics.build_metrics_dict([sprint], {1: [issue]}, [issue_cl])
     expected_keys = {
-        "velocity", "cycle_time", "custom_trends", "generated_at",
-        "ai_assistance_trend", "ai_usage_details",
-        "ai_assisted_label", "ai_exclude_labels",
-        "filter_name", "filter_id", "filter_jql", "project_key",
+        "velocity",
+        "cycle_time",
+        "custom_trends",
+        "generated_at",
+        "ai_assistance_trend",
+        "ai_usage_details",
+        "ai_assisted_label",
+        "ai_exclude_labels",
+        "filter_name",
+        "filter_id",
+        "filter_jql",
+        "project_key",
     }
     assert set(result.keys()) == expected_keys
 
 
 def test_build_metrics_dict_generated_at_is_iso():
-    from datetime import datetime, timezone
+    from datetime import datetime
+
     result = metrics.build_metrics_dict([], {}, [])
     ts = result["generated_at"]
     # Should parse without error
@@ -268,13 +287,17 @@ def test_build_metrics_dict_generated_at_is_iso():
 # _parse_iso
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("input_val,expected_not_none", [
-    ("2026-03-01T10:00:00+00:00", True),
-    ("2026-03-01T10:00:00Z", True),
-    ("", False),
-    (None, False),
-    ("not-a-date", False),
-])
+
+@pytest.mark.parametrize(
+    "input_val,expected_not_none",
+    [
+        ("2026-03-01T10:00:00+00:00", True),
+        ("2026-03-01T10:00:00Z", True),
+        ("", False),
+        (None, False),
+        ("not-a-date", False),
+    ],
+)
 def test_parse_iso(input_val, expected_not_none):
     result = metrics._parse_iso(input_val)
     if expected_not_none:
@@ -287,6 +310,7 @@ def test_parse_iso(input_val, expected_not_none):
 # ---------------------------------------------------------------------------
 # _get_labels
 # ---------------------------------------------------------------------------
+
 
 def test_get_labels_normal():
     issue = make_issue_with_labels("X-1", labels=["bug", "AI_assistance"])
@@ -312,6 +336,7 @@ def test_get_labels_missing_fields():
 # _cycle_time_from_changelog
 # ---------------------------------------------------------------------------
 
+
 def test_cycle_time_no_changelog():
     issue = {"key": "X-1", "fields": {}}
     assert metrics._cycle_time_from_changelog(issue) is None
@@ -326,10 +351,14 @@ def test_cycle_time_only_in_progress():
     issue = {
         "key": "X-1",
         "fields": {},
-        "changelog": {"histories": [{
-            "created": "2026-03-01T10:00:00+00:00",
-            "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}],
-        }]},
+        "changelog": {
+            "histories": [
+                {
+                    "created": "2026-03-01T10:00:00+00:00",
+                    "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}],
+                }
+            ]
+        },
     }
     assert metrics._cycle_time_from_changelog(issue) is None
 
@@ -338,10 +367,14 @@ def test_cycle_time_only_done():
     issue = {
         "key": "X-1",
         "fields": {},
-        "changelog": {"histories": [{
-            "created": "2026-03-03T10:00:00+00:00",
-            "items": [{"field": "status", "fromString": "In Progress", "toString": "Done"}],
-        }]},
+        "changelog": {
+            "histories": [
+                {
+                    "created": "2026-03-03T10:00:00+00:00",
+                    "items": [{"field": "status", "fromString": "In Progress", "toString": "Done"}],
+                }
+            ]
+        },
     }
     assert metrics._cycle_time_from_changelog(issue) is None
 
@@ -350,24 +383,26 @@ def test_cycle_time_multiple_transitions():
     issue = {
         "key": "X-1",
         "fields": {},
-        "changelog": {"histories": [
-            {
-                "created": "2026-03-01T10:00:00+00:00",
-                "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}],
-            },
-            {
-                "created": "2026-03-02T10:00:00+00:00",
-                "items": [{"field": "status", "fromString": "In Progress", "toString": "To Do"}],
-            },
-            {
-                "created": "2026-03-03T10:00:00+00:00",
-                "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}],
-            },
-            {
-                "created": "2026-03-05T10:00:00+00:00",
-                "items": [{"field": "status", "fromString": "In Progress", "toString": "Done"}],
-            },
-        ]},
+        "changelog": {
+            "histories": [
+                {
+                    "created": "2026-03-01T10:00:00+00:00",
+                    "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}],
+                },
+                {
+                    "created": "2026-03-02T10:00:00+00:00",
+                    "items": [{"field": "status", "fromString": "In Progress", "toString": "To Do"}],
+                },
+                {
+                    "created": "2026-03-03T10:00:00+00:00",
+                    "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}],
+                },
+                {
+                    "created": "2026-03-05T10:00:00+00:00",
+                    "items": [{"field": "status", "fromString": "In Progress", "toString": "Done"}],
+                },
+            ]
+        },
     }
     result = metrics._cycle_time_from_changelog(issue)
     # First In Progress: March 1, Done: March 5 → 4 days
@@ -378,22 +413,24 @@ def test_cycle_time_non_status_fields_ignored():
     issue = {
         "key": "X-1",
         "fields": {},
-        "changelog": {"histories": [
-            {
-                "created": "2026-03-01T10:00:00+00:00",
-                "items": [
-                    {"field": "priority", "fromString": "Low", "toString": "High"},
-                    {"field": "status", "fromString": "To Do", "toString": "In Progress"},
-                ],
-            },
-            {
-                "created": "2026-03-03T10:00:00+00:00",
-                "items": [
-                    {"field": "assignee", "fromString": "Alice", "toString": "Bob"},
-                    {"field": "status", "fromString": "In Progress", "toString": "Done"},
-                ],
-            },
-        ]},
+        "changelog": {
+            "histories": [
+                {
+                    "created": "2026-03-01T10:00:00+00:00",
+                    "items": [
+                        {"field": "priority", "fromString": "Low", "toString": "High"},
+                        {"field": "status", "fromString": "To Do", "toString": "In Progress"},
+                    ],
+                },
+                {
+                    "created": "2026-03-03T10:00:00+00:00",
+                    "items": [
+                        {"field": "assignee", "fromString": "Alice", "toString": "Bob"},
+                        {"field": "status", "fromString": "In Progress", "toString": "Done"},
+                    ],
+                },
+            ]
+        },
     }
     result = metrics._cycle_time_from_changelog(issue)
     assert result == 2.0
@@ -403,6 +440,7 @@ def test_cycle_time_non_status_fields_ignored():
 # compute_ai_assistance_trend
 # ---------------------------------------------------------------------------
 
+
 def test_ai_trend_ai_labeled_done_issues():
     sprint = make_sprint(1, "S1")
     issues = [
@@ -410,7 +448,10 @@ def test_ai_trend_ai_labeled_done_issues():
         make_issue_with_labels("X-2", "Done", 3.0, []),
     ]
     result = metrics.compute_ai_assistance_trend(
-        [sprint], {1: issues}, ai_assisted_label="AI_assistance", ai_exclude_labels=[],
+        [sprint],
+        {1: issues},
+        ai_assisted_label="AI_assistance",
+        ai_exclude_labels=[],
     )
     assert len(result) == 1
     assert result[0]["total_sp"] == 8.0
@@ -422,7 +463,10 @@ def test_ai_trend_no_done_issues():
     sprint = make_sprint(1)
     issues = [make_issue_with_labels("X-1", "In Progress", 5.0, ["AI_assistance"])]
     result = metrics.compute_ai_assistance_trend(
-        [sprint], {1: issues}, ai_assisted_label="AI_assistance", ai_exclude_labels=[],
+        [sprint],
+        {1: issues},
+        ai_assisted_label="AI_assistance",
+        ai_exclude_labels=[],
     )
     assert result[0]["total_sp"] == 0.0
     assert result[0]["ai_pct"] == 0.0
@@ -435,7 +479,10 @@ def test_ai_trend_exclude_labels():
         make_issue_with_labels("X-2", "Done", 3.0, ["exclude_me"]),
     ]
     result = metrics.compute_ai_assistance_trend(
-        [sprint], {1: issues}, ai_assisted_label="AI_assistance", ai_exclude_labels=["exclude_me"],
+        [sprint],
+        {1: issues},
+        ai_assisted_label="AI_assistance",
+        ai_exclude_labels=["exclude_me"],
     )
     assert result[0]["total_sp"] == 5.0  # X-2 excluded from denominator
     assert result[0]["ai_sp"] == 5.0
@@ -447,7 +494,10 @@ def test_ai_trend_multiple_sprints():
     i1 = [make_issue_with_labels("X-1", "Done", 5.0, ["AI_assistance"])]
     i2 = [make_issue_with_labels("X-2", "Done", 3.0, [])]
     result = metrics.compute_ai_assistance_trend(
-        [s1, s2], {1: i1, 2: i2}, ai_assisted_label="AI_assistance", ai_exclude_labels=[],
+        [s1, s2],
+        {1: i1, 2: i2},
+        ai_assisted_label="AI_assistance",
+        ai_exclude_labels=[],
     )
     assert len(result) == 2
     assert result[0]["ai_sp"] == 5.0
@@ -458,7 +508,10 @@ def test_ai_trend_no_ai_label():
     sprint = make_sprint(1)
     issues = [make_issue_with_labels("X-1", "Done", 5.0, [])]
     result = metrics.compute_ai_assistance_trend(
-        [sprint], {1: issues}, ai_assisted_label="AI_assistance", ai_exclude_labels=[],
+        [sprint],
+        {1: issues},
+        ai_assisted_label="AI_assistance",
+        ai_exclude_labels=[],
     )
     assert result[0]["ai_sp"] == 0.0
     assert result[0]["ai_pct"] == 0.0
@@ -468,6 +521,7 @@ def test_ai_trend_no_ai_label():
 # compute_ai_usage_details
 # ---------------------------------------------------------------------------
 
+
 def test_ai_usage_tool_breakdown():
     sprint = make_sprint(1)
     issues = [
@@ -475,7 +529,8 @@ def test_ai_usage_tool_breakdown():
         make_issue_with_labels("X-2", "Done", 3.0, ["AI_assistance", "AI_Tool_ChatGPT"]),
     ]
     result = metrics.compute_ai_usage_details(
-        [sprint], {1: issues},
+        [sprint],
+        {1: issues},
         ai_assisted_label="AI_assistance",
         ai_tool_labels=["AI_Tool_Copilot", "AI_Tool_ChatGPT"],
         ai_action_labels=[],
@@ -493,7 +548,8 @@ def test_ai_usage_action_breakdown():
         make_issue_with_labels("X-1", "Done", 5.0, ["AI_assistance", "AI_Case_CodeGen"]),
     ]
     result = metrics.compute_ai_usage_details(
-        [sprint], {1: issues},
+        [sprint],
+        {1: issues},
         ai_assisted_label="AI_assistance",
         ai_tool_labels=[],
         ai_action_labels=["AI_Case_CodeGen", "AI_Case_Review"],
@@ -507,7 +563,8 @@ def test_ai_usage_dedup_across_sprints():
     s1, s2 = make_sprint(1), make_sprint(2)
     issue = make_issue_with_labels("X-1", "Done", 5.0, ["AI_assistance", "AI_Tool_Copilot"])
     result = metrics.compute_ai_usage_details(
-        [s1, s2], {1: [issue], 2: [issue]},  # same issue in two sprints
+        [s1, s2],
+        {1: [issue], 2: [issue]},  # same issue in two sprints
         ai_assisted_label="AI_assistance",
         ai_tool_labels=["AI_Tool_Copilot"],
         ai_action_labels=[],
@@ -519,7 +576,8 @@ def test_ai_usage_no_ai_issues():
     sprint = make_sprint(1)
     issues = [make_issue_with_labels("X-1", "Done", 5.0, [])]
     result = metrics.compute_ai_usage_details(
-        [sprint], {1: issues},
+        [sprint],
+        {1: issues},
         ai_assisted_label="AI_assistance",
         ai_tool_labels=["AI_Tool_Copilot"],
         ai_action_labels=[],
@@ -532,7 +590,8 @@ def test_ai_usage_empty_labels():
     sprint = make_sprint(1)
     issues = [make_issue_with_labels("X-1", "Done", 5.0, ["AI_assistance"])]
     result = metrics.compute_ai_usage_details(
-        [sprint], {1: issues},
+        [sprint],
+        {1: issues},
         ai_assisted_label="AI_assistance",
         ai_tool_labels=[],
         ai_action_labels=[],
@@ -545,6 +604,7 @@ def test_ai_usage_empty_labels():
 # ---------------------------------------------------------------------------
 # compute_custom_trends (placeholder)
 # ---------------------------------------------------------------------------
+
 
 def test_compute_custom_trends_returns_empty_list():
     assert metrics.compute_custom_trends([], {}) == []

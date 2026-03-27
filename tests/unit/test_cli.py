@@ -1,4 +1,5 @@
 """Unit tests for app.cli.main orchestration branches."""
+
 from __future__ import annotations
 
 from unittest.mock import MagicMock

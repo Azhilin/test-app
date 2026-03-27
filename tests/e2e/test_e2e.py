@@ -1,4 +1,5 @@
 """End-to-end tests: exercise via subprocess, no mocking."""
+
 from __future__ import annotations
 
 import os
@@ -69,9 +70,7 @@ def test_server_health_check():
         resp = None
         while time.monotonic() < deadline:
             try:
-                resp = urllib.request.urlopen(
-                    f"http://127.0.0.1:{port}/", timeout=2
-                )
+                resp = urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=2)
                 break
             except (urllib.error.URLError, OSError):
                 time.sleep(0.25)

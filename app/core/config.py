@@ -1,4 +1,5 @@
 """Load configuration from environment."""
+
 import os
 from pathlib import Path
 
@@ -27,7 +28,8 @@ JIRA_SPRINT_COUNT = int(_sprint_count) if _sprint_count.isdigit() else 10
 # Story points field key (varies by instance; common: customfield_10016)
 JIRA_STORY_POINTS_FIELD = os.getenv("JIRA_STORY_POINTS_FIELD", "customfield_10016").strip() or "customfield_10016"
 
-# Optional: Jira saved filter ID. When set, only issues matching this filter are included (filter's JQL is applied to sprint issues).
+# Optional: Jira saved filter ID. When set, only issues matching this filter are included
+# (filter's JQL is applied to sprint issues).
 _filter_id = os.getenv("JIRA_FILTER_ID", "").strip()
 JIRA_FILTER_ID = int(_filter_id) if _filter_id.isdigit() else None
 

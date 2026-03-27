@@ -5,6 +5,7 @@ Layer-specific fixtures live in each layer's own conftest.py:
   tests/component/conftest.py  — minimal_metrics_dict, empty_metrics_dict
   tests/e2e/conftest.py        — live_server_url
 """
+
 from __future__ import annotations
 
 import sys
@@ -19,6 +20,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 # ---------------------------------------------------------------------------
 # Helper factories (plain functions, not fixtures, so tests can call them freely)
 # ---------------------------------------------------------------------------
+
 
 def make_sprint(id: int, name: str = "", start: str | None = None, end: str | None = None) -> dict:
     return {
@@ -51,15 +53,19 @@ def make_issue_with_changelog(
     """Build an issue dict with a synthetic changelog."""
     histories = []
     if in_progress_ts:
-        histories.append({
-            "created": in_progress_ts,
-            "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}],
-        })
+        histories.append(
+            {
+                "created": in_progress_ts,
+                "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}],
+            }
+        )
     if done_ts:
-        histories.append({
-            "created": done_ts,
-            "items": [{"field": "status", "fromString": "In Progress", "toString": "Done"}],
-        })
+        histories.append(
+            {
+                "created": done_ts,
+                "items": [{"field": "status", "fromString": "In Progress", "toString": "Done"}],
+            }
+        )
     return {
         "key": key,
         "fields": {"status": {"name": "Done"}},
@@ -70,6 +76,7 @@ def make_issue_with_changelog(
 # ---------------------------------------------------------------------------
 # Helper factories (continued)
 # ---------------------------------------------------------------------------
+
 
 def make_issue_with_labels(
     key: str,
@@ -88,16 +95,15 @@ def make_issue_with_labels(
     return {"key": key, "fields": fields}
 
 
-
 # ---------------------------------------------------------------------------
 # Cross-layer fixtures
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def server_url():
     """Start a Server on a random port in a daemon thread, yield the base URL, then shut down."""
     import importlib
-    import sys
 
     # server.py parses sys.argv[1] at module level — override before import
     orig_argv = sys.argv
@@ -105,6 +111,7 @@ def server_url():
     sys.modules.pop("server", None)
     try:
         import server as srv_mod
+
         importlib.reload(srv_mod)
     finally:
         sys.argv = orig_argv
@@ -115,4 +122,3 @@ def server_url():
     thread.start()
     yield f"http://127.0.0.1:{port}"
     server.shutdown()
-

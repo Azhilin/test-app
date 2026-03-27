@@ -1,12 +1,13 @@
 """Tests for main.py helper functions."""
-from __future__ import annotations
 
-import pytest
+from __future__ import annotations
 
 import sys
 from unittest.mock import patch
 
-from main import _timestamp_folder_name, _parse_args
+import pytest
+
+from main import _parse_args, _timestamp_folder_name
 
 pytestmark = pytest.mark.unit
 

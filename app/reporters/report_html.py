@@ -1,4 +1,5 @@
 """Generate HTML report from metrics dict."""
+
 from __future__ import annotations
 
 from pathlib import Path

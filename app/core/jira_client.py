@@ -1,4 +1,5 @@
 """Jira Cloud API client wrapper for fetching boards, sprints, and issues."""
+
 from __future__ import annotations
 
 import logging
@@ -35,12 +36,8 @@ def get_board_id(jira: Jira) -> int:
 def get_sprints(jira: Jira, board_id: int) -> list[dict[str, Any]]:
     """Return recent sprints for the board (closed + active), limited by JIRA_SPRINT_COUNT."""
     # Fetch closed first, then active
-    result_closed = jira.get_all_sprints_from_board(
-        board_id, state="closed", start=0, limit=config.JIRA_SPRINT_COUNT
-    )
-    result_active = jira.get_all_sprints_from_board(
-        board_id, state="active", start=0, limit=10
-    )
+    result_closed = jira.get_all_sprints_from_board(board_id, state="closed", start=0, limit=config.JIRA_SPRINT_COUNT)
+    result_active = jira.get_all_sprints_from_board(board_id, state="active", start=0, limit=10)
     closed = result_closed.get("values") or []
     active = result_active.get("values") or []
     ordered = sorted(closed, key=lambda s: s.get("startDate") or "", reverse=True)
@@ -65,9 +62,7 @@ def get_issues_for_sprint(jira: Jira, board_id: int, sprint_id: int, jql: str = 
     start = 0
     limit = 50
     while True:
-        result = jira.get_all_issues_for_sprint_in_board(
-            board_id, sprint_id, jql=jql, start=start, limit=limit
-        )
+        result = jira.get_all_issues_for_sprint_in_board(board_id, sprint_id, jql=jql, start=start, limit=limit)
         issues = result.get("issues") or []
         all_issues.extend(issues)
         total = result.get("total", 0)
@@ -82,9 +77,7 @@ def get_issue_with_changelog(jira: Jira, issue_key: str) -> dict[str, Any]:
     return jira.get_issue(issue_key, expand="changelog")
 
 
-def get_issues_with_changelog(
-    jira: Jira, issue_keys: list[str]
-) -> list[dict[str, Any]]:
+def get_issues_with_changelog(jira: Jira, issue_keys: list[str]) -> list[dict[str, Any]]:
     """Fetch multiple issues with changelog. Returns list in same order as keys."""
     out = []
     for key in issue_keys:

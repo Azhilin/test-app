@@ -1,16 +1,14 @@
 """Integration tests: verify module interaction with mocked external boundaries."""
+
 from __future__ import annotations
 
 import json
-import shutil
-import sys
 import urllib.request
-from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock
 
 import pytest
 
-from tests.conftest import make_sprint, make_issue, make_issue_with_changelog
+from tests.conftest import make_issue, make_issue_with_changelog, make_sprint
 
 pytestmark = pytest.mark.integration
 
@@ -18,6 +16,7 @@ pytestmark = pytest.mark.integration
 # ---------------------------------------------------------------------------
 # Full pipeline — success
 # ---------------------------------------------------------------------------
+
 
 def test_main_pipeline_success(monkeypatch, tmp_path):
     """Mock jira_client functions, call main.main(), verify HTML/MD files are created."""
@@ -40,6 +39,7 @@ def test_main_pipeline_success(monkeypatch, tmp_path):
     monkeypatch.setattr("sys.argv", ["main.py"])
 
     from main import main
+
     rc = main()
     assert rc == 0
 
@@ -60,6 +60,7 @@ def test_main_pipeline_success(monkeypatch, tmp_path):
 # Full pipeline — config failure
 # ---------------------------------------------------------------------------
 
+
 def test_main_pipeline_config_fail(monkeypatch):
     """No credentials → exit 1 with error message."""
     monkeypatch.setattr("app.core.config.JIRA_URL", "")
@@ -68,6 +69,7 @@ def test_main_pipeline_config_fail(monkeypatch):
     monkeypatch.setattr("sys.argv", ["main.py"])
 
     from main import main
+
     rc = main()
     assert rc == 1
 
@@ -75,6 +77,7 @@ def test_main_pipeline_config_fail(monkeypatch):
 # ---------------------------------------------------------------------------
 # --clean flag
 # ---------------------------------------------------------------------------
+
 
 def test_main_clean_removes_reports(monkeypatch, tmp_path):
     reports_dir = tmp_path / "generated" / "reports"
@@ -85,6 +88,7 @@ def test_main_clean_removes_reports(monkeypatch, tmp_path):
     monkeypatch.setattr("sys.argv", ["main.py", "--clean"])
 
     from main import main
+
     rc = main()
     assert rc == 0
     assert not reports_dir.exists()
@@ -93,6 +97,7 @@ def test_main_clean_removes_reports(monkeypatch, tmp_path):
 # ---------------------------------------------------------------------------
 # Filter metadata flow
 # ---------------------------------------------------------------------------
+
 
 def test_filter_metadata_in_html(monkeypatch, tmp_path):
     sprints = [make_sprint(1, "Sprint 1", "2026-01-01", "2026-01-14")]
@@ -119,6 +124,7 @@ def test_filter_metadata_in_html(monkeypatch, tmp_path):
     monkeypatch.setattr("sys.argv", ["main.py"])
 
     from main import main
+
     rc = main()
     assert rc == 0
 
@@ -132,13 +138,16 @@ def test_filter_metadata_in_html(monkeypatch, tmp_path):
 # Server test-connection endpoint (real server + mocked urlopen)
 # ---------------------------------------------------------------------------
 
+
 def test_server_test_connection_json_shape(server_url):
     """Verify test-connection returns the expected JSON shape for an error response."""
-    body = json.dumps({
-        "url": "https://nonexistent-jira-12345.atlassian.net",
-        "email": "test@test.com",
-        "token": "badtoken",
-    }).encode()
+    body = json.dumps(
+        {
+            "url": "https://nonexistent-jira-12345.atlassian.net",
+            "email": "test@test.com",
+            "token": "badtoken",
+        }
+    ).encode()
     req = urllib.request.Request(
         f"{server_url}/api/test-connection",
         data=body,
@@ -154,6 +163,7 @@ def test_server_test_connection_json_shape(server_url):
 # ---------------------------------------------------------------------------
 # Server generate endpoint (real server)
 # ---------------------------------------------------------------------------
+
 
 def test_server_generate_sse_format(server_url):
     """Verify generate endpoint returns SSE-formatted response."""

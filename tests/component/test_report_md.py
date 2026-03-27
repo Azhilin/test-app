@@ -1,9 +1,10 @@
 """Tests for app.report_md: Markdown output correctness."""
+
 from __future__ import annotations
 
 import pytest
 
-from app.reporters.report_md import generate_md, _md_table
+from app.reporters.report_md import _md_table, generate_md
 
 pytestmark = pytest.mark.component
 
@@ -46,8 +47,8 @@ def test_cycle_time_stats_present(tmp_path, minimal_metrics_dict):
     out = tmp_path / "report.md"
     generate_md(minimal_metrics_dict, out)
     content = out.read_text(encoding="utf-8")
-    assert "3.5" in content   # mean
-    assert "3.0" in content   # median
+    assert "3.5" in content  # mean
+    assert "3.0" in content  # median
 
 
 def test_no_velocity_data_message(tmp_path, empty_metrics_dict):
@@ -79,9 +80,7 @@ def test_custom_trends_section_absent_when_empty(tmp_path, minimal_metrics_dict)
 
 
 def test_custom_trends_section_present_when_data(tmp_path, minimal_metrics_dict):
-    minimal_metrics_dict["custom_trends"] = [
-        {"sprint_id": 1, "sprint_name": "Sprint Alpha", "ai_usage": 42}
-    ]
+    minimal_metrics_dict["custom_trends"] = [{"sprint_id": 1, "sprint_name": "Sprint Alpha", "ai_usage": 42}]
     out = tmp_path / "report.md"
     generate_md(minimal_metrics_dict, out)
     content = out.read_text(encoding="utf-8")
@@ -92,6 +91,7 @@ def test_custom_trends_section_present_when_data(tmp_path, minimal_metrics_dict)
 # ---------------------------------------------------------------------------
 # _md_table
 # ---------------------------------------------------------------------------
+
 
 def test_md_table_header_row():
     table = _md_table(["A", "B"], [])
@@ -114,6 +114,7 @@ def test_md_table_data_row():
 # ---------------------------------------------------------------------------
 # MD report does NOT render AI sections (documents current behavior gap)
 # ---------------------------------------------------------------------------
+
 
 def test_md_report_no_ai_assistance_section(tmp_path, minimal_metrics_dict):
     """MD report currently does not render AI assistance trend section."""

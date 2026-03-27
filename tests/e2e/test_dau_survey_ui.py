@@ -8,6 +8,7 @@ Run:
     pytest tests/e2e/test_dau_survey_ui.py -v
     pytest tests/e2e/test_dau_survey_ui.py -v --headed
 """
+
 from __future__ import annotations
 
 import json
@@ -23,9 +24,7 @@ pytestmark = pytest.mark.e2e
 # Constants
 # ---------------------------------------------------------------------------
 
-SURVEY_URL = (
-    Path(__file__).resolve().parents[2] / "ui" / "dau_survey.html"
-).as_uri()
+SURVEY_URL = (Path(__file__).resolve().parents[2] / "ui" / "dau_survey.html").as_uri()
 
 # Replaces window.showDirectoryPicker with a mock that stores written data in
 # window.__savedFiles so tests can inspect the saved JSON payload.
@@ -65,6 +64,7 @@ _MOCK_ONLY = """
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _goto(page: Page) -> None:
     """Load the survey with FS API mocked and localStorage cleared."""
     page.add_init_script(_SETUP_SCRIPT)
@@ -86,6 +86,7 @@ def _fill_all(
 # ---------------------------------------------------------------------------
 # Group 1: Page Load & Layout
 # ---------------------------------------------------------------------------
+
 
 def test_survey_page_loads_with_title(page: Page) -> None:
     """Page loads with the correct <title> and <h1>."""
@@ -111,6 +112,7 @@ def test_submit_button_initially_disabled(page: Page) -> None:
 # Group 2: Progress Bar
 # ---------------------------------------------------------------------------
 
+
 def test_progress_starts_at_zero(page: Page) -> None:
     """Progress label shows '0 of 3 answered' and bar width is 0% on load."""
     _goto(page)
@@ -134,6 +136,7 @@ def test_progress_increments_with_each_field(page: Page) -> None:
 # Group 3: Username Validation
 # ---------------------------------------------------------------------------
 
+
 def test_username_valid_input_applies_valid_class(page: Page) -> None:
     """A valid alphanumeric username gets the is-valid class and no error text."""
     _goto(page)
@@ -149,9 +152,7 @@ def test_username_rejects_underscore(page: Page) -> None:
     inp = page.locator("#input-username")
     inp.fill("alice_123")
     expect(inp).to_have_class(re.compile(r"is-error"))
-    expect(page.locator("#username-error")).to_contain_text(
-        "Only letters and digits are allowed"
-    )
+    expect(page.locator("#username-error")).to_contain_text("Only letters and digits are allowed")
 
 
 def test_username_rejects_space(page: Page) -> None:
@@ -160,9 +161,7 @@ def test_username_rejects_space(page: Page) -> None:
     inp = page.locator("#input-username")
     inp.fill("alice 123")
     expect(inp).to_have_class(re.compile(r"is-error"))
-    expect(page.locator("#username-error")).to_contain_text(
-        "Only letters and digits are allowed"
-    )
+    expect(page.locator("#username-error")).to_contain_text("Only letters and digits are allowed")
 
 
 def test_username_too_short_shows_error(page: Page) -> None:
@@ -178,6 +177,7 @@ def test_username_too_short_shows_error(page: Page) -> None:
 # Group 4: Submit Button State
 # ---------------------------------------------------------------------------
 
+
 def test_submit_enabled_only_when_all_fields_are_valid(page: Page) -> None:
     """Submit button stays disabled with 2 of 3 fields and enables at 3 of 3."""
     _goto(page)
@@ -191,6 +191,7 @@ def test_submit_enabled_only_when_all_fields_are_valid(page: Page) -> None:
 # ---------------------------------------------------------------------------
 # Group 5: Radio Card Selection
 # ---------------------------------------------------------------------------
+
 
 def test_radio_card_click_marks_it_selected(page: Page) -> None:
     """Clicking the second radio card adds 'selected' only to that card."""
@@ -214,6 +215,7 @@ def test_radio_card_keyboard_navigation(page: Page) -> None:
 # ---------------------------------------------------------------------------
 # Group 6: Submit & Confirmation
 # ---------------------------------------------------------------------------
+
 
 def test_submit_hides_form_and_shows_confirmation(page: Page) -> None:
     """Clicking submit replaces the form with the confirmation screen."""
@@ -248,11 +250,11 @@ def test_submit_writes_valid_json_to_mocked_fs(page: Page) -> None:
     assert data["usage"] == "Every day (5 days)"
     assert data["score"] == 5
     assert "timestamp" in data
-    assert re.match(r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$', data["timestamp"]), \
+    assert re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$", data["timestamp"]), (
         f"timestamp format unexpected: {data['timestamp']}"
+    )
     assert "week" in data
-    assert re.match(r'^\d{4}-W\d{2}$', data["week"]), \
-        f"week format unexpected: {data['week']}"
+    assert re.match(r"^\d{4}-W\d{2}$", data["week"]), f"week format unexpected: {data['week']}"
 
 
 def test_submit_timestamp_format(page: Page) -> None:
@@ -265,7 +267,7 @@ def test_submit_timestamp_format(page: Page) -> None:
     assert raw is not None
     data = json.loads(raw)
     assert re.match(
-        r'^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$',
+        r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$",
         data["timestamp"],
     ), f"Bad timestamp format: {data['timestamp']}"
 
@@ -280,13 +282,13 @@ def test_submit_week_field_format(page: Page) -> None:
     assert raw is not None
     data = json.loads(raw)
     assert "week" in data, "'week' field missing from payload"
-    assert re.match(r'^\d{4}-W\d{2}$', data["week"]), \
-        f"Bad week format: {data['week']}"
+    assert re.match(r"^\d{4}-W\d{2}$", data["week"]), f"Bad week format: {data['week']}"
 
 
 # ---------------------------------------------------------------------------
 # Group 7: localStorage
 # ---------------------------------------------------------------------------
+
 
 def test_username_saved_to_localstorage_after_submit(page: Page) -> None:
     """Username is persisted in localStorage when submit succeeds."""
