@@ -332,7 +332,7 @@ Jira Software exposes several custom fields relevant to agile metrics:
 
 | Field | Custom Field ID | Description |
 |-------|----------------|-------------|
-| Story Points | `customfield_10016` (default) | Numeric estimation value; configurable via `JIRA_STORY_POINTS_FIELD` |
+| Story Points | `customfield_10016` (typical Cloud default) | Numeric estimation value; field ID comes from the active schema in `config/jira_schema.json` |
 | Sprint | `customfield_10020` | List of sprint objects the issue belongs to |
 | Epic Link | `customfield_10014` | Key of the parent epic |
 | Epic Name | `customfield_10011` | Name of the epic |

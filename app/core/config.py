@@ -25,8 +25,8 @@ JIRA_BOARD_ID = int(_board_id) if _board_id.isdigit() else None
 _sprint_count = os.getenv("JIRA_SPRINT_COUNT", "10").strip()
 JIRA_SPRINT_COUNT = int(_sprint_count) if _sprint_count.isdigit() else 10
 
-# Story points field key (varies by instance; common: customfield_10016)
-JIRA_STORY_POINTS_FIELD = os.getenv("JIRA_STORY_POINTS_FIELD", "customfield_10016").strip() or "customfield_10016"
+# Optional: schema_name in config/jira_schema.json (CLI). When unset, default schema from file is used.
+JIRA_SCHEMA_NAME = os.getenv("JIRA_SCHEMA_NAME", "").strip() or None
 
 # Optional: Jira saved filter ID. When set, only issues matching this filter are included
 # (filter's JQL is applied to sprint issues).

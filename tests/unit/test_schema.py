@@ -56,8 +56,9 @@ def test_get_schema_not_found(tmp_path):
 # ---------------------------------------------------------------------------
 
 def test_get_active_schema_by_name(tmp_path):
+    dn = schema_mod.DEFAULT_SCHEMA_NAME
     data = {"schemas": [
-        {"schema_name": "Default (Jira Cloud)", "fields": {}},
+        {"schema_name": dn, "fields": {}},
         {"schema_name": "Custom", "fields": {"story_points": {"id": "cf_99"}}},
     ]}
     p = tmp_path / "schemas.json"
@@ -67,24 +68,24 @@ def test_get_active_schema_by_name(tmp_path):
 
 
 def test_get_active_schema_falls_back_to_default(tmp_path):
-    data = {"schemas": [{"schema_name": "Default (Jira Cloud)", "fields": {}}]}
+    dn = schema_mod.DEFAULT_SCHEMA_NAME
+    data = {"schemas": [{"schema_name": dn, "fields": {}}]}
     p = tmp_path / "schemas.json"
     p.write_text(json.dumps(data), encoding="utf-8")
     result = schema_mod.get_active_schema(None, p)
-    assert result["schema_name"] == "Default (Jira Cloud)"
+    assert result["schema_name"] == dn
 
 
 def test_get_active_schema_no_file_returns_hardcoded_default(tmp_path):
     result = schema_mod.get_active_schema(None, tmp_path / "missing.json")
-    assert result["schema_name"] == "Default (Jira Cloud)"
+    assert result["schema_name"] == schema_mod.DEFAULT_SCHEMA_NAME
     assert "fields" in result
     assert "status_mapping" in result
 
 
-def test_get_active_schema_hardcoded_respects_env(tmp_path, monkeypatch):
-    monkeypatch.setattr("app.core.config.JIRA_STORY_POINTS_FIELD", "customfield_99999")
+def test_get_active_schema_hardcoded_uses_builtin_story_points(tmp_path):
     result = schema_mod.get_active_schema(None, tmp_path / "missing.json")
-    assert result["fields"]["story_points"]["id"] == "customfield_99999"
+    assert result["fields"]["story_points"]["id"] == schema_mod.DEFAULT_STORY_POINTS_FIELD_ID
 
 
 # ---------------------------------------------------------------------------
@@ -122,8 +123,9 @@ def test_save_schema_appends_new(tmp_path):
 
 def test_delete_schema_removes_entry(tmp_path):
     p = tmp_path / "schemas.json"
+    dn = schema_mod.DEFAULT_SCHEMA_NAME
     p.write_text(json.dumps({"schemas": [
-        {"schema_name": "Default (Jira Cloud)"},
+        {"schema_name": dn},
         {"schema_name": "Custom"},
     ]}), encoding="utf-8")
     assert schema_mod.delete_schema("Custom", p) is True
@@ -132,9 +134,10 @@ def test_delete_schema_removes_entry(tmp_path):
 
 
 def test_delete_schema_refuses_default(tmp_path):
+    dn = schema_mod.DEFAULT_SCHEMA_NAME
     p = tmp_path / "schemas.json"
-    p.write_text(json.dumps({"schemas": [{"schema_name": "Default (Jira Cloud)"}]}), encoding="utf-8")
-    assert schema_mod.delete_schema("Default (Jira Cloud)", p) is False
+    p.write_text(json.dumps({"schemas": [{"schema_name": dn}]}), encoding="utf-8")
+    assert schema_mod.delete_schema(dn, p) is False
 
 
 def test_delete_schema_not_found(tmp_path):

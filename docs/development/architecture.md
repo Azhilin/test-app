@@ -317,7 +317,7 @@ All configuration is read from a `.env` file in the project root (or from enviro
 |----------|------|---------|-------------|
 | `JIRA_BOARD_ID` | `int` | first available board | Numeric board ID; auto-detected if unset |
 | `JIRA_SPRINT_COUNT` | `int` | `10` | Number of past sprints to include |
-| `JIRA_STORY_POINTS_FIELD` | `str` | `customfield_10016` | Jira custom field key for story points |
+| `JIRA_SCHEMA_NAME` | `str` | _(unset)_ | Optional; `schema_name` in `config/jira_schema.json` for CLI (`python main.py`) |
 | `JIRA_FILTER_ID` | `int` | `None` | Saved filter ID; when set, only matching issues are included |
 | `PORT` | `int` | `8080` | Dev server port |
 | `AI_ASSISTED_LABEL` | `str` | `AI_assistance` | Issue label marking AI-assisted work |
@@ -402,10 +402,10 @@ Current counts (run `python tests/tools/test_coverage.py` to refresh):
 
 | Layer | Count | Files |
 |-------|-------|-------|
-| Unit | ~115 | test_cert_validation, test_config, test_imports, test_jira_client, test_main_helpers, test_metrics |
-| Component | ~76 | test_contracts, test_report_html, test_report_md, test_server |
-| Integration | ~6 | test_integration |
-| E2E | ~24 | test_e2e, test_e2e_ui |
+| Unit | 153 | test_cert_validation, test_config, test_imports, test_jira_client, test_main_helpers, test_metrics, test_schema |
+| Component | 128 | test_contracts, test_report_html, test_report_md, test_server, test_server_config |
+| Integration | 9 | test_integration, test_cli_server |
+| E2E | 47 | test_e2e_connection, test_e2e_ui |
 
 ### Running tests
 
@@ -421,7 +421,7 @@ Current counts (run `python tests/tools/test_coverage.py` to refresh):
 .venv/Scripts/pytest -m unit -v
 .venv/Scripts/pytest -m "not e2e" -v
 
-# Integration (requires real Jira credentials in .env)
+# Integration
 .venv/Scripts/pytest tests/integration/ -v
 
 # E2E (requires Playwright browsers installed)
