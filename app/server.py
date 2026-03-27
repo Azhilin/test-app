@@ -35,7 +35,10 @@ load_dotenv()
 
 ROOT = Path(__file__).resolve().parent.parent
 HOST = os.environ.get("HOST", "127.0.0.1").strip() or "127.0.0.1"
-PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("PORT", 8080))
+try:
+    PORT = int(sys.argv[1]) if len(sys.argv) > 1 else int(os.environ.get("PORT", 8080))
+except (ValueError, TypeError):
+    PORT = int(os.environ.get("PORT", 8080))
 
 MIME = {
     "html": "text/html; charset=utf-8",
