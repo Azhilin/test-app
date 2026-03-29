@@ -1647,7 +1647,7 @@
               headers: { 'Content-Type': 'application/json' },
               body:    JSON.stringify({ name: filterName, params }),
             });
-            if (!res.ok && res.headers.get('content-type')?.includes('json') === false) {
+            if (!res.ok && !res.headers.get('content-type')?.includes('json')) {
               filterLogLine(`✗ Server returned HTTP ${res.status}. Make sure server.py is restarted with the latest version.`, 'log-error');
               resetSaveFilterBtn();
               return;
@@ -1673,7 +1673,7 @@
           }
         } else {
           // file:// mode — build locally, save to localStorage only
-          filterLogLine('⚠ File:// mode — filter is saved to browser localStorage only (no disk persistence).', 'log-error');
+          filterLogLine('⚠ File:// mode — filter is saved to browser localStorage only (no disk persistence).', 'log-info');
           const localJql = buildJqlLocally(params);
           if (!localJql) {
             filterLogLine('✗ JIRA_PROJECT is required to build a JQL filter.', 'log-error');

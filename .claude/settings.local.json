@@ -30,7 +30,23 @@
       "Bash(python:*)",
       "Bash(.venv/Scripts/python tests/tools/test_coverage.py)",
       "Bash(.venv/Scripts/python -m tests.tools.test_coverage)",
-      "Bash(git:*)"
+      "Bash(git:*)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_console_messages",
+      "mcp__playwright__browser_network_requests",
+      "mcp__playwright__browser_evaluate",
+      "Bash(netstat -ano)",
+      "Bash(findstr :8080)",
+      "Bash(wmic process:*)",
+      "Bash(taskkill:*)",
+      "Bash(cmd /c \"taskkill /PID 45668 /F\")",
+      "Bash(cmd /c \"taskkill /PID 45668 /F 2>&1\")",
+      "Bash(cmd /c taskkill /PID 45668 /F)",
+      "Bash(powershell -Command \"Stop-Process -Id 45668 -Force -ErrorAction SilentlyContinue; Write-Host 'done'\")",
+      "Bash(powershell -Command \"netstat -ano | Select-String ':8080'\")",
+      "mcp__playwright__browser_wait_for",
+      "mcp__playwright__browser_snapshot"
     ]
   }
 }
