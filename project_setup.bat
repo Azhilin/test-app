@@ -380,6 +380,13 @@ if exist "requirements-dev.txt" (
         exit /b 1
     )
     call :LOG "[SUCCESS]" "Dev dependencies installed successfully."
+    call :LOG "[INFO]" "Installing Playwright Chromium browser (required for e2e tests)..."
+    "%VENV_DIR%\Scripts\python.exe" -m playwright install chromium
+    if !errorlevel! neq 0 (
+        call :LOG "[WARNING]" "Playwright Chromium install failed. E2e tests will not run. Re-run: .venv\Scripts\python -m playwright install chromium"
+    ) else (
+        call :LOG "[SUCCESS]" "Playwright Chromium installed successfully."
+    )
     :AFTER_DEV
 )
 
