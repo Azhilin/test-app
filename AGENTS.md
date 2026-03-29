@@ -13,10 +13,47 @@ Help Copilot and other coding agents work accurately in this repository while us
 
 ## Task routing
 
-- **Metrics, schema, Jira, config:** focus on `app/core/`, `config/jira_schema.json`, and the matching unit tests.
+- **Metrics, schema, Jira, config:** focus on `app/core/`, `config/jira_schema.json`, `config/jira_filters.json`, and the matching unit tests.
+- **Utilities (logging, certs, new helpers):** focus on `app/utils/`, `app/cli.py` (consumer), and `tests/unit/` for the affected utility.
 - **Rendering or presentation changes:** focus on `app/reporters/`, `templates/`, and any affected UI or server surface.
 - **Browser/server work:** inspect `server.py`, `app/server.py`, `ui/`, and the related tests before touching shared core logic.
 - **Tests:** choose the narrowest test layer that fits the change. Use factories from `tests/conftest.py` directly in test bodies.
+- **Filter presets:** `config/jira_filters.json` is source-controlled (named JQL presets + env-var-style overrides); treat it like `config/jira_schema.json`, not generated output.
+
+## Development workflow
+
+For any non-trivial code change (new feature, behavioral fix, refactor), follow these steps in order:
+
+1. **Maintain requirements** — identify the relevant file(s) using `docs/product/requirements/README.md` (lists all files and their ID prefixes); update the `Status` column (`✓ Met`, `✗ Not met`, `⬜ N/T`) for rows whose acceptance criterion is affected. Do not add rows or create new files.
+2. **Maintain application functionality** — implement the feature, fix, or refactor.
+3. **Maintain tests** — write or update tests in the narrowest layer that proves the changed behavior.
+4. **Complete testing and verification** — run the test suite; fix all failures before proceeding.
+5. **Maintain test coverage** — run `python tests/tools/test_coverage.py` after adding, removing, or renaming test functions.
+6. **Maintain project documentation** — update relevant docs when behavior changes:
+   - `docs/product/metrics/` — when metric behavior or output shape changes
+   - `docs/development/architecture.md` — when modules are added or restructured
+   - `README.md` — when setup steps, commands, or project purpose changes
+   - `docs/product/features/features.md` — when UI or user-visible behavior changes
+
+## Interaction style
+
+**Provide recommendations proactively:**
+- While working: flag related issues or improvement opportunities — describe them, don't implement them.
+- Before implementing: propose design alternatives with trade-off explanations before starting.
+- After finishing: suggest logical follow-up tasks (e.g. "the metric doc may also need updating").
+
+**Ask clarifying questions before acting when:**
+- The task scope, edge cases, or expected behavior are ambiguous.
+- A change touches multiple areas (core + reporters + tests + docs) — ask about priorities or constraints.
+- A change might break existing metrics contracts, API shapes, or test expectations.
+
+## Commit messages
+
+Format: `<type>: <short imperative summary>` (subject line ≤50 chars, no period)
+
+Types: `feat`, `fix`, `refactor`, `test`, `docs`, `chore`
+
+Use a body only when changes span multiple unrelated areas — 1–3 short bullets, no paragraphs. Imperative mood ("add", not "added"); no file names or line numbers in the subject.
 
 ## Token-efficiency rules
 
@@ -27,7 +64,8 @@ Help Copilot and other coding agents work accurately in this repository while us
 
 ## Repository facts worth remembering
 
-- `main.py` orchestrates Jira fetch -> metrics computation -> HTML and Markdown report generation.
+- `main.py` calls `setup_logging()` then delegates to `app/cli.py`, which orchestrates the full pipeline. AI metrics env vars (`AI_ASSISTED_LABEL`, `AI_EXCLUDE_LABELS`, `AI_TOOL_LABELS`, `AI_ACTION_LABELS`, `DAU_RESPONSES_DIR`) are loaded in `app/core/config.py`.
 - `config/jira_schema.json` is source-controlled and important; it is not a disposable generated file.
-- Generated artifacts belong under `generated/`.
+- `config/jira_filters.json` is source-controlled (named JQL filter presets); not generated output.
+- Generated artifacts belong under `generated/`. `generated/logs/` holds timestamped run logs; delete with `python main.py --clean-logs`.
 - If tests are added, removed, or renamed, refresh coverage stats with `python tests/tools/test_coverage.py`.
