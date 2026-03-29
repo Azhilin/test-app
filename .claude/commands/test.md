@@ -1,3 +1,3 @@
 Run the project test suite.
 
-cd /c/Users/Oleksii_Zhylin/CursorProjects/test-app && .venv/Scripts/pytest $ARGUMENTS
+cd /c/Users/Oleksii_Zhylin/VSCodeProjects/test-app && .venv/Scripts/pytest $ARGUMENTS

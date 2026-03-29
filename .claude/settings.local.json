@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ls -d /c/Users/Oleksii_Zhylin/CursorProjects/test-app/*/)",
+      "Bash(ls -d /c/Users/Oleksii_Zhylin/VSCodeProjects/test-app/*/)",
       "Bash(xargs -I {} basename {})",
       "Bash(.venv/Scripts/pytest tests/ -v)",
       "Bash(.venv/Scripts/pytest tests/ -v --tb=short*)",
@@ -29,7 +29,8 @@
       "Bash(xargs grep:*)",
       "Bash(python:*)",
       "Bash(.venv/Scripts/python tests/tools/test_coverage.py)",
-      "Bash(.venv/Scripts/python -m tests.tools.test_coverage)"
+      "Bash(.venv/Scripts/python -m tests.tools.test_coverage)",
+      "Bash(git:*)"
     ]
   }
 }

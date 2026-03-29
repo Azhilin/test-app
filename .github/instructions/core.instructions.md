@@ -1,5 +1,5 @@
 ---
-applyTo: "app/core/**/*.py,main.py,config/jira_schema.json"
+applyTo: "app/core/**/*.py,app/cli.py,app/utils/**/*.py,main.py,config/jira_schema.json,config/jira_filters.json"
 ---
 
 # Core logic instructions
@@ -13,3 +13,5 @@ The core of this project lives in `app/core/` and is the source of truth for con
 - Reuse existing helpers for issue shapes, sprint shapes, and story-point access rather than introducing alternate dict contracts.
 - When adding or changing metrics, keep the downstream contract in mind: reporters and tests depend on stable keys and list/dict shapes.
 - For new sprint trend metrics, include `sprint_id` and `sprint_name` in each result row and follow the existing `compute_custom_trends` style.
+- CLI entry points (`app/cli.py`, `main.py`) must call `setup_logging()` from `app/utils.logging_setup` before any other logging calls. `setup_logging()` returns `(root_logger, log_file_path)` and creates `generated/logs/` automatically; store the path if you need to surface it to the user.
+- `config/jira_filters.json` is source-controlled (named JQL presets + env-var-style overrides). Keep aligned with `app/core/config.py` when filter-related env vars change; do not treat as generated output.

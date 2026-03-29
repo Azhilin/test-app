@@ -12,3 +12,4 @@ These files control report rendering, browser behavior, and server-facing UX.
 - When a metric becomes user-visible, check whether the browser UI, report template, and server endpoints need matching updates.
 - Preserve the local workflow: start a local server, open the browser UI, configure Jira, and generate reports.
 - Do not treat generated report output as source; real templates and rendering logic belong in `templates/` and `app/reporters/`.
+- `ui/dau_survey.html` is client-side only: saves `dau_<username>_<timestamp>.json` via the File System Access API (download fallback if unavailable); persists username to `localStorage`. Do not add server-side dependencies.
