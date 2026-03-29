@@ -30,6 +30,7 @@ class GenerateHandlerMixin:
                 self.wfile.write(b"\n")
                 self.wfile.flush()
             except BrokenPipeError:
+                # Client disconnected; ignore broken pipe during SSE write.
                 pass
 
         try:
