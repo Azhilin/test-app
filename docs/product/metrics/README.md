@@ -76,4 +76,4 @@ or future built-in metrics.
 | `AI_TOOL_LABELS` | _(empty)_ | Labels identifying AI tools (e.g. `AI_Tool_Copilot`) |
 | `AI_ACTION_LABELS` | _(empty)_ | Labels identifying AI use-cases (e.g. `AI_Case_CodeGen`) |
 
-Full configuration reference: [`.env.example`](../../.env.example)
+Full configuration reference: [`.env.example`](../../../.env.example)

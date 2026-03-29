@@ -82,6 +82,8 @@ Key modules (all under `app/`):
 
 **Reports output:** `generated/reports/<ISO-timestamp>/report.html` and `report.md`
 
+**Metric documentation:** `docs/product/metrics/` — metric definitions, required Jira fields, calculation details, and configuration quick reference (including DAU metric)
+
 ## Configuration
 
 All config is via `.env` (see `.env.example`). Required: `JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`. Optional: `JIRA_BOARD_ID`, `JIRA_SPRINT_COUNT` (default 10), `JIRA_SCHEMA_NAME` (which entry in `config/jira_schema.json` to use for CLI), `JIRA_FILTER_ID`.

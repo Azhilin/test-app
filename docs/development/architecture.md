@@ -67,7 +67,7 @@ Both the browser UI (`server.py`) and the CLI (`main.py`) produce the same repor
 
 ### Stdlib modules used
 
-`argparse`, `base64`, `concurrent.futures`, `http.server`, `json`, `os`, `pathlib`, `shutil`, `ssl`, `subprocess`, `sys`, `threading`, `urllib`, `webbrowser`
+`argparse`, `base64`, `concurrent.futures`, `datetime`, `http.server`, `json`, `logging`, `os`, `pathlib`, `shutil`, `ssl`, `subprocess`, `sys`, `threading`, `urllib`, `webbrowser`
 
 ---
 
@@ -88,7 +88,8 @@ test-app/                          ← project root
 │   │   ├── __init__.py
 │   │   ├── config.py              ← env/dotenv loading, validation, constants
 │   │   ├── jira_client.py         ← Jira REST API wrapper
-│   │   └── metrics.py             ← pure metric computation functions
+│   │   ├── metrics.py             ← pure metric computation functions
+│   │   └── schema.py              ← Jira field schema registry (load/save/query)
 │   │
 │   ├── reporters/                 ← output formatters
 │   │   ├── __init__.py
@@ -97,7 +98,12 @@ test-app/                          ← project root
 │   │
 │   └── utils/                     ← shared utilities
 │       ├── __init__.py
-│       └── cert_utils.py          ← PEM certificate validation
+│       ├── cert_utils.py          ← PEM certificate validation
+│       └── logging_setup.py       ← centralized log setup; custom SUCCESS level
+│
+├── config/                        ← persistent config files (not generated)
+│   ├── jira_schema.json           ← Jira field schema definitions per instance
+│   └── jira_filters.json          ← saved JQL filters (default + user-saved)
 │
 ├── templates/
 │   └── report.html.j2             ← Jinja2 HTML template
@@ -176,11 +182,13 @@ test-app/                          ← project root
 | `app/core/config.py` | Loads `.env` from project root via `python-dotenv`. Exposes all `JIRA_*` and `AI_*` constants as module-level names. `validate_config()` returns a list of error strings. |
 | `app/core/jira_client.py` | Wraps `atlassian-python-api`. `create_client()` returns an authenticated `Jira` instance. `fetch_sprint_data()` returns `(sprints, sprint_issues)`. Handles pagination and optional filter JQL. |
 | `app/core/metrics.py` | Pure functions: `compute_velocity`, `compute_cycle_time`, `compute_ai_assistance_trend`, `compute_ai_usage_details`, `compute_custom_trends` (placeholder). `build_metrics_dict()` assembles all results into a single dict consumed by both reporters. |
+| `app/core/schema.py` | Loads/saves/queries Jira field schemas from `config/jira_schema.json`. Provides field ID lookups, status mapping accessors, and auto-detection from Jira's `/rest/api/2/field` response. Ships a built-in `Default_Jira_Cloud` schema as fallback. |
 | `app/reporters/report_html.py` | Renders `templates/report.html.j2` via Jinja2. Accepts a `section_visibility` dict to hide/show individual report sections. |
 | `app/reporters/report_md.py` | Builds a Markdown string (velocity bar chart, tables, cycle time stats) and writes to disk. |
 | `app/utils/cert_utils.py` | `validate_cert(Path)` — parses a PEM file with `cryptography`, returns a dict: `{valid, expires_at, days_remaining, subject}` (plus `error` on failure). |
+| `app/utils/logging_setup.py` | `setup_logging()` — configures the root logger with a timestamped `FileHandler` (`generated/logs/app-YYYYMMDD-HHMMSS.log`) and a `StreamHandler`; defines `SUCCESS_LEVEL = 25` and patches `.success()` onto `logging.Logger`. Called once per entry point. |
 | `app/cli.py` | Orchestrates the full report pipeline. Validates config, fetches Jira data, computes metrics, enriches with filter metadata, and generates HTML + MD in parallel via `ThreadPoolExecutor(max_workers=2)`. |
-| `app/server.py` | Stdlib `HTTPServer` dev server. Serves the UI, proxies Jira test-connection (avoids CORS), streams `main.py` output as SSE, and exposes config/cert management APIs. |
+| `app/server.py` | Stdlib `HTTPServer` dev server. Serves the UI, proxies Jira test-connection (avoids CORS), streams `main.py` output as SSE, and exposes config/cert/schema/filter management APIs. |
 | `main.py` | Thin entry-point — re-exports `main`, `_parse_args`, `_timestamp_folder_name` from `app.cli` for test compatibility. |
 | `server.py` | Thin entry-point — re-exports `run`, `Server`, `Handler`, `PORT`, `ROOT`, `MIME`, `guess_mime` from `app.server` for test compatibility. |
 
@@ -287,13 +295,21 @@ generated/reports/<YYYY-MM-DDTHH-MM-SS>/
 ### Dev server flow (`server.py` / `app/server.py`)
 
 ```
-browser → GET /             → serve ui/index.html
-browser → POST /api/config  → write .env fields
-browser → POST /api/test-connection → proxy to Jira /rest/api/3/myself
-browser → GET /api/generate → spawn subprocess: python main.py
-                               stream stdout/stderr as SSE events
-browser → GET /api/cert-status → app.utils.cert_utils.validate_cert(...)
-browser → POST /api/fetch-cert → ssl.get_server_certificate → certs/jira_ca_bundle.pem
+browser → GET /                      → serve ui/index.html
+browser → GET /api/config            → return .env values (token masked)
+browser → POST /api/config           → write .env fields (17 keys supported)
+browser → POST /api/test-connection  → proxy to Jira /rest/api/3/myself
+browser → GET /api/generate          → spawn subprocess: python main.py
+                                        stream stdout/stderr as SSE events
+browser → GET /api/cert-status       → app.utils.cert_utils.validate_cert(...)
+browser → POST /api/fetch-cert       → ssl.get_server_certificate → certs/jira_ca_bundle.pem
+browser → GET /api/schemas           → list schemas from config/jira_schema.json
+browser → POST /api/schemas          → create/update a schema entry
+browser → DELETE /api/schemas/<name> → remove a schema entry
+browser → GET /api/filters           → list filters from config/jira_filters.json
+browser → POST /api/filters          → create/update (upsert) a saved filter; builds JQL
+browser → DELETE /api/filters/<slug> → remove a user filter (default filter protected)
+browser → GET /api/reports           → list generated report directories
 browser → GET /generated/reports/... → serve static report files
 ```
 
@@ -345,12 +361,19 @@ All routes are served by `app/server.py` (stdlib `HTTPServer`). CORS headers (`A
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/` or `/index.html` | Serve `ui/index.html` |
-| `GET` | `/api/config` | Return current `.env` values (token masked as `***`) |
-| `POST` | `/api/config` | Write `JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN` to `.env` |
+| `GET` | `/api/config` | Return current `.env` values (token masked as `***`) for all 17 config keys |
+| `POST` | `/api/config` | Write any subset of the 17 supported config keys to `.env` |
 | `POST` | `/api/test-connection` | Proxy credentials test to `JIRA_URL/rest/api/3/myself` |
 | `GET` | `/api/generate` | Run `main.py` as subprocess; stream stdout/stderr as SSE |
 | `GET` | `/api/cert-status` | Return cert existence and validity from `certs/jira_ca_bundle.pem` |
 | `POST` | `/api/fetch-cert` | Fetch TLS cert from Jira host via `ssl.get_server_certificate` and save to `certs/` |
+| `GET` | `/api/schemas` | List all schemas from `config/jira_schema.json` |
+| `POST` | `/api/schemas` | Create or update a schema entry (upsert by `schema_name`) |
+| `DELETE` | `/api/schemas/<name>` | Delete a schema entry by name |
+| `GET` | `/api/filters` | List all saved filters from `config/jira_filters.json` (default filter always first) |
+| `POST` | `/api/filters` | Create or update a saved filter; builds JQL from params; upsert by `name` |
+| `DELETE` | `/api/filters/<slug>` | Delete a user filter by slug (the default filter cannot be deleted) |
+| `GET` | `/api/reports` | List generated report directory names under `generated/reports/` |
 | `GET` | `/generated/reports/<path>` | Serve any file under `generated/reports/` |
 | `OPTIONS` | `*` | CORS preflight (returns 204) |
 
@@ -402,10 +425,10 @@ Current counts (run `python tests/tools/test_coverage.py` to refresh):
 
 | Layer | Count | Files |
 |-------|-------|-------|
-| Unit | 178 | test_cert_validation, test_config, test_imports, test_jira_client, test_main_helpers, test_metrics, test_schema |
-| Component | 129 | test_contracts, test_report_html, test_report_md, test_server, test_server_config |
-| Integration | 9 | test_integration, test_cli_server |
-| E2E | 66 | test_dau_survey_ui, test_e2e_connection, test_e2e_ui |
+| Unit | 210 | test_cert_validation, test_cli, test_config, test_dau_metrics, test_imports, test_jira_client, test_main_helpers, test_metrics, test_schema, test_server_handlers |
+| Component | 142 | test_contracts, test_dau_report, test_report_html, test_report_md, test_report_performance, test_server, test_server_config |
+| Integration | 18 | test_cli_server, test_fetch_ssl_cert, test_integration |
+| E2E | 88 | test_dau_survey_ui, test_e2e, test_e2e_connection, test_e2e_ui |
 
 ### Running tests
 
@@ -559,8 +582,9 @@ python server.py 9000                 # custom port
 
 - [`README.md`](../README.md) — user-facing quickstart
 - [`CLAUDE.md`](../CLAUDE.md) — AI assistant guidance and coding conventions
-- [`docs/jira/`](../docs/jira/) — Jira REST API reference notes
-- [`docs/confluence/`](../docs/confluence/) — Confluence API reference notes
+- [`docs/development/jira/`](jira/) — Jira REST API reference notes
+- [`docs/development/confluence/`](confluence/) — Confluence API reference notes
+- [`docs/product/metrics/`](../product/metrics/) — metric definitions, field reference, and configuration guide
 - [`tests/coverage/test_coverage.md`](../tests/coverage/test_coverage.md) — auto-generated test count + requirements summary
 - [`tests/coverage/requirements/`](../tests/coverage/requirements/) — per-requirements-source coverage detail files
 - [`.env.example`](../.env.example) — all configuration variables with comments
