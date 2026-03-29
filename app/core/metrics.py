@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from app.core import config, schema
+
+logger = logging.getLogger(__name__)
 
 _DEFAULT_DONE = frozenset(("done", "closed", "resolved", "complete"))
 _DEFAULT_IN_PROGRESS = frozenset(("in progress",))
@@ -403,9 +406,26 @@ def build_metrics_dict(
 ) -> dict[str, Any]:
     """Build the single metrics dict used by both HTML and MD reporters."""
     sp_field, done_fs, ip_fs = _resolve_schema_params(schema)
+    logger.debug(
+        "Computing metrics: %s sprint(s), %s changelog issue(s)",
+        len(sprints),
+        len(issues_with_changelog),
+    )
 
     velocity = compute_velocity(sprints, sprint_issues, sp_field, done_fs)
+    logger.debug(
+        "Velocity computed for %s sprint(s); totals: %s",
+        len(velocity),
+        [f"{r['sprint_name']}={r['velocity']}sp" for r in velocity],
+    )
+
     cycle_time = compute_cycle_time(issues_with_changelog, done_fs, ip_fs)
+    logger.debug(
+        "Cycle time: sample_size=%s, mean=%s days, median=%s days",
+        cycle_time.get("sample_size"),
+        cycle_time.get("mean_days"),
+        cycle_time.get("median_days"),
+    )
     custom = compute_custom_trends(sprints, sprint_issues)
     ai_trend = compute_ai_assistance_trend(
         sprints,

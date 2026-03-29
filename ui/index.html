@@ -805,6 +805,22 @@
         </div>
 
         <div class="form-group">
+          <label class="form-label" for="jira-board-id">
+            Board ID <span class="optional">optional</span>
+          </label>
+          <input
+            class="form-input"
+            type="number"
+            id="jira-board-id"
+            name="JIRA_BOARD_ID"
+            min="1"
+            placeholder="e.g. 42"
+            autocomplete="off"
+          />
+          <p class="form-helper">Agile board ID. Find it in the board URL: <code>.../boards/42</code>. Leave blank to use the first board your account can access.</p>
+        </div>
+
+        <div class="form-group">
           <label class="form-label" for="sprint-count">Sprint Count</label>
           <input
             class="form-input"
@@ -817,6 +833,18 @@
             autocomplete="off"
           />
           <p class="form-helper">Number of past sprints to include in the report. Default: <strong>10</strong>.</p>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-save-board" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            Save Board Settings
+          </button>
+          <span class="save-confirm" id="save-confirm-board" aria-live="polite">Settings saved</span>
         </div>
 
         <hr class="section-divider" />
@@ -838,34 +866,6 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="filter-schema-select">
-            Jira Schema <span class="optional">optional — auto-fills Story Points Field</span>
-          </label>
-          <select class="form-input" id="filter-schema-select">
-            <option value="">— No schema selected —</option>
-          </select>
-          <p class="form-helper">Select a saved schema to auto-fill the Story Points Field below, or fetch a new schema from the controls above.</p>
-          <div id="schema-field-info" hidden style="margin-top:10px;padding:10px 14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);font-size:0.78rem;max-height:160px;overflow-y:auto;">
-            <!-- Populated by JS when a schema is selected -->
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="story-points-field">Story Points Field</label>
-          <input
-            class="form-input"
-            type="text"
-            id="story-points-field"
-            name="JIRA_STORY_POINTS_FIELD"
-            placeholder="customfield_10016"
-            autocomplete="off"
-            spellcheck="false"
-            maxlength="100"
-          />
-          <p class="form-helper">Custom field key used for story points. This varies by Jira instance; the most common value is <code>customfield_10016</code>.</p>
-        </div>
-
-        <div class="form-group">
           <label class="form-label" for="jira-filter-page-size">
             Filter Page Size <span class="optional">optional</span>
           </label>
@@ -882,6 +882,93 @@
           <p class="form-helper">Issues fetched per page from Jira when using Filter ID fallback. Valid range: 1–100. Default: <strong>100</strong>.</p>
         </div>
 
+      </div>
+
+      <!-- AI Adoption Labels -->
+      <div class="card">
+        <div class="card-title">AI Adoption Labels</div>
+        <div class="card-subtitle">
+          Labels added in Jira to track AI-assisted work. Labels are case-sensitive and must match exactly.
+          Click <strong>Save AI Labels</strong> to persist these to <code>.env</code>.
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="ai-assisted-label">AI Assisted Label</label>
+          <input
+            class="form-input"
+            type="text"
+            id="ai-assisted-label"
+            name="AI_ASSISTED_LABEL"
+            placeholder="AI_assistance"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="200"
+          />
+          <p class="form-helper">Label that marks an issue as AI-assisted. Default: <strong>AI_assistance</strong>.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="ai-exclude-labels">
+            Exclude Labels <span class="optional">optional — comma-separated</span>
+          </label>
+          <input
+            class="form-input"
+            type="text"
+            id="ai-exclude-labels"
+            name="AI_EXCLUDE_LABELS"
+            placeholder="e.g. spike,admin,tech-debt"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="1000"
+          />
+          <p class="form-helper">Issues carrying these labels are excluded from the AI % denominator. Use for non-delivery work such as spikes or admin tickets.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="ai-tool-labels">
+            Tool Labels <span class="optional">optional — comma-separated</span>
+          </label>
+          <input
+            class="form-input"
+            type="text"
+            id="ai-tool-labels"
+            name="AI_TOOL_LABELS"
+            placeholder="AI_Tool_Copilot,AI_Tool_ChatGPT,AI_Tool_Gemini"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="1000"
+          />
+          <p class="form-helper">Labels identifying AI tools used. One label per tool; an issue can carry multiple tool labels. Default: <strong>AI_Tool_Copilot,AI_Tool_ChatGPT,AI_Tool_Gemini</strong>.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="ai-action-labels">
+            Action Labels <span class="optional">optional — comma-separated</span>
+          </label>
+          <input
+            class="form-input"
+            type="text"
+            id="ai-action-labels"
+            name="AI_ACTION_LABELS"
+            placeholder="AI_Case_CodeGen,AI_Case_Review,AI_Case_Testing"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="1000"
+          />
+          <p class="form-helper">Labels identifying AI use-cases. Default: <strong>AI_Case_CodeGen,AI_Case_Review,AI_Case_Testing</strong>.</p>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-save-ai-labels" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            Save AI Labels
+          </button>
+          <span class="save-confirm" id="save-confirm-ai" aria-live="polite">Settings saved</span>
+        </div>
       </div>
 
       <!-- Save Filter action card -->
@@ -1155,18 +1242,34 @@
         JIRA_URL:                  'jira_url',
         JIRA_EMAIL:                'jira_email',
         JIRA_API_TOKEN:            'jira_api_token',
+        JIRA_BOARD_ID:             'jira_board_id',
         JIRA_FILTER_ID:            'jira_filter_id',
         JIRA_SPRINT_COUNT:         'jira_sprint_count',
-        JIRA_STORY_POINTS_FIELD:   'jira_sp_field',
         JIRA_PROJECT:              'jira_project',
         JIRA_TEAM_ID:              'jira_team_id',
         JIRA_ISSUE_TYPES:          'jira_issue_types',
         JIRA_FILTER_STATUS:        'jira_filter_status',
         JIRA_CLOSED_SPRINTS_ONLY:  'jira_closed_sprints_only',
         JIRA_FILTER_PAGE_SIZE:     'jira_filter_page_size',
+        AI_ASSISTED_LABEL:         'ai_assisted_label',
+        AI_EXCLUDE_LABELS:         'ai_exclude_labels',
+        AI_TOOL_LABELS:            'ai_tool_labels',
+        AI_ACTION_LABELS:          'ai_action_labels',
         REPORTS:                   'jira_reports_list',
         FILTERS:                   'jira_saved_filters',
         JIRA_SCHEMA:               'jira_schema_name',
+      };
+
+      // Default values applied when a field is empty after all config sources are loaded.
+      // Mirrors the uncommented defaults in .env.example.
+      const FIELD_DEFAULTS = {
+        JIRA_SPRINT_COUNT:        '10',
+        JIRA_FILTER_STATUS:       'Done',
+        JIRA_CLOSED_SPRINTS_ONLY: 'true',
+        JIRA_FILTER_PAGE_SIZE:    '100',
+        AI_ASSISTED_LABEL:        'AI_assistance',
+        AI_TOOL_LABELS:           'AI_Tool_Copilot,AI_Tool_ChatGPT,AI_Tool_Gemini',
+        AI_ACTION_LABELS:         'AI_Case_CodeGen,AI_Case_Review,AI_Case_Testing',
       };
 
       const store = {
@@ -1332,21 +1435,30 @@
           return;
         }
         filtersEmpty.hidden = true;
-        entries.slice(0, 20).forEach(({ name, created_at, jql, filename }) => {
+        entries.slice(0, 20).forEach((entry) => {
+          // Normalise field names: server uses filter_name/slug, localStorage legacy uses name/filename
+          const name      = entry.filter_name || entry.name || '(unnamed)';
+          const slug      = entry.slug || entry.filename || '';
+          const jql       = entry.jql || '';
+          const createdAt = entry.created_at || '';
+          const isDefault = !!entry.is_default;
+
           const li = document.createElement('li');
 
           const tsSpan = document.createElement('span');
           tsSpan.className = 'report-ts';
-          tsSpan.textContent = created_at || '';
+          tsSpan.textContent = createdAt;
 
           const nameSpan = document.createElement('span');
           nameSpan.style.cssText = 'font-weight:600;color:var(--text);flex-shrink:0;';
-          nameSpan.textContent = name || '(unnamed)';
+          nameSpan.textContent = name;
 
           const jqlPreview = document.createElement('span');
           jqlPreview.style.cssText = 'color:var(--text-muted);font-size:0.78rem;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;';
           jqlPreview.title = jql;
-          jqlPreview.textContent = jql.length > 80 ? jql.slice(0, 80) + '…' : jql;
+          jqlPreview.textContent = jql
+            ? (jql.length > 80 ? jql.slice(0, 80) + '…' : jql)
+            : '(no JQL — set Project Key and save)';
 
           const copyBtn = document.createElement('button');
           copyBtn.className = 'btn btn-secondary';
@@ -1354,6 +1466,7 @@
           copyBtn.textContent = 'Copy JQL';
           copyBtn.type = 'button';
           copyBtn.title = 'Copy JQL to clipboard';
+          copyBtn.disabled = !jql;
           copyBtn.addEventListener('click', () => {
             navigator.clipboard.writeText(jql).then(() => {
               copyBtn.textContent = 'Copied!';
@@ -1364,32 +1477,35 @@
             });
           });
 
-          const removeBtn = document.createElement('button');
-          removeBtn.className = 'btn btn-danger';
-          removeBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;';
-          removeBtn.textContent = 'Remove';
-          removeBtn.type = 'button';
-          removeBtn.title = 'Delete this filter';
-          removeBtn.addEventListener('click', async () => {
-            removeBtn.disabled = true;
-            removeBtn.textContent = 'Removing…';
-            if (IS_SERVED && filename) {
-              try {
-                await fetch(`/api/filters/${encodeURIComponent(filename)}`, { method: 'DELETE' });
-              } catch { /* ignore network errors — remove from local state anyway */ }
-            }
-            // Remove from localStorage
-            const saved = store.getJSON(STORE_KEYS.FILTERS) || [];
-            store.setJSON(STORE_KEYS.FILTERS, saved.filter((f) => f.name !== name));
-            loadFilters();
-          });
-
           li.style.cssText = 'flex-wrap:wrap;gap:8px;align-items:center;';
           li.appendChild(tsSpan);
           li.appendChild(nameSpan);
           li.appendChild(jqlPreview);
           li.appendChild(copyBtn);
-          li.appendChild(removeBtn);
+
+          if (!isDefault) {
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'btn btn-danger';
+            removeBtn.style.cssText = 'font-size:0.72rem;padding:4px 10px;flex-shrink:0;';
+            removeBtn.textContent = 'Remove';
+            removeBtn.type = 'button';
+            removeBtn.title = 'Delete this filter';
+            removeBtn.addEventListener('click', async () => {
+              removeBtn.disabled = true;
+              removeBtn.textContent = 'Removing…';
+              if (IS_SERVED && slug) {
+                try {
+                  await fetch(`/api/filters/${encodeURIComponent(slug)}`, { method: 'DELETE' });
+                } catch { /* ignore network errors — remove from local state anyway */ }
+              }
+              // Remove from localStorage fallback store too
+              const saved = store.getJSON(STORE_KEYS.FILTERS) || [];
+              store.setJSON(STORE_KEYS.FILTERS, saved.filter((f) => (f.filter_name || f.name) !== name));
+              loadFilters();
+            });
+            li.appendChild(removeBtn);
+          }
+
           filtersList.appendChild(li);
         });
 
@@ -1398,11 +1514,14 @@
         if (genSel) {
           const prevVal = genSel.value;
           genSel.innerHTML = '<option value="">— Select a saved filter —</option>';
-          entries.slice(0, 20).forEach(({ name, filename, jql }) => {
-            const opt = document.createElement('option');
-            opt.value    = filename || '';
-            opt.textContent = name || '(unnamed)';
-            opt.dataset.jql = jql || '';
+          entries.slice(0, 20).forEach((entry) => {
+            const name = entry.filter_name || entry.name || '(unnamed)';
+            const slug = entry.slug || entry.filename || '';
+            const jql  = entry.jql || '';
+            const opt  = document.createElement('option');
+            opt.value       = slug;
+            opt.textContent = name;
+            opt.dataset.jql = jql;
             genSel.appendChild(opt);
           });
           if (prevVal) genSel.value = prevVal;
@@ -1414,31 +1533,16 @@
           try {
             const res  = await fetch('/api/filters');
             const data = await res.json();
-            if (Array.isArray(data.filters)) {
-              const serverKeys = new Set(data.filters.map((f) => f.created_at + f.name));
-              const local      = store.getJSON(STORE_KEYS.FILTERS) || [];
-              const localOnly  = local.filter((f) => !serverKeys.has(f.created_at + f.name));
-              renderFilters([...data.filters, ...localOnly]);
+            if (data.ok && Array.isArray(data.filters)) {
+              // Server is source of truth — render directly without localStorage merge
+              renderFilters(data.filters);
               return;
             }
           } catch {
-            // fall through
+            // fall through to localStorage fallback
           }
         }
         renderFilters(store.getJSON(STORE_KEYS.FILTERS) || []);
-      }
-
-      function addFilterEntry(entry) {
-        const saved = store.getJSON(STORE_KEYS.FILTERS) || [];
-        // Upsert by name (case-insensitive) — keep list deduplicated
-        const idx = saved.findIndex((f) => f.name.toLowerCase() === entry.name.toLowerCase());
-        if (idx !== -1) {
-          saved[idx] = entry;            // update in place
-        } else {
-          saved.unshift(entry);          // new entry at front
-        }
-        store.setJSON(STORE_KEYS.FILTERS, saved.slice(0, 20));
-        loadFilters();
       }
 
       /* ═══════════════════════════════════════════════
@@ -1559,8 +1663,8 @@
             if (data.ok) {
               const verb = data.updated ? 'Updated' : 'Saved';
               filterLogLine(data.jql, 'log-ok');
-              filterLogLine(`✓ ${verb} in generated/filters/ ( ${data.filename} )`, 'log-ok');
-              addFilterEntry({ name: filterName, created_at: data.created_at, jql: data.jql, filename: data.filename });
+              filterLogLine(`✓ ${verb} to config/jira_filters.json`, 'log-ok');
+              loadFilters();   // reload from server — source of truth
             } else {
               filterLogLine(`✗ Error: ${data.error || 'Unknown error'}`, 'log-error');
             }
@@ -1568,15 +1672,20 @@
             filterLogLine(`✗ Request failed: ${err.message}`, 'log-error');
           }
         } else {
-          // file:// mode — build locally, no disk persistence
-          filterLogLine('⚠ File:// mode — filter is saved to browser localStorage only (no disk file).', 'log-error');
+          // file:// mode — build locally, save to localStorage only
+          filterLogLine('⚠ File:// mode — filter is saved to browser localStorage only (no disk persistence).', 'log-error');
           const localJql = buildJqlLocally(params);
           if (!localJql) {
             filterLogLine('✗ JIRA_PROJECT is required to build a JQL filter.', 'log-error');
           } else {
             const createdAt = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
             filterLogLine(localJql, 'log-ok');
-            addFilterEntry({ name: filterName, created_at: createdAt, jql: localJql, filename: null });
+            const saved = store.getJSON(STORE_KEYS.FILTERS) || [];
+            const idx = saved.findIndex((f) => (f.filter_name || f.name || '').toLowerCase() === filterName.toLowerCase());
+            const entry = { filter_name: filterName, slug: filterName.toLowerCase().replace(/\W+/g, '_'), created_at: createdAt, jql: localJql, is_default: false };
+            if (idx !== -1) { saved[idx] = entry; } else { saved.unshift(entry); }
+            store.setJSON(STORE_KEYS.FILTERS, saved.slice(0, 20));
+            loadFilters();
           }
         }
 
@@ -1656,14 +1765,6 @@
         store.set(STORE_KEYS.JIRA_SCHEMA, name);
         const schema = await fetchSchemaDetails(name);
         _activeSchemaCache = schema;
-        if (schema && schema.fields) {
-          const spId = (schema.fields.story_points || {}).id || 'customfield_10016';
-          const spField = document.getElementById('story-points-field');
-          if (spField && !spField.dataset.userEdited) {
-            spField.value = spId;
-            store.set(STORE_KEYS.JIRA_STORY_POINTS_FIELD, spId);
-          }
-        }
       }
 
       schemaSelect.addEventListener('change', async () => {
@@ -1902,7 +2003,7 @@
         const email = jiraEmailInput.value.trim();
         const token = jiraTokenInput.value;
 
-        if (!url || !email || !token) {
+        if (!url || !email || (!token && !hasServerToken)) {
           setStatus('error', 'Fill in URL, email, and token before testing.');
           return;
         }
@@ -1918,7 +2019,7 @@
           const res  = await fetch('/api/test-connection', {
             method:  'POST',
             headers: { 'Content-Type': 'application/json' },
-            body:    JSON.stringify({ url, email, token }),
+            body:    JSON.stringify({ url, email, token: token || (hasServerToken ? '***' : '') }),
           });
           const data = await res.json();
 
@@ -2213,15 +2314,19 @@
         jiraEmailInput.value = store.get(STORE_KEYS.JIRA_EMAIL);
         jiraTokenInput.value = store.get(STORE_KEYS.JIRA_API_TOKEN);
 
-        document.getElementById('filter-id').value               = store.get(STORE_KEYS.JIRA_FILTER_ID);
-        document.getElementById('sprint-count').value             = store.get(STORE_KEYS.JIRA_SPRINT_COUNT) || '10';
-        document.getElementById('story-points-field').value       = store.get(STORE_KEYS.JIRA_STORY_POINTS_FIELD) || 'customfield_10016';
-        document.getElementById('jira-project').value             = store.get(STORE_KEYS.JIRA_PROJECT);
-        document.getElementById('jira-team-id').value             = store.get(STORE_KEYS.JIRA_TEAM_ID);
-        document.getElementById('jira-issue-types').value         = store.get(STORE_KEYS.JIRA_ISSUE_TYPES);
-        document.getElementById('jira-filter-status').value       = store.get(STORE_KEYS.JIRA_FILTER_STATUS);
-        document.getElementById('jira-closed-sprints-only').value = store.get(STORE_KEYS.JIRA_CLOSED_SPRINTS_ONLY) || 'true';
-        document.getElementById('jira-filter-page-size').value    = store.get(STORE_KEYS.JIRA_FILTER_PAGE_SIZE);
+        document.getElementById('jira-board-id').value            = store.get(STORE_KEYS.JIRA_BOARD_ID);
+        document.getElementById('filter-id').value                = store.get(STORE_KEYS.JIRA_FILTER_ID);
+        document.getElementById('sprint-count').value              = store.get(STORE_KEYS.JIRA_SPRINT_COUNT);
+        document.getElementById('jira-project').value              = store.get(STORE_KEYS.JIRA_PROJECT);
+        document.getElementById('jira-team-id').value              = store.get(STORE_KEYS.JIRA_TEAM_ID);
+        document.getElementById('jira-issue-types').value          = store.get(STORE_KEYS.JIRA_ISSUE_TYPES);
+        document.getElementById('jira-filter-status').value        = store.get(STORE_KEYS.JIRA_FILTER_STATUS);
+        document.getElementById('jira-closed-sprints-only').value  = store.get(STORE_KEYS.JIRA_CLOSED_SPRINTS_ONLY);
+        document.getElementById('jira-filter-page-size').value     = store.get(STORE_KEYS.JIRA_FILTER_PAGE_SIZE);
+        document.getElementById('ai-assisted-label').value         = store.get(STORE_KEYS.AI_ASSISTED_LABEL);
+        document.getElementById('ai-exclude-labels').value         = store.get(STORE_KEYS.AI_EXCLUDE_LABELS);
+        document.getElementById('ai-tool-labels').value            = store.get(STORE_KEYS.AI_TOOL_LABELS);
+        document.getElementById('ai-action-labels').value          = store.get(STORE_KEYS.AI_ACTION_LABELS);
         updateBadgeFromSaved();
 
         // 2. Overlay with server-side config read from .env on disk
@@ -2244,16 +2349,22 @@
               }
             }
 
-            // Filter fields
-            if (cfg.JIRA_FILTER_ID)           { document.getElementById('filter-id').value               = cfg.JIRA_FILTER_ID;           store.set(STORE_KEYS.JIRA_FILTER_ID,           cfg.JIRA_FILTER_ID); }
-            if (cfg.JIRA_SPRINT_COUNT)        { document.getElementById('sprint-count').value             = cfg.JIRA_SPRINT_COUNT;        store.set(STORE_KEYS.JIRA_SPRINT_COUNT,        cfg.JIRA_SPRINT_COUNT); }
-            if (cfg.JIRA_STORY_POINTS_FIELD)  { document.getElementById('story-points-field').value       = cfg.JIRA_STORY_POINTS_FIELD;  store.set(STORE_KEYS.JIRA_STORY_POINTS_FIELD,  cfg.JIRA_STORY_POINTS_FIELD); }
-            if (cfg.JIRA_PROJECT)             { document.getElementById('jira-project').value             = cfg.JIRA_PROJECT;             store.set(STORE_KEYS.JIRA_PROJECT,             cfg.JIRA_PROJECT); }
-            if (cfg.JIRA_TEAM_ID)             { document.getElementById('jira-team-id').value             = cfg.JIRA_TEAM_ID;             store.set(STORE_KEYS.JIRA_TEAM_ID,             cfg.JIRA_TEAM_ID); }
-            if (cfg.JIRA_ISSUE_TYPES)         { document.getElementById('jira-issue-types').value         = cfg.JIRA_ISSUE_TYPES;         store.set(STORE_KEYS.JIRA_ISSUE_TYPES,         cfg.JIRA_ISSUE_TYPES); }
-            if (cfg.JIRA_FILTER_STATUS)       { document.getElementById('jira-filter-status').value       = cfg.JIRA_FILTER_STATUS;       store.set(STORE_KEYS.JIRA_FILTER_STATUS,       cfg.JIRA_FILTER_STATUS); }
-            if (cfg.JIRA_CLOSED_SPRINTS_ONLY) { document.getElementById('jira-closed-sprints-only').value = cfg.JIRA_CLOSED_SPRINTS_ONLY; store.set(STORE_KEYS.JIRA_CLOSED_SPRINTS_ONLY, cfg.JIRA_CLOSED_SPRINTS_ONLY); }
-            if (cfg.JIRA_FILTER_PAGE_SIZE)    { document.getElementById('jira-filter-page-size').value    = cfg.JIRA_FILTER_PAGE_SIZE;    store.set(STORE_KEYS.JIRA_FILTER_PAGE_SIZE,    cfg.JIRA_FILTER_PAGE_SIZE); }
+            // Filter & scope fields
+            if (cfg.JIRA_BOARD_ID)            { document.getElementById('jira-board-id').value            = cfg.JIRA_BOARD_ID;            store.set(STORE_KEYS.JIRA_BOARD_ID,            cfg.JIRA_BOARD_ID); }
+            if (cfg.JIRA_FILTER_ID)            { document.getElementById('filter-id').value                = cfg.JIRA_FILTER_ID;            store.set(STORE_KEYS.JIRA_FILTER_ID,            cfg.JIRA_FILTER_ID); }
+            if (cfg.JIRA_SPRINT_COUNT)         { document.getElementById('sprint-count').value              = cfg.JIRA_SPRINT_COUNT;         store.set(STORE_KEYS.JIRA_SPRINT_COUNT,         cfg.JIRA_SPRINT_COUNT); }
+            if (cfg.JIRA_PROJECT)              { document.getElementById('jira-project').value              = cfg.JIRA_PROJECT;              store.set(STORE_KEYS.JIRA_PROJECT,              cfg.JIRA_PROJECT); }
+            if (cfg.JIRA_TEAM_ID)              { document.getElementById('jira-team-id').value              = cfg.JIRA_TEAM_ID;              store.set(STORE_KEYS.JIRA_TEAM_ID,              cfg.JIRA_TEAM_ID); }
+            if (cfg.JIRA_ISSUE_TYPES)          { document.getElementById('jira-issue-types').value          = cfg.JIRA_ISSUE_TYPES;          store.set(STORE_KEYS.JIRA_ISSUE_TYPES,          cfg.JIRA_ISSUE_TYPES); }
+            if (cfg.JIRA_FILTER_STATUS)        { document.getElementById('jira-filter-status').value        = cfg.JIRA_FILTER_STATUS;        store.set(STORE_KEYS.JIRA_FILTER_STATUS,        cfg.JIRA_FILTER_STATUS); }
+            if (cfg.JIRA_CLOSED_SPRINTS_ONLY)  { document.getElementById('jira-closed-sprints-only').value  = cfg.JIRA_CLOSED_SPRINTS_ONLY;  store.set(STORE_KEYS.JIRA_CLOSED_SPRINTS_ONLY,  cfg.JIRA_CLOSED_SPRINTS_ONLY); }
+            if (cfg.JIRA_FILTER_PAGE_SIZE)     { document.getElementById('jira-filter-page-size').value     = cfg.JIRA_FILTER_PAGE_SIZE;     store.set(STORE_KEYS.JIRA_FILTER_PAGE_SIZE,     cfg.JIRA_FILTER_PAGE_SIZE); }
+
+            // AI label fields
+            if (cfg.AI_ASSISTED_LABEL)  { document.getElementById('ai-assisted-label').value  = cfg.AI_ASSISTED_LABEL;  store.set(STORE_KEYS.AI_ASSISTED_LABEL,  cfg.AI_ASSISTED_LABEL); }
+            if (cfg.AI_EXCLUDE_LABELS)  { document.getElementById('ai-exclude-labels').value  = cfg.AI_EXCLUDE_LABELS;  store.set(STORE_KEYS.AI_EXCLUDE_LABELS,  cfg.AI_EXCLUDE_LABELS); }
+            if (cfg.AI_TOOL_LABELS)     { document.getElementById('ai-tool-labels').value      = cfg.AI_TOOL_LABELS;     store.set(STORE_KEYS.AI_TOOL_LABELS,     cfg.AI_TOOL_LABELS); }
+            if (cfg.AI_ACTION_LABELS)   { document.getElementById('ai-action-labels').value    = cfg.AI_ACTION_LABELS;   store.set(STORE_KEYS.AI_ACTION_LABELS,   cfg.AI_ACTION_LABELS); }
 
             updateBadgeFromSaved();
 
@@ -2267,6 +2378,30 @@
           }
         }
 
+        // 3. Apply defaults for fields that are still empty after all config sources
+        const fieldIds = {
+          JIRA_SPRINT_COUNT:        'sprint-count',
+          JIRA_FILTER_STATUS:       'jira-filter-status',
+          JIRA_CLOSED_SPRINTS_ONLY: 'jira-closed-sprints-only',
+          JIRA_FILTER_PAGE_SIZE:    'jira-filter-page-size',
+          AI_ASSISTED_LABEL:        'ai-assisted-label',
+          AI_TOOL_LABELS:           'ai-tool-labels',
+          AI_ACTION_LABELS:         'ai-action-labels',
+        };
+        for (const [key, elId] of Object.entries(fieldIds)) {
+          const el = document.getElementById(elId);
+          if (el && !el.value && FIELD_DEFAULTS[key]) {
+            el.value = FIELD_DEFAULTS[key];
+          }
+        }
+
+        // Pre-populate Filter Name with Default_Jira_Filter_<YYYY-MM-DD> when empty
+        const filterNameEl = document.getElementById('filter-name');
+        if (filterNameEl && !filterNameEl.value) {
+          const today = new Date().toISOString().slice(0, 10);
+          filterNameEl.value = `Default_Jira_Filter_${today}`;
+        }
+
         // Ensure Save button reflects initial state (disabled until Test Connection passes)
         updateSaveBtn();
 
@@ -2276,11 +2411,49 @@
         loadReports();
         // Filters list (async — fetches from /api/filters when served)
         loadFilters();
-        // Schemas list (async — fetches from /api/schemas when served)
-        loadSchemas();
         // SSL certificate status
         loadCertStatus();
       }
+
+      /* ═══════════════════════════════════════════════
+         Save Board Settings button
+      ═══════════════════════════════════════════════ */
+      document.getElementById('btn-save-board').addEventListener('click', () => {
+        const boardId     = document.getElementById('jira-board-id').value.trim();
+        const sprintCount = document.getElementById('sprint-count').value.trim();
+        store.set(STORE_KEYS.JIRA_BOARD_ID,    boardId);
+        store.set(STORE_KEYS.JIRA_SPRINT_COUNT, sprintCount);
+        flashConfirm('save-confirm-board');
+        if (IS_SERVED) {
+          const updates = {};
+          if (boardId)     updates.JIRA_BOARD_ID    = boardId;
+          if (sprintCount) updates.JIRA_SPRINT_COUNT = sprintCount;
+          if (Object.keys(updates).length) saveConfigToServer(updates);
+        }
+      });
+
+      /* ═══════════════════════════════════════════════
+         Save AI Labels button
+      ═══════════════════════════════════════════════ */
+      document.getElementById('btn-save-ai-labels').addEventListener('click', () => {
+        const aiAssisted = document.getElementById('ai-assisted-label').value.trim();
+        const aiExclude  = document.getElementById('ai-exclude-labels').value.trim();
+        const aiTools    = document.getElementById('ai-tool-labels').value.trim();
+        const aiActions  = document.getElementById('ai-action-labels').value.trim();
+        store.set(STORE_KEYS.AI_ASSISTED_LABEL, aiAssisted);
+        store.set(STORE_KEYS.AI_EXCLUDE_LABELS,  aiExclude);
+        store.set(STORE_KEYS.AI_TOOL_LABELS,     aiTools);
+        store.set(STORE_KEYS.AI_ACTION_LABELS,   aiActions);
+        flashConfirm('save-confirm-ai');
+        if (IS_SERVED) {
+          const updates = {};
+          if (aiAssisted) updates.AI_ASSISTED_LABEL = aiAssisted;
+          if (aiExclude)  updates.AI_EXCLUDE_LABELS  = aiExclude;
+          if (aiTools)    updates.AI_TOOL_LABELS     = aiTools;
+          if (aiActions)  updates.AI_ACTION_LABELS   = aiActions;
+          if (Object.keys(updates).length) saveConfigToServer(updates);
+        }
+      });
 
       /* ── Boot ── */
       restoreValues();

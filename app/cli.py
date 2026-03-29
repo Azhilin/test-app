@@ -5,10 +5,14 @@ Jira metrics report: fetch data from Jira Cloud, compute metrics, generate HTML 
 from __future__ import annotations
 
 import argparse
+import logging
 import shutil
-import sys
 from concurrent.futures import ThreadPoolExecutor, wait
 from pathlib import Path
+
+from app.utils.logging_setup import SUCCESS_LEVEL
+
+logger = logging.getLogger(__name__)
 
 from app.core import config, jira_client, metrics
 from app.core import schema as schema_mod
@@ -16,11 +20,13 @@ from app.reporters import report_html, report_md
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 REPORTS_DIR = PROJECT_ROOT / "generated" / "reports"
+LOGS_DIR = PROJECT_ROOT / "generated" / "logs"
 
 
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser()
     p.add_argument("--clean", action="store_true", help="Delete the generated/reports/ directory and exit")
+    p.add_argument("--clean-logs", action="store_true", help="Delete the generated/logs/ directory and exit")
     return p.parse_args()
 
 
@@ -36,23 +42,30 @@ def main() -> int:
     if args.clean:
         if REPORTS_DIR.exists():
             shutil.rmtree(REPORTS_DIR)
-            print("generated/reports folder removed.")
+            logger.info("generated/reports folder removed.")
         else:
-            print("generated/reports folder does not exist.")
+            logger.info("generated/reports folder does not exist.")
+        return 0
+    if args.clean_logs:
+        if LOGS_DIR.exists():
+            shutil.rmtree(LOGS_DIR)
+            logger.info("generated/logs folder removed.")
+        else:
+            logger.info("generated/logs folder does not exist.")
         return 0
 
     errors = config.validate_config()
     if errors:
         for e in errors:
-            print(f"Config error: {e}", file=sys.stderr)
-        print("Copy .env.example to .env and set JIRA_URL, JIRA_EMAIL, JIRA_API_TOKEN.", file=sys.stderr)
+            logger.error("Config error: %s", e)
+        logger.error("Copy .env.example to .env and set JIRA_URL, JIRA_EMAIL, JIRA_API_TOKEN.")
         return 1
 
     jira = jira_client.create_client()
     try:
         sprints, sprint_issues = jira_client.fetch_sprint_data(jira)
     except Exception as e:
-        print(f"Failed to fetch Jira data: {jira_client._sanitise_error(str(e))}", file=sys.stderr)
+        logger.error("Failed to fetch Jira data: %s", jira_client._sanitise_error(str(e)))
         return 1
 
     active_schema = schema_mod.get_active_schema(schema_name=config.JIRA_SCHEMA_NAME)
@@ -78,6 +91,8 @@ def main() -> int:
             metrics_dict["filter_name"] = f.get("name") or None
         except Exception:  # nosec B110
             pass  # filter name is non-critical metadata; failure is safe to ignore
+    if config.JIRA_PROJECT:
+        metrics_dict["project_key"] = config.JIRA_PROJECT
 
     folder_name = _timestamp_folder_name(metrics_dict["generated_at"])
     report_dir = REPORTS_DIR / folder_name
@@ -93,5 +108,5 @@ def main() -> int:
         f_html.result()
         f_md.result()
 
-    print(f"Reports written: {path_html}, {path_md}")
+    logger.log(SUCCESS_LEVEL, "Reports written: %s, %s", path_html, path_md)
     return 0

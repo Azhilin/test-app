@@ -132,6 +132,15 @@ jobs:
           -m "unit and not windows_only"
           --tb=short
           --junitxml=results/unit.xml
+          --alluredir=generated/allure-results
+
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: allure-results-unit-${{ github.run_id }}
+          path: generated/allure-results/
+          if-no-files-found: ignore
 
       - name: Upload test results
         if: always()
@@ -168,6 +177,15 @@ jobs:
           -m "component and not windows_only"
           --tb=short
           --junitxml=results/component.xml
+          --alluredir=generated/allure-results
+
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: allure-results-component-${{ github.run_id }}
+          path: generated/allure-results/
+          if-no-files-found: ignore
 
       - name: Upload test results
         if: always()
@@ -207,6 +225,15 @@ jobs:
           -m "integration and not windows_only"
           --tb=short
           --junitxml=results/integration.xml
+          --alluredir=generated/allure-results
+
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: allure-results-integration-${{ github.run_id }}
+          path: generated/allure-results/
+          if-no-files-found: ignore
 
       - name: Upload test results
         if: always()
@@ -263,6 +290,15 @@ jobs:
           -m "e2e and not windows_only"
           --tb=short
           --junitxml=results/e2e.xml
+          --alluredir=generated/allure-results
+
+      - name: Upload Allure results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: allure-results-e2e-${{ github.run_id }}
+          path: generated/allure-results/
+          if-no-files-found: ignore
 
       - name: Upload test results
         if: always()
@@ -335,6 +371,50 @@ jobs:
       - name: Audit production dependencies
         run: pip-audit -r requirements.txt
 
+  # ── Allure Report ─────────────────────────────────────────────────────────────
+  # Merges per-layer allure-results artifacts, generates an HTML report with
+  # trend history, and deploys it to the gh-pages branch (GitHub Pages).
+  # Skipped entirely when all four test jobs were skipped (nothing to report).
+  allure-report:
+    name: Allure Report (GitHub Pages)
+    runs-on: ubuntu-latest
+    needs: [unit-tests, component-tests, integration-tests, e2e-tests]
+    if: >
+      always() &&
+      (
+        needs.unit-tests.result        != 'skipped' ||
+        needs.component-tests.result   != 'skipped' ||
+        needs.integration-tests.result != 'skipped' ||
+        needs.e2e-tests.result         != 'skipped'
+      )
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download all Allure results artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: allure-results-*-${{ github.run_id }}
+          merge-multiple: true
+          path: allure-results/
+
+      - name: Generate Allure report with history
+        uses: simple-elf/allure-report-action@v1.7
+        with:
+          allure_results: allure-results
+          allure_report: allure-report
+          gh_pages: gh-pages
+          allure_history: allure-history
+          keep_reports: 20
+
+      - name: Deploy report to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-history
+
   # ── CI Summary ───────────────────────────────────────────────────────────────
   # Always runs; writes a markdown summary to the Actions job page.
   # Fails the workflow if any job that actually ran returned 'failure'.
@@ -350,6 +430,7 @@ jobs:
       - e2e-tests
       - windows-tests
       - security-scan
+      - allure-report
     if: always()
     steps:
       - name: Write job summary
@@ -367,6 +448,7 @@ jobs:
           echo "| E2E Tests | ${{ needs.e2e-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Windows Tests | ${{ needs.windows-tests.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Security Scan | ${{ needs.security-scan.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Allure Report | ${{ needs.allure-report.result }} |" >> $GITHUB_STEP_SUMMARY
 
       - name: Fail if any enabled job failed
         if: contains(needs.*.result, 'failure')

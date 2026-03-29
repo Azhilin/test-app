@@ -7,6 +7,7 @@ import threading
 import time
 import urllib.request
 
+import allure
 import pytest
 
 
@@ -60,3 +61,36 @@ def live_server_url():
     yield f"http://127.0.0.1:{port}"
 
     server.shutdown()
+
+
+# ---------------------------------------------------------------------------
+# Allure screenshots — captured for every E2E test (pass and fail)
+# ---------------------------------------------------------------------------
+
+
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Take a full-page screenshot after the test body runs and attach to Allure.
+
+    Uses pytest_runtest_makereport so the ``page`` fixture is still alive
+    when the screenshot is captured (fixture teardown has not started yet).
+    Only fires during the ``call`` phase (the actual test body) and only for
+    tests that have a ``page`` fixture.
+    """
+    outcome = yield
+    if call.when != "call":
+        return
+    if "page" not in item.fixturenames:
+        return
+    try:
+        page = item.funcargs.get("page")
+        if page is None:
+            return
+        screenshot = page.screenshot(full_page=True)
+        allure.attach(
+            screenshot,
+            name=item.name,
+            attachment_type=allure.attachment_type.PNG,
+        )
+    except Exception:
+        pass

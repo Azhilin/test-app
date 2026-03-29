@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 SCHEMA_PATH = Path(__file__).resolve().parent.parent.parent / "config" / "jira_schema.json"
 
@@ -112,12 +115,17 @@ def get_active_schema(schema_name: str | None = None, path: Path | None = None) 
     if schema_name:
         found = get_schema(schema_name, path)
         if found:
+            field_count = len((found.get("fields") or {}))
+            logger.debug("Active schema: %r (%s fields)", schema_name, field_count)
             return found
 
     default = get_schema(DEFAULT_SCHEMA_NAME, path)
     if default:
+        field_count = len((default.get("fields") or {}))
+        logger.debug("Active schema: %r (default from file, %s fields)", DEFAULT_SCHEMA_NAME, field_count)
         return default
 
+    logger.debug("Active schema: %r (built-in fallback, %s fields)", DEFAULT_SCHEMA_NAME, len(_DEFAULT_SCHEMA["fields"]))
     return json.loads(json.dumps(_DEFAULT_SCHEMA))
 
 

@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import re
 
+import allure
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -55,29 +56,47 @@ def _goto(page: Page, url: str) -> None:
 
 
 def _mock_filters_api(page: Page) -> None:
-    """Intercept /api/filters POST to return a mock success response.
+    """Intercept /api/filters with a stateful mock that tracks saved/deleted filters.
 
-    The dev server doesn't implement /api/filters, so tests that save
-    filters would get a 404 without this mock.
+    GET returns the current filter list (with ok=True so loadFilters() uses it).
+    POST appends/updates the list. DELETE removes from the list.
     """
+    saved_filters: list[dict] = []
 
     def _handle_post(route):
         body = route.request.post_data_json
         name = body.get("name", "filter") if body else "filter"
         params = body.get("params", {}) if body else {}
-        # Build a simple JQL from params
         project = params.get("JIRA_PROJECT", "TEST")
         jql = f"project = {project} AND status = Done AND sprint in closedSprints()"
+        slug = name.lower().replace(" ", "_")
+        entry = {
+            "filter_name": name,
+            "slug": slug,
+            "is_default": False,
+            "jql": jql,
+            "created_at": "2026-03-25T12:00:00",
+            "params": params,
+        }
+        idx = next(
+            (i for i, f in enumerate(saved_filters) if f["filter_name"].lower() == name.lower()),
+            None,
+        )
+        updated = idx is not None
+        if updated:
+            saved_filters[idx] = entry
+        else:
+            saved_filters.append(entry)
         route.fulfill(
             status=200,
             content_type="application/json",
             body=json.dumps(
                 {
                     "ok": True,
-                    "updated": False,
+                    "updated": updated,
                     "jql": jql,
-                    "filename": f"{name.lower().replace(' ', '_')}.json",
-                    "created_at": "2026-03-25T12-00-00",
+                    "slug": slug,
+                    "created_at": "2026-03-25T12:00:00",
                 }
             ),
         )
@@ -86,10 +105,15 @@ def _mock_filters_api(page: Page) -> None:
         route.fulfill(
             status=200,
             content_type="application/json",
-            body=json.dumps({"filters": []}),
+            body=json.dumps({"ok": True, "filters": list(saved_filters)}),
         )
 
     def _handle_delete(route):
+        url = route.request.url
+        slug = url.split("/api/filters/")[-1].split("?")[0]
+        to_remove = [f for f in saved_filters if f.get("slug") == slug]
+        for f in to_remove:
+            saved_filters.remove(f)
         route.fulfill(
             status=200,
             content_type="application/json",
@@ -99,7 +123,7 @@ def _mock_filters_api(page: Page) -> None:
     page.route(
         "**/api/filters", lambda route: _handle_post(route) if route.request.method == "POST" else _handle_get(route)
     )
-    page.route("**/api/filters/*", _handle_delete)
+    page.route("**/api/filters/**", _handle_delete)
 
 
 # ---------------------------------------------------------------------------
@@ -178,35 +202,39 @@ def test_keyboard_arrow_right_navigation(page: Page, live_server_url: str):
 
 def test_save_connection_valid_inputs(page: Page, live_server_url: str):
     """Filling valid inputs, testing connection, then clicking Save shows confirmation flash."""
-    # Mock Test Connection to return success so Save button becomes enabled
-    page.route(
-        "**/api/test-connection",
-        lambda route: route.fulfill(
-            status=200,
-            content_type="application/json",
-            body=json.dumps({"ok": True, "displayName": "Test User", "emailAddress": "user@example.com"}),
-        ),
-    )
-    _goto(page, live_server_url)
-    page.get_by_role("tab", name="Jira Connection").click()
+    with allure.step("Mock /api/test-connection to return a successful response"):
+        page.route(
+            "**/api/test-connection",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({"ok": True, "displayName": "Test User", "emailAddress": "user@example.com"}),
+            ),
+        )
+    with allure.step("Navigate to the Connection tab"):
+        _goto(page, live_server_url)
+        page.get_by_role("tab", name="Jira Connection").click()
 
-    page.locator("#jira-url").fill("https://test.atlassian.net")
-    page.locator("#jira-email").fill("user@example.com")
-    page.locator("#jira-token").fill("test-token-123")
+    with allure.step("Fill in valid Jira credentials"):
+        page.locator("#jira-url").fill("https://test.atlassian.net")
+        page.locator("#jira-email").fill("user@example.com")
+        page.locator("#jira-token").fill("test-token-123")
 
-    # Test Connection must succeed first to enable Save
-    page.locator("#btn-test-conn").click()
-    expect(page.locator("#conn-status-badge")).to_have_text("Connected", timeout=5000)
+    with allure.step("Click Test Connection and assert Connected badge appears"):
+        # Test Connection must succeed first to enable Save
+        page.locator("#btn-test-conn").click()
+        expect(page.locator("#conn-status-badge")).to_have_text("Connected", timeout=5000)
 
-    page.locator("#btn-save-conn").click()
+    with allure.step("Click Save and assert confirmation flash + localStorage persistence"):
+        page.locator("#btn-save-conn").click()
 
-    # "Settings saved" flash should appear
-    flash = page.locator("#save-confirm-conn")
-    expect(flash).to_have_class(re.compile(r"visible"))
+        # "Settings saved" flash should appear
+        flash = page.locator("#save-confirm-conn")
+        expect(flash).to_have_class(re.compile(r"visible"))
 
-    # Values persisted to localStorage
-    stored_url = page.evaluate("localStorage.getItem('jira_url')")
-    assert stored_url == "https://test.atlassian.net"
+        # Values persisted to localStorage
+        stored_url = page.evaluate("localStorage.getItem('jira_url')")
+        assert stored_url == "https://test.atlassian.net"
 
 
 def test_validation_error_empty_fields(page: Page, live_server_url: str):
@@ -285,7 +313,16 @@ def test_test_connection_missing_fields(page: Page, live_server_url: str):
 
 
 def test_test_connection_unreachable_server(page: Page, live_server_url: str):
-    """Test Connection with unreachable Jira shows error after attempt."""
+    """Test Connection with unreachable Jira shows error after attempt (mocked — no real DNS)."""
+    # Mock the server-side test-connection call so the test stays fast without a real DNS lookup.
+    page.route(
+        "**/api/test-connection",
+        lambda route: route.fulfill(
+            status=502,
+            content_type="application/json",
+            body=json.dumps({"ok": False, "error": "Connection refused — host unreachable"}),
+        ),
+    )
     _goto(page, live_server_url)
     page.get_by_role("tab", name="Jira Connection").click()
 
@@ -295,8 +332,7 @@ def test_test_connection_unreachable_server(page: Page, live_server_url: str):
     page.locator("#btn-test-conn").click()
 
     badge = page.locator("#conn-status-badge")
-    # First shows "Testing…", then transitions to "Error"
-    expect(badge).to_have_text("Error", timeout=15000)
+    expect(badge).to_have_text("Error", timeout=5000)
     detail = page.locator("#conn-status-detail")
     expect(detail).not_to_be_empty()
 

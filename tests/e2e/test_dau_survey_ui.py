@@ -15,6 +15,7 @@ import json
 import re
 from pathlib import Path
 
+import allure
 import pytest
 from playwright.sync_api import Page, expect
 
@@ -124,12 +125,15 @@ def test_progress_starts_at_zero(page: Page) -> None:
 def test_progress_increments_with_each_field(page: Page) -> None:
     """Progress count advances 1 → 2 → 3 as each field is completed."""
     _goto(page)
-    page.locator("#input-username").fill("alice123")
-    expect(page.locator("#progress-count")).to_have_text("1 of 3 answered")
-    page.locator("#select-role").select_option(value="Developer")
-    expect(page.locator("#progress-count")).to_have_text("2 of 3 answered")
-    page.locator(".radio-card").first.click()
-    expect(page.locator("#progress-count")).to_have_text("3 of 3 answered")
+    with allure.step("Fill username — expect progress '1 of 3 answered'"):
+        page.locator("#input-username").fill("alice123")
+        expect(page.locator("#progress-count")).to_have_text("1 of 3 answered")
+    with allure.step("Select role — expect progress '2 of 3 answered'"):
+        page.locator("#select-role").select_option(value="Developer")
+        expect(page.locator("#progress-count")).to_have_text("2 of 3 answered")
+    with allure.step("Click radio card — expect progress '3 of 3 answered'"):
+        page.locator(".radio-card").first.click()
+        expect(page.locator("#progress-count")).to_have_text("3 of 3 answered")
 
 
 # ---------------------------------------------------------------------------

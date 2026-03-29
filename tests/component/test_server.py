@@ -304,6 +304,28 @@ def test_cert_status_with_valid_cert_returns_enriched_fields(server_url, tmp_pat
     assert data["days_remaining"] > 0
 
 
+def test_cert_status_with_corrupt_cert_returns_error(server_url, tmp_path):
+    """GET /api/cert-status with a corrupt (non-PEM) cert file returns exists=True and error key."""
+    import app.server as srv
+
+    certs_dir = tmp_path / "certs"
+    certs_dir.mkdir()
+    (certs_dir / "jira_ca_bundle.pem").write_bytes(b"this is not a PEM certificate")
+
+    orig = srv.ROOT
+    srv.ROOT = tmp_path
+    try:
+        resp = urllib.request.urlopen(f"{server_url}/api/cert-status")
+        data = json.loads(resp.read())
+    finally:
+        srv.ROOT = orig
+
+    assert data["exists"] is True
+    assert data["path"] == "certs/jira_ca_bundle.pem"
+    assert "error" in data
+    assert data["valid"] is False
+
+
 # ---------------------------------------------------------------------------
 # POST /api/fetch-cert
 # ---------------------------------------------------------------------------
@@ -507,3 +529,39 @@ def test_delete_nonexistent_schema_returns_404(server_url):
     with pytest.raises(urllib.error.HTTPError) as exc_info:
         urllib.request.urlopen(req)
     assert exc_info.value.code == 404
+
+
+def test_fetch_cert_saves_pem_without_crlf_line_endings(server_url, tmp_path):
+    """POST /api/fetch-cert saves the PEM file with LF-only line endings (no CRLF on Windows).
+
+    Ensures the write_bytes fix is effective: ssl.get_server_certificate returns a PEM
+    string with \\n endings; the saved bytes must not contain \\r\\n sequences, which would
+    make cryptography fail to parse the cert on Windows.
+    """
+    import ssl
+
+    import app.server as srv
+
+    sample_pem = _make_test_pem(90).decode("ascii")
+
+    certs_dir = tmp_path / "certs"
+    orig_root = srv.ROOT
+    srv.ROOT = tmp_path
+    try:
+        with patch.object(ssl, "get_server_certificate", return_value=sample_pem):
+            body = json.dumps({"url": "https://test.atlassian.net"}).encode()
+            req = urllib.request.Request(
+                f"{server_url}/api/fetch-cert",
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            resp = urllib.request.urlopen(req)
+            data = json.loads(resp.read())
+    finally:
+        srv.ROOT = orig_root
+
+    assert data["ok"] is True
+    saved = (certs_dir / "jira_ca_bundle.pem").read_bytes()
+    assert b"\r\n" not in saved, "PEM file must not contain CRLF line endings"
+    assert b"\n" in saved

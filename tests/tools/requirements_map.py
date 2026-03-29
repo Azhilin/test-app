@@ -1356,6 +1356,1028 @@ DAU_SURVEY_REQUIREMENTS: list[dict] = [
     },
 ]
 
+# ── Jira Connection Requirements ───────────────────────────────────────────
+
+JIRA_CONNECTION_REQUIREMENTS: list[dict] = [
+    # --- 1. Authentication ---
+    {
+        "id": "JCR-A-001",
+        "description": "Valid Basic Auth credentials are accepted by Jira",
+        "type": FUNCTIONAL,
+        "section": "Authentication",
+        "tests": [
+            "component/test_server.py::test_test_connection_valid_creds",
+        ],
+    },
+    {
+        "id": "JCR-A-002",
+        "description": "An invalid API token is rejected with a clear error",
+        "type": FUNCTIONAL,
+        "section": "Authentication",
+        "tests": [
+            "component/test_server.py::test_test_connection_http_error",
+        ],
+    },
+    {
+        "id": "JCR-A-003",
+        "description": "An unrecognised Jira email is rejected with a clear error",
+        "type": FUNCTIONAL,
+        "section": "Authentication",
+        "tests": [
+            "component/test_server.py::test_test_connection_http_error",
+        ],
+    },
+    {
+        "id": "JCR-A-004",
+        "description": "The API token is never echoed in any server response",
+        "type": FUNCTIONAL,
+        "section": "Authentication",
+        "tests": [],
+    },
+    {
+        "id": "JCR-A-005",
+        "description": "Credentials are sanitised before logging or raising exceptions",
+        "type": FUNCTIONAL,
+        "section": "Authentication",
+        "tests": [
+            "unit/test_jira_client.py::test_sanitise_error_replaces_url",
+            "unit/test_jira_client.py::test_sanitise_error_replaces_email_and_token",
+            "unit/test_jira_client.py::test_sanitise_error_handles_none_config_values",
+        ],
+    },
+    # --- 2. Configuration & Validation ---
+    {
+        "id": "JCR-C-001",
+        "description": "Missing JIRA_URL is detected before any network call",
+        "type": FUNCTIONAL,
+        "section": "Configuration & Validation",
+        "tests": [
+            "unit/test_config.py::test_validate_config_missing_url",
+            "integration/test_integration.py::test_main_pipeline_config_fail",
+        ],
+    },
+    {
+        "id": "JCR-C-002",
+        "description": "Missing JIRA_EMAIL is detected before any network call",
+        "type": FUNCTIONAL,
+        "section": "Configuration & Validation",
+        "tests": [
+            "unit/test_config.py::test_validate_config_missing_email",
+        ],
+    },
+    {
+        "id": "JCR-C-003",
+        "description": "Missing JIRA_API_TOKEN is detected before any network call",
+        "type": FUNCTIONAL,
+        "section": "Configuration & Validation",
+        "tests": [
+            "unit/test_config.py::test_validate_config_missing_token",
+        ],
+    },
+    {
+        "id": "JCR-C-004",
+        "description": "JIRA_URL trailing slashes are stripped automatically",
+        "type": FUNCTIONAL,
+        "section": "Configuration & Validation",
+        "tests": [
+            "unit/test_config.py::test_jira_url_trailing_slash_stripped",
+            "unit/test_config.py::test_jira_url_multiple_trailing_slashes_stripped",
+        ],
+    },
+    {
+        "id": "JCR-C-005",
+        "description": "JIRA_BOARD_ID is optional; app auto-discovers the first board",
+        "type": FUNCTIONAL,
+        "section": "Configuration & Validation",
+        "tests": [
+            "unit/test_jira_client.py::test_get_board_id_from_api",
+        ],
+    },
+    {
+        "id": "JCR-C-006",
+        "description": "JIRA_SPRINT_COUNT defaults to 10 when not set",
+        "type": FUNCTIONAL,
+        "section": "Configuration & Validation",
+        "tests": [
+            "unit/test_config.py::test_sprint_count_default",
+        ],
+    },
+    {
+        "id": "JCR-C-007",
+        "description": "JIRA_FILTER_ID is optional; absent value causes no error",
+        "type": FUNCTIONAL,
+        "section": "Configuration & Validation",
+        "tests": [
+            "unit/test_config.py::test_filter_id_empty",
+        ],
+    },
+    # --- 3. Test-Connection Endpoint ---
+    {
+        "id": "JCR-T-001",
+        "description": "Valid credentials return user details",
+        "type": FUNCTIONAL,
+        "section": "Test-Connection Endpoint",
+        "tests": [
+            "component/test_server.py::test_test_connection_valid_creds",
+            "integration/test_integration.py::test_server_test_connection_json_shape",
+        ],
+    },
+    {
+        "id": "JCR-T-002",
+        "description": "Missing required fields return HTTP 400",
+        "type": FUNCTIONAL,
+        "section": "Test-Connection Endpoint",
+        "tests": [
+            "component/test_server.py::test_test_connection_missing_fields",
+        ],
+    },
+    {
+        "id": "JCR-T-003",
+        "description": "Malformed JSON body returns HTTP 400",
+        "type": FUNCTIONAL,
+        "section": "Test-Connection Endpoint",
+        "tests": [
+            "component/test_server.py::test_test_connection_invalid_json",
+        ],
+    },
+    {
+        "id": "JCR-T-004",
+        "description": "An empty request body returns HTTP 400",
+        "type": FUNCTIONAL,
+        "section": "Test-Connection Endpoint",
+        "tests": [
+            "component/test_server.py::test_test_connection_empty_body",
+        ],
+    },
+    {
+        "id": "JCR-T-005",
+        "description": "An unreachable host returns ok: false with an error message",
+        "type": FUNCTIONAL,
+        "section": "Test-Connection Endpoint",
+        "tests": [
+            "component/test_server.py::test_test_connection_http_error",
+        ],
+    },
+    {
+        "id": "JCR-T-006",
+        "description": "Jira HTTP 401 / 403 is surfaced to the caller",
+        "type": FUNCTIONAL,
+        "section": "Test-Connection Endpoint",
+        "tests": [
+            "component/test_server.py::test_test_connection_http_error",
+        ],
+    },
+    {
+        "id": "JCR-T-007",
+        "description": "The test-connection request times out after at most 12 seconds",
+        "type": FUNCTIONAL,
+        "section": "Test-Connection Endpoint",
+        "tests": [],
+    },
+    {
+        "id": "JCR-T-008",
+        "description": "An unexpected server-side exception returns HTTP 500",
+        "type": FUNCTIONAL,
+        "section": "Test-Connection Endpoint",
+        "tests": [],
+    },
+    # --- 4. SSL / TLS Certificate Handling ---
+    {
+        "id": "JCR-SSL-001",
+        "description": "A custom CA bundle is used when present",
+        "type": FUNCTIONAL,
+        "section": "SSL / TLS Certificate Handling",
+        "tests": [
+            "unit/test_config.py::test_jira_ssl_cert_returns_path_when_file_exists",
+            "unit/test_jira_client.py::test_create_client_passes_verify_ssl",
+        ],
+    },
+    {
+        "id": "JCR-SSL-002",
+        "description": "The system CA store is used when no custom cert is present",
+        "type": FUNCTIONAL,
+        "section": "SSL / TLS Certificate Handling",
+        "tests": [
+            "unit/test_config.py::test_jira_ssl_cert_returns_true_when_no_file",
+        ],
+    },
+    {
+        "id": "JCR-SSL-003",
+        "description": "Certificate validity is reported by cert_utils.validate_cert()",
+        "type": FUNCTIONAL,
+        "section": "SSL / TLS Certificate Handling",
+        "tests": [
+            "component/test_server.py::test_cert_status_with_valid_cert_returns_enriched_fields",
+        ],
+    },
+    {
+        "id": "JCR-SSL-004",
+        "description": "The test-connection request uses the same SSL context as the Jira client",
+        "type": FUNCTIONAL,
+        "section": "SSL / TLS Certificate Handling",
+        "tests": [],
+    },
+    {
+        "id": "JCR-SSL-005",
+        "description": "An expired custom CA bundle is reported but does not block client creation",
+        "type": FUNCTIONAL,
+        "section": "SSL / TLS Certificate Handling",
+        "tests": [],
+        "partial": True,
+    },
+    {
+        "id": "JCR-SSL-006",
+        "description": "Fetch Certificate happy path delivers a parseable, valid cert badge",
+        "type": FUNCTIONAL,
+        "section": "SSL / TLS Certificate Handling",
+        "tests": [
+            "e2e/test_e2e_connection.py::test_fetch_cert_success_updates_badge",
+            "e2e/test_e2e_connection.py::test_positive_e2e_fetch_cert_then_badge_shows_valid",
+            "component/test_server.py::test_fetch_cert_saves_pem_without_crlf_line_endings",
+        ],
+    },
+    {
+        "id": "JCR-SSL-007",
+        "description": "Standard Jira Cloud positive E2E: absent cert file is an acceptable state",
+        "type": FUNCTIONAL,
+        "section": "SSL / TLS Certificate Handling",
+        "tests": [
+            "e2e/test_e2e_connection.py::test_positive_e2e_no_cert_is_acceptable_state",
+        ],
+    },
+    # --- 5. Client Timeouts ---
+    {
+        "id": "JCR-TO-001",
+        "description": "The Jira API client uses a 55-second connection timeout",
+        "type": FUNCTIONAL,
+        "section": "Client Timeouts",
+        "tests": [
+            "unit/test_jira_client.py::test_create_client_returns_jira_instance",
+        ],
+    },
+    {
+        "id": "JCR-TO-002",
+        "description": "The test-connection endpoint enforces a 12-second timeout",
+        "type": FUNCTIONAL,
+        "section": "Client Timeouts",
+        "tests": [],
+    },
+    # --- 6. Future Enhancements ---
+    {
+        "id": "JCR-FUT-001",
+        "description": "OAuth 2.0 3LO authentication support",
+        "type": OPERATIONAL,
+        "section": "Future Enhancements",
+        "tests": [],
+    },
+    {
+        "id": "JCR-FUT-002",
+        "description": "Configurable test-connection timeout via JIRA_TEST_CONNECTION_TIMEOUT env var",
+        "type": OPERATIONAL,
+        "section": "Future Enhancements",
+        "tests": [],
+    },
+    {
+        "id": "JCR-FUT-003",
+        "description": "Block report generation when certs/jira_ca_bundle.pem is expired",
+        "type": OPERATIONAL,
+        "section": "Future Enhancements",
+        "tests": [],
+    },
+    {
+        "id": "JCR-FUT-004",
+        "description": "Automatic retry on HTTP 429 with exponential backoff",
+        "type": OPERATIONAL,
+        "section": "Future Enhancements",
+        "tests": [],
+    },
+]
+
+# ── Jira Data Fetching Requirements ────────────────────────────────────────
+
+JIRA_DATA_FETCHING_REQUIREMENTS: list[dict] = [
+    # --- 1. Board Discovery ---
+    {
+        "id": "JDF-B-001",
+        "description": "JIRA_BOARD_ID from config is used without making an API call",
+        "type": FUNCTIONAL,
+        "section": "Board Discovery",
+        "tests": [
+            "unit/test_jira_client.py::test_get_board_id_from_config",
+        ],
+    },
+    {
+        "id": "JDF-B-002",
+        "description": "The first accessible board is auto-discovered when no JIRA_BOARD_ID is configured",
+        "type": FUNCTIONAL,
+        "section": "Board Discovery",
+        "tests": [
+            "unit/test_jira_client.py::test_get_board_id_from_api",
+        ],
+    },
+    {
+        "id": "JDF-B-003",
+        "description": "An empty boards list raises a ValueError with an actionable message",
+        "type": FUNCTIONAL,
+        "section": "Board Discovery",
+        "tests": [
+            "unit/test_jira_client.py::test_get_board_id_no_boards_raises",
+        ],
+    },
+    # --- 2. Sprint Fetching ---
+    {
+        "id": "JDF-SP-001",
+        "description": "Closed and active sprints are both returned",
+        "type": FUNCTIONAL,
+        "section": "Sprint Fetching",
+        "tests": [
+            "unit/test_jira_client.py::test_get_sprints_sorted_desc_by_start_date",
+        ],
+    },
+    {
+        "id": "JDF-SP-002",
+        "description": "Sprints are sorted by startDate descending (newest first)",
+        "type": FUNCTIONAL,
+        "section": "Sprint Fetching",
+        "tests": [
+            "unit/test_jira_client.py::test_get_sprints_sorted_desc_by_start_date",
+        ],
+    },
+    {
+        "id": "JDF-SP-003",
+        "description": "Sprint count is capped at JIRA_SPRINT_COUNT",
+        "type": FUNCTIONAL,
+        "section": "Sprint Fetching",
+        "tests": [
+            "unit/test_jira_client.py::test_get_sprints_capped_at_sprint_count",
+        ],
+    },
+    {
+        "id": "JDF-SP-004",
+        "description": "An empty sprint list is tolerated without crashing",
+        "type": FUNCTIONAL,
+        "section": "Sprint Fetching",
+        "tests": [
+            "unit/test_jira_client.py::test_get_sprints_empty",
+        ],
+    },
+    # --- 3. Issue Fetching ---
+    {
+        "id": "JDF-I-001",
+        "description": "All issues are retrieved across multiple pages",
+        "type": FUNCTIONAL,
+        "section": "Issue Fetching",
+        "tests": [
+            "unit/test_jira_client.py::test_get_issues_for_sprint_pagination",
+        ],
+    },
+    {
+        "id": "JDF-I-002",
+        "description": "A filter JQL constraint is applied when JIRA_FILTER_ID is set",
+        "type": FUNCTIONAL,
+        "section": "Issue Fetching",
+        "tests": [
+            "unit/test_jira_client.py::test_fetch_sprint_data_passes_filter_jql_to_each_sprint",
+        ],
+    },
+    {
+        "id": "JDF-I-003",
+        "description": "All sprint issues are returned when no filter is set",
+        "type": FUNCTIONAL,
+        "section": "Issue Fetching",
+        "tests": [
+            "unit/test_jira_client.py::test_get_issues_for_sprint_single_page",
+        ],
+    },
+    {
+        "id": "JDF-I-004",
+        "description": "An empty issue list for a sprint is tolerated",
+        "type": FUNCTIONAL,
+        "section": "Issue Fetching",
+        "tests": [
+            "unit/test_jira_client.py::test_get_issues_for_sprint_empty",
+        ],
+    },
+    {
+        "id": "JDF-I-005",
+        "description": "A network failure during pagination terminates the loop safely",
+        "type": FUNCTIONAL,
+        "section": "Issue Fetching",
+        "tests": [],
+    },
+    # --- 4. Changelog Fetching ---
+    {
+        "id": "JDF-CL-001",
+        "description": "Changelog with status transition history is returned per issue",
+        "type": FUNCTIONAL,
+        "section": "Changelog Fetching",
+        "tests": [
+            "unit/test_jira_client.py::test_get_issue_with_changelog_expand_param",
+        ],
+    },
+    {
+        "id": "JDF-CL-002",
+        "description": "Fetching changelogs for multiple issues returns a list in key order",
+        "type": FUNCTIONAL,
+        "section": "Changelog Fetching",
+        "tests": [
+            "unit/test_jira_client.py::test_get_issues_with_changelog_multiple_keys",
+        ],
+    },
+    {
+        "id": "JDF-CL-003",
+        "description": "A per-issue changelog failure logs a warning and appends {}",
+        "type": FUNCTIONAL,
+        "section": "Changelog Fetching",
+        "tests": [
+            "unit/test_jira_client.py::test_get_issues_with_changelog_skips_failures",
+        ],
+    },
+    {
+        "id": "JDF-CL-004",
+        "description": "Changelog timestamps must be timezone-aware ISO-8601 strings",
+        "type": FUNCTIONAL,
+        "section": "Changelog Fetching",
+        "tests": [],
+    },
+    # --- 5. Filter JQL Resolution ---
+    {
+        "id": "JDF-F-001",
+        "description": "A valid filter ID resolves to its JQL string",
+        "type": FUNCTIONAL,
+        "section": "Filter JQL Resolution",
+        "tests": [
+            "unit/test_jira_client.py::test_get_filter_jql_valid",
+        ],
+    },
+    {
+        "id": "JDF-F-002",
+        "description": "A None filter ID returns an empty string without making an API call",
+        "type": FUNCTIONAL,
+        "section": "Filter JQL Resolution",
+        "tests": [
+            "unit/test_jira_client.py::test_get_filter_jql_none",
+        ],
+    },
+    {
+        "id": "JDF-F-003",
+        "description": "An invalid or inaccessible filter ID returns an empty string without crashing",
+        "type": FUNCTIONAL,
+        "section": "Filter JQL Resolution",
+        "tests": [
+            "unit/test_jira_client.py::test_get_filter_jql_api_error",
+        ],
+        "partial": True,
+    },
+    # --- 6. Future Enhancements ---
+    {
+        "id": "JDF-FUT-001",
+        "description": "Log a warning when filter JQL fetch fails silently",
+        "type": OPERATIONAL,
+        "section": "Future Enhancements",
+        "tests": [],
+    },
+    {
+        "id": "JDF-FUT-002",
+        "description": "Automatic retry on HTTP 429 with exponential backoff",
+        "type": OPERATIONAL,
+        "section": "Future Enhancements",
+        "tests": [],
+    },
+    {
+        "id": "JDF-FUT-003",
+        "description": "Configurable issue page size via JIRA_FILTER_PAGE_SIZE env var",
+        "type": OPERATIONAL,
+        "section": "Future Enhancements",
+        "tests": [],
+    },
+]
+
+# ── Jira Schema Requirements ────────────────────────────────────────────────
+
+JIRA_SCHEMA_REQUIREMENTS: list[dict] = [
+    # --- 1. Schema Loading ---
+    {
+        "id": "JSR-L-001",
+        "description": "All schema entries are loaded from config/jira_schema.json",
+        "type": FUNCTIONAL,
+        "section": "Schema Loading",
+        "tests": [
+            "unit/test_schema.py::test_load_schemas_returns_list_from_file",
+        ],
+    },
+    {
+        "id": "JSR-L-002",
+        "description": "A missing schema file returns an empty list",
+        "type": FUNCTIONAL,
+        "section": "Schema Loading",
+        "tests": [
+            "unit/test_schema.py::test_load_schemas_missing_file",
+        ],
+    },
+    {
+        "id": "JSR-L-003",
+        "description": "Malformed JSON in the schema file returns an empty list",
+        "type": FUNCTIONAL,
+        "section": "Schema Loading",
+        "tests": [
+            "unit/test_schema.py::test_load_schemas_invalid_json",
+        ],
+    },
+    {
+        "id": "JSR-L-004",
+        "description": "A schema can be retrieved by name",
+        "type": FUNCTIONAL,
+        "section": "Schema Loading",
+        "tests": [
+            "unit/test_schema.py::test_get_schema_found",
+            "unit/test_schema.py::test_get_schema_not_found",
+        ],
+    },
+    # --- 2. Active Schema Resolution ---
+    {
+        "id": "JSR-R-001",
+        "description": "A named schema is returned when an explicit name is given",
+        "type": FUNCTIONAL,
+        "section": "Active Schema Resolution",
+        "tests": [
+            "unit/test_schema.py::test_get_active_schema_by_name",
+        ],
+    },
+    {
+        "id": "JSR-R-002",
+        "description": "Default_Jira_Cloud is used as a fallback when no name is given",
+        "type": FUNCTIONAL,
+        "section": "Active Schema Resolution",
+        "tests": [
+            "unit/test_schema.py::test_get_active_schema_falls_back_to_default",
+        ],
+    },
+    {
+        "id": "JSR-R-003",
+        "description": "The hardcoded _DEFAULT_SCHEMA is returned when the file is absent",
+        "type": FUNCTIONAL,
+        "section": "Active Schema Resolution",
+        "tests": [
+            "unit/test_schema.py::test_get_active_schema_no_file_returns_hardcoded_default",
+            "unit/test_schema.py::test_get_active_schema_hardcoded_uses_builtin_story_points",
+        ],
+    },
+    {
+        "id": "JSR-R-004",
+        "description": "A non-existent named schema falls back to the default silently",
+        "type": FUNCTIONAL,
+        "section": "Active Schema Resolution",
+        "tests": [],
+        "partial": True,
+    },
+    # --- 3. Schema Save & Delete ---
+    {
+        "id": "JSR-SD-001",
+        "description": "A new schema is appended to the file",
+        "type": FUNCTIONAL,
+        "section": "Schema Save & Delete",
+        "tests": [
+            "unit/test_schema.py::test_save_schema_appends_new",
+        ],
+    },
+    {
+        "id": "JSR-SD-002",
+        "description": "An existing schema is updated in-place",
+        "type": FUNCTIONAL,
+        "section": "Schema Save & Delete",
+        "tests": [
+            "unit/test_schema.py::test_save_schema_updates_existing",
+        ],
+    },
+    {
+        "id": "JSR-SD-003",
+        "description": "The parent directory is created if absent",
+        "type": FUNCTIONAL,
+        "section": "Schema Save & Delete",
+        "tests": [
+            "unit/test_schema.py::test_save_schema_creates_file",
+        ],
+    },
+    {
+        "id": "JSR-SD-004",
+        "description": "Default_Jira_Cloud cannot be deleted",
+        "type": FUNCTIONAL,
+        "section": "Schema Save & Delete",
+        "tests": [
+            "unit/test_schema.py::test_delete_schema_refuses_default",
+        ],
+    },
+    {
+        "id": "JSR-SD-005",
+        "description": "Deleting a non-existent schema name returns False",
+        "type": FUNCTIONAL,
+        "section": "Schema Save & Delete",
+        "tests": [
+            "unit/test_schema.py::test_delete_schema_not_found",
+        ],
+    },
+    # --- 4. Field ID & JQL Name Lookups ---
+    {
+        "id": "JSR-F-001",
+        "description": "get_field_id() returns the Jira field ID for a known field key",
+        "type": FUNCTIONAL,
+        "section": "Field ID & JQL Name Lookups",
+        "tests": [
+            "unit/test_schema.py::test_get_field_id",
+        ],
+    },
+    {
+        "id": "JSR-F-002",
+        "description": "get_field_id() returns None for an unknown field key",
+        "type": FUNCTIONAL,
+        "section": "Field ID & JQL Name Lookups",
+        "tests": [
+            "unit/test_schema.py::test_get_field_id",
+        ],
+    },
+    {
+        "id": "JSR-F-003",
+        "description": "get_field_jql_name() falls back to id when jql_name is absent",
+        "type": FUNCTIONAL,
+        "section": "Field ID & JQL Name Lookups",
+        "tests": [
+            "unit/test_schema.py::test_get_field_jql_name_falls_back_to_id",
+            "unit/test_schema.py::test_get_field_jql_name_with_explicit_jql_name",
+        ],
+    },
+    # --- 5. Status Mappings ---
+    {
+        "id": "JSR-SM-001",
+        "description": "get_done_statuses() returns the configured done status list",
+        "type": FUNCTIONAL,
+        "section": "Status Mappings",
+        "tests": [
+            "unit/test_schema.py::test_get_done_statuses",
+        ],
+    },
+    {
+        "id": "JSR-SM-002",
+        "description": "get_in_progress_statuses() returns the configured in-progress list",
+        "type": FUNCTIONAL,
+        "section": "Status Mappings",
+        "tests": [
+            "unit/test_schema.py::test_get_in_progress_statuses",
+        ],
+    },
+    {
+        "id": "JSR-SM-003",
+        "description": "Default done statuses are returned when status_mapping is absent",
+        "type": FUNCTIONAL,
+        "section": "Status Mappings",
+        "tests": [
+            "unit/test_schema.py::test_get_done_statuses_defaults",
+        ],
+    },
+    {
+        "id": "JSR-SM-004",
+        "description": "Default in-progress statuses are returned when status_mapping is absent",
+        "type": FUNCTIONAL,
+        "section": "Status Mappings",
+        "tests": [
+            "unit/test_schema.py::test_get_in_progress_statuses_defaults",
+        ],
+    },
+    # --- 6. Auto-Detection from Jira Fields ---
+    {
+        "id": "JSR-AD-001",
+        "description": "Sprint field is detected by schema.custom identifier",
+        "type": FUNCTIONAL,
+        "section": "Auto-Detection from Jira Fields",
+        "tests": [
+            "unit/test_schema.py::test_build_schema_from_fields_detects_sprint",
+        ],
+    },
+    {
+        "id": "JSR-AD-002",
+        "description": "Story-points field is detected by name pattern when schema.custom is absent",
+        "type": FUNCTIONAL,
+        "section": "Auto-Detection from Jira Fields",
+        "tests": [
+            "unit/test_schema.py::test_build_schema_from_fields_detects_story_points_by_name",
+        ],
+    },
+    {
+        "id": "JSR-AD-003",
+        "description": "Undetected fields retain their _DEFAULT_SCHEMA values",
+        "type": FUNCTIONAL,
+        "section": "Auto-Detection from Jira Fields",
+        "tests": [
+            "unit/test_schema.py::test_build_schema_from_fields_preserves_defaults_for_missing",
+        ],
+    },
+    {
+        "id": "JSR-AD-004",
+        "description": "The team field's jql_name is preserved through auto-detection",
+        "type": FUNCTIONAL,
+        "section": "Auto-Detection from Jira Fields",
+        "tests": [
+            "unit/test_schema.py::test_build_schema_from_fields_preserves_team_jql_name",
+        ],
+    },
+    {
+        "id": "JSR-AD-005",
+        "description": "Null or structurally incomplete entries in the Jira fields response are tolerated",
+        "type": FUNCTIONAL,
+        "section": "Auto-Detection from Jira Fields",
+        "tests": [],
+        "partial": True,
+    },
+    # --- 7. Future Enhancements ---
+    {
+        "id": "JSR-FUT-001",
+        "description": "Validate schema entries on load and surface missing required keys as warnings",
+        "type": OPERATIONAL,
+        "section": "Future Enhancements",
+        "tests": [],
+    },
+    {
+        "id": "JSR-FUT-002",
+        "description": "Block duplicate schema_name values on save",
+        "type": OPERATIONAL,
+        "section": "Future Enhancements",
+        "tests": [],
+    },
+    {
+        "id": "JSR-FUT-003",
+        "description": "Add a get_schema_names() convenience function",
+        "type": OPERATIONAL,
+        "section": "Future Enhancements",
+        "tests": [],
+    },
+    {
+        "id": "JSR-FUT-004",
+        "description": "Emit a warning when a non-existent named schema falls back to the default",
+        "type": OPERATIONAL,
+        "section": "Future Enhancements",
+        "tests": [],
+    },
+]
+
+JIRA_FILTER_MANAGEMENT_REQUIREMENTS: list[dict] = [
+    # --- 1. Default Filter Template ---
+    {"id": "JFM-D-001", "description": "Default_Jira_Filter entry ships in config/jira_filters.json", "type": FUNCTIONAL, "section": "Default Filter Template", "tests": [
+        "tests/unit/test_filter_handlers.py::test_default_filter_entry_is_present_and_correct",
+        "tests/component/test_server_filters.py::test_get_filters_default_is_first",
+    ]},
+    {"id": "JFM-D-002", "description": "Default filter pre-sets sensible parameter defaults", "type": FUNCTIONAL, "section": "Default Filter Template", "tests": [
+        "tests/unit/test_filter_handlers.py::test_default_filter_entry_is_present_and_correct",
+    ]},
+    {"id": "JFM-D-003", "description": "Default filter is always returned by GET /api/filters", "type": FUNCTIONAL, "section": "Default Filter Template", "tests": [
+        "tests/unit/test_filter_handlers.py::test_load_filters_injects_default_when_absent_from_file",
+        "tests/component/test_server_filters.py::test_get_filters_always_includes_default_after_user_delete",
+    ]},
+    {"id": "JFM-D-004", "description": "Default filter cannot be deleted", "type": FUNCTIONAL, "section": "Default Filter Template", "tests": [
+        "tests/unit/test_filter_handlers.py::test_delete_default_filter_is_blocked",
+        "tests/component/test_server_filters.py::test_delete_default_filter_returns_error",
+    ]},
+    # --- 2. Filter Persistence — Server API ---
+    {"id": "JFM-P-001", "description": "GET /api/filters returns all saved filters ordered default-first", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
+        "tests/component/test_server_filters.py::test_get_filters_default_is_first",
+    ]},
+    {"id": "JFM-P-002", "description": "GET /api/filters initialises config file from default template if missing", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
+        "tests/unit/test_filter_handlers.py::test_load_filters_creates_file_when_missing",
+    ]},
+    {"id": "JFM-P-003", "description": "POST /api/filters creates a new filter entry when name is new", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
+        "tests/unit/test_filter_handlers.py::test_post_filter_creates_new_entry",
+        "tests/component/test_server_filters.py::test_post_filter_creates_new_and_get_returns_it",
+    ]},
+    {"id": "JFM-P-004", "description": "POST /api/filters updates existing entry when name matches (upsert)", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
+        "tests/unit/test_filter_handlers.py::test_post_filter_updates_existing_entry",
+        "tests/component/test_server_filters.py::test_post_filter_upserts_on_duplicate_name",
+    ]},
+    {"id": "JFM-P-005", "description": "POST /api/filters rejects missing JIRA_PROJECT", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
+        "tests/unit/test_filter_handlers.py::test_post_filter_rejects_blank_project",
+    ]},
+    {"id": "JFM-P-006", "description": "POST /api/filters builds correct JQL from params", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
+        "tests/unit/test_filter_handlers.py::test_build_jql_from_params[params0-project = PROJ-None]",
+        "tests/unit/test_filter_handlers.py::test_build_jql_from_params[params1-project IN (A, B)-None]",
+        "tests/unit/test_filter_handlers.py::test_build_jql_from_params[params2-\"Team[Team]\" = T1-None]",
+        "tests/unit/test_filter_handlers.py::test_build_jql_from_params[params3-status IN (Done, Closed)-None]",
+        "tests/unit/test_filter_handlers.py::test_build_jql_from_params[params4-project = PROJ-sprint in closedSprints()]",
+        "tests/unit/test_filter_handlers.py::test_build_jql_from_params[params5-type IN (Story, Bug)-None]",
+    ]},
+    {"id": "JFM-P-007", "description": "POST /api/filters uses schema team JQL field name when schema_name provided", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
+        "tests/unit/test_filter_handlers.py::test_post_filter_uses_schema_team_jql_field",
+    ]},
+    {"id": "JFM-P-008", "description": "DELETE /api/filters/<slug> removes the matching entry", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
+        "tests/component/test_server_filters.py::test_delete_filter_removes_entry",
+    ]},
+    {"id": "JFM-P-009", "description": "DELETE /api/filters/<slug> returns 404-style error for unknown slug", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
+        "tests/unit/test_filter_handlers.py::test_delete_unknown_slug_returns_not_found",
+        "tests/component/test_server_filters.py::test_delete_unknown_slug_returns_not_found",
+    ]},
+    {"id": "JFM-P-010", "description": "Filter data persists across application restarts", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
+        "tests/unit/test_filter_handlers.py::test_filter_data_persists_across_loads",
+        "tests/component/test_server_filters.py::test_filter_persists_across_server_restart",
+    ]},
+    # --- 3. UI — Filter Name Pre-population ---
+    {"id": "JFM-UI-001", "description": "Filter Name field is pre-populated on page load when empty", "type": FUNCTIONAL, "section": "UI — Filter Name Pre-population", "tests": [
+        "tests/e2e/test_e2e_filters.py::test_filter_name_prepopulated_on_empty_load",
+    ]},
+    {"id": "JFM-UI-002", "description": "Pre-population does not overwrite a previously entered or saved value", "type": FUNCTIONAL, "section": "UI — Filter Name Pre-population", "tests": [
+        "tests/e2e/test_e2e_filters.py::test_filter_name_not_overwritten_after_user_edit",
+    ]},
+    # --- 4. UI — Filter List Behaviour ---
+    {"id": "JFM-UI-003", "description": "Saved filters loaded and displayed on page load", "type": FUNCTIONAL, "section": "UI — Filter List Behaviour", "tests": [
+        "tests/e2e/test_e2e_filters.py::test_filter_list_displayed_on_load",
+    ]},
+    {"id": "JFM-UI-004", "description": "Default filter does not show a Remove button", "type": FUNCTIONAL, "section": "UI — Filter List Behaviour", "tests": [
+        "tests/e2e/test_e2e_filters.py::test_default_filter_has_no_remove_button",
+    ]},
+    {"id": "JFM-UI-005", "description": "Non-default user filters show a Remove button", "type": FUNCTIONAL, "section": "UI — Filter List Behaviour", "tests": [
+        "tests/e2e/test_e2e_filters.py::test_user_filter_has_remove_button",
+    ]},
+    {"id": "JFM-UI-006", "description": "Removing a filter via the Remove button updates the list immediately", "type": FUNCTIONAL, "section": "UI — Filter List Behaviour", "tests": [
+        "tests/e2e/test_e2e_filters.py::test_remove_filter_updates_list",
+    ]},
+    # --- 5. Future Enhancements ---
+    {"id": "JFM-FUT-001", "description": "Apply selected filter params to .env before running main.py", "type": FUNCTIONAL, "section": "Future Enhancements", "tests": [
+        "tests/unit/test_filter_handlers.py::test_generate_applies_filter_params_to_subprocess_env",
+    ]},
+    {"id": "JFM-FUT-002", "description": "Allow reordering of saved filters in the UI", "type": OPERATIONAL, "section": "Future Enhancements", "tests": []},
+    {"id": "JFM-FUT-003", "description": "Export / import filter config as a downloadable JSON file", "type": OPERATIONAL, "section": "Future Enhancements", "tests": []},
+]
+
+# ── Logging requirements ───────────────────────────────────────────────────
+
+LOGGING_REQUIREMENTS: list[dict] = [
+    # --- 1. Log File ---
+    {
+        "id": "LOG-01",
+        "description": "Each application run writes a unique timestamped log file",
+        "type": FUNCTIONAL,
+        "section": "Log File",
+        "tests": [
+            "unit/test_logging_setup.py::test_setup_logging_creates_log_file",
+            "unit/test_logging_setup.py::test_setup_logging_log_filename_matches_pattern",
+        ],
+    },
+    {
+        "id": "LOG-02",
+        "description": "The log directory is created automatically if it does not exist",
+        "type": FUNCTIONAL,
+        "section": "Log File",
+        "tests": [
+            "unit/test_logging_setup.py::test_setup_logging_creates_log_directory",
+        ],
+    },
+    # --- 2. Log Format ---
+    {
+        "id": "LOG-03",
+        "description": "All log lines follow a consistent structured format",
+        "type": FUNCTIONAL,
+        "section": "Log Format",
+        "tests": [
+            "unit/test_logging_setup.py::test_log_file_format",
+        ],
+    },
+    {
+        "id": "LOG-04",
+        "description": "File and console output use the same formatter",
+        "type": FUNCTIONAL,
+        "section": "Log Format",
+        "tests": [
+            "unit/test_logging_setup.py::test_log_file_format",
+        ],
+    },
+    # --- 3. Output Channels ---
+    {
+        "id": "LOG-05",
+        "description": "All log output reaches both a log file and stdout",
+        "type": FUNCTIONAL,
+        "section": "Output Channels",
+        "tests": [
+            "unit/test_logging_setup.py::test_setup_logging_attaches_file_handler",
+            "unit/test_logging_setup.py::test_setup_logging_attaches_stream_handler",
+        ],
+    },
+    {
+        "id": "LOG-06",
+        "description": "Log files are written in UTF-8 encoding",
+        "type": FUNCTIONAL,
+        "section": "Output Channels",
+        "tests": [
+            "unit/test_logging_setup.py::test_log_file_format",
+        ],
+    },
+    # --- 4. Log Levels ---
+    {
+        "id": "LOG-07",
+        "description": "The root logger captures all severity levels by default",
+        "type": FUNCTIONAL,
+        "section": "Log Levels",
+        "tests": [
+            "unit/test_logging_setup.py::test_setup_logging_sets_debug_level",
+        ],
+    },
+    {
+        "id": "LOG-08",
+        "description": "A custom SUCCESS level is defined with numeric value 25",
+        "type": FUNCTIONAL,
+        "section": "Log Levels",
+        "tests": [
+            "unit/test_logging_setup.py::test_success_level_value",
+        ],
+    },
+    {
+        "id": "LOG-09",
+        "description": "The SUCCESS level name is registered with the logging system",
+        "type": FUNCTIONAL,
+        "section": "Log Levels",
+        "tests": [
+            "unit/test_logging_setup.py::test_success_level_name_registered",
+        ],
+    },
+    {
+        "id": "LOG-10",
+        "description": "Logger instances expose a .success() convenience method",
+        "type": FUNCTIONAL,
+        "section": "Log Levels",
+        "tests": [
+            "unit/test_logging_setup.py::test_logger_has_success_method",
+        ],
+    },
+    # --- 5. Entry-Point Integration ---
+    {
+        "id": "LOG-11",
+        "description": "setup_logging() is invoked from the CLI entry point",
+        "type": FUNCTIONAL,
+        "section": "Entry-Point Integration",
+        "tests": [
+            "unit/test_logging_setup.py::test_setup_logging_returns_logger_and_path",
+        ],
+    },
+    {
+        "id": "LOG-12",
+        "description": "setup_logging() is invoked from the server entry point",
+        "type": FUNCTIONAL,
+        "section": "Entry-Point Integration",
+        "tests": [
+            "unit/test_logging_setup.py::test_setup_logging_returns_logger_and_path",
+        ],
+    },
+    # --- 6. Code Quality ---
+    {
+        "id": "LOG-13",
+        "description": "Entry-point modules use the logging system instead of print()",
+        "type": FUNCTIONAL,
+        "section": "Code Quality",
+        "tests": [
+            "unit/test_imports.py::test_import_app_logging_setup",
+        ],
+    },
+    {
+        "id": "LOG-14",
+        "description": "Log call sites use lazy %-style argument formatting",
+        "type": FUNCTIONAL,
+        "section": "Code Quality",
+        "tests": [
+            "unit/test_logging_setup.py::test_log_file_format",
+        ],
+    },
+    # --- 7. Security ---
+    {
+        "id": "LOG-15",
+        "description": "Sensitive credentials are not written to log files",
+        "type": FUNCTIONAL,
+        "section": "Security",
+        "tests": [
+            "unit/test_logging_setup.py::test_credentials_not_in_log_output",
+        ],
+    },
+    # --- 8. Performance ---
+    {
+        "id": "LOG-16",
+        "description": "Logging overhead does not measurably slow report generation",
+        "type": OPERATIONAL,
+        "section": "Performance",
+        "tests": [],
+    },
+    # --- 9. Log Retention ---
+    {
+        "id": "LOG-17",
+        "description": "Log files from previous runs are preserved across runs",
+        "type": FUNCTIONAL,
+        "section": "Log Retention",
+        "tests": [
+            "unit/test_logging_setup.py::test_setup_logging_creates_log_file",
+        ],
+    },
+    {
+        "id": "LOG-18",
+        "description": "Log files are excluded from version control",
+        "type": OPERATIONAL,
+        "section": "Log Retention",
+        "tests": [],
+    },
+]
+
 # ── All requirements combined ──────────────────────────────────────────────
 
 ALL_REQUIREMENTS: dict[str, list[dict]] = {
@@ -1363,4 +2385,9 @@ ALL_REQUIREMENTS: dict[str, list[dict]] = {
     "installation_requirements": INSTALLATION_REQUIREMENTS,
     "app_non_functional_requirements": NON_FUNCTIONAL_REQUIREMENTS,
     "dau_survey_requirements": DAU_SURVEY_REQUIREMENTS,
+    "jira_connection_requirements": JIRA_CONNECTION_REQUIREMENTS,
+    "jira_data_fetching_requirements": JIRA_DATA_FETCHING_REQUIREMENTS,
+    "jira_schema_requirements": JIRA_SCHEMA_REQUIREMENTS,
+    "jira_filter_management_requirements": JIRA_FILTER_MANAGEMENT_REQUIREMENTS,
+    "logging_requirements": LOGGING_REQUIREMENTS,
 }

@@ -8,10 +8,12 @@ Layer-specific fixtures live in each layer's own conftest.py:
 
 from __future__ import annotations
 
+import logging
 import sys
 import threading
 from pathlib import Path
 
+import allure
 import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -122,3 +124,31 @@ def server_url():
     thread.start()
     yield f"http://127.0.0.1:{port}"
     server.shutdown()
+
+
+# ---------------------------------------------------------------------------
+# Allure log / output capture  (applied to every test automatically)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(autouse=True)
+def attach_logs_to_allure(caplog):
+    """Capture Python logging records at DEBUG+ and attach them as TEXT to Allure."""
+    with caplog.at_level(logging.DEBUG):
+        yield
+    if caplog.records:
+        log_text = "\n".join(
+            f"{r.levelname:<8} {r.name}: {r.getMessage()}" for r in caplog.records
+        )
+        allure.attach(log_text, name="captured logs", attachment_type=allure.attachment_type.TEXT)
+
+
+@pytest.fixture(autouse=True)
+def attach_stdout_stderr_to_allure(capsys):
+    """Attach any captured stdout/stderr (including server request logs) to Allure."""
+    yield
+    captured = capsys.readouterr()
+    if captured.out.strip():
+        allure.attach(captured.out, name="stdout", attachment_type=allure.attachment_type.TEXT)
+    if captured.err.strip():
+        allure.attach(captured.err, name="stderr", attachment_type=allure.attachment_type.TEXT)
