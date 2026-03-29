@@ -1,0 +1,18 @@
+[
+  {
+    "filter_name": "Default_Jira_Filter",
+    "slug": "default_jira_filter",
+    "description": "Default JQL filter template. Set JIRA_PROJECT before saving.",
+    "is_default": true,
+    "created_at": null,
+    "jql": "",
+    "params": {
+      "JIRA_PROJECT": "",
+      "JIRA_TEAM_ID": "",
+      "JIRA_ISSUE_TYPES": "",
+      "JIRA_FILTER_STATUS": "Done",
+      "JIRA_CLOSED_SPRINTS_ONLY": "true",
+      "schema_name": "Default_Jira_Cloud"
+    }
+  }
+]

@@ -272,6 +272,7 @@ def test_delete_schema_returns_404_when_missing(monkeypatch, tmp_path):
 
 def test_handle_generate_emits_error_event_for_nonzero_exit(monkeypatch, tmp_path):
     srv, handler = _make_handler(monkeypatch, tmp_path)
+    handler.path = "/api/generate"
 
     class _FakeProc:
         def __init__(self):
@@ -296,6 +297,7 @@ def test_handle_generate_emits_error_event_for_nonzero_exit(monkeypatch, tmp_pat
 
 def test_handle_generate_emits_error_when_main_file_missing(monkeypatch, tmp_path):
     srv, handler = _make_handler(monkeypatch, tmp_path)
+    handler.path = "/api/generate"
     monkeypatch.setattr(srv.subprocess, "Popen", lambda *args, **kwargs: (_ for _ in ()).throw(FileNotFoundError()))
 
     handler._handle_generate()
@@ -346,7 +348,8 @@ def test_handle_test_connection_uses_custom_ssl_context(monkeypatch, tmp_path):
             "token": "secret-token",
         },
     )
-    context_calls: list[str] = []
+    create_calls: list[tuple] = []
+    load_verify_calls: list[str] = []
     urlopen_calls: list[object] = []
     mock_response = MagicMock()
     mock_response.read.return_value = json.dumps(
@@ -355,8 +358,13 @@ def test_handle_test_connection_uses_custom_ssl_context(monkeypatch, tmp_path):
     mock_response.__enter__.return_value = mock_response
     mock_response.__exit__.return_value = False
 
+    mock_ctx = MagicMock()
+    mock_ctx.load_verify_locations = lambda cafile=None: load_verify_calls.append(cafile)
+
     monkeypatch.setattr(srv.config, "JIRA_SSL_CERT", "/tmp/jira_ca_bundle.pem")
-    monkeypatch.setattr(srv.ssl, "create_default_context", lambda cafile=None: context_calls.append(cafile) or object())
+    monkeypatch.setattr(
+        srv.ssl, "create_default_context", lambda *args, **kwargs: create_calls.append(kwargs) or mock_ctx
+    )
     monkeypatch.setattr(
         srv.urllib.request,
         "urlopen",
@@ -365,7 +373,14 @@ def test_handle_test_connection_uses_custom_ssl_context(monkeypatch, tmp_path):
 
     handler._handle_test_connection()
 
-    assert context_calls == ["/tmp/jira_ca_bundle.pem"]
+    # create_default_context must be called WITHOUT cafile so system CAs are included
+    assert len(create_calls) == 1
+    assert "cafile" not in create_calls[0], (
+        "_jira_ssl_context() must not pass cafile= to create_default_context(); "
+        "system CA store would be bypassed and connections break after cert renewal"
+    )
+    # The custom cert must be added via load_verify_locations
+    assert load_verify_calls == ["/tmp/jira_ca_bundle.pem"]
     assert len(urlopen_calls) == 1
 
 
@@ -400,3 +415,62 @@ def test_serve_file_catches_client_disconnect(monkeypatch, tmp_path, exc_type):
     handler.wfile.write = _exploding_write
     # Should not raise
     handler._serve_file(target)
+
+
+# ── _handle_cert_status ──────────────────────────────────────────────────
+
+
+def test_handle_cert_status_returns_validity_fields_for_valid_cert(monkeypatch, tmp_path):
+    """_handle_cert_status returns exists=True plus all validity fields when cert parses OK."""
+    srv, handler = _make_handler(monkeypatch, tmp_path)
+
+    certs_dir = tmp_path / "certs"
+    certs_dir.mkdir()
+
+    fake_validate_result = {
+        "valid": True,
+        "expires_at": "2026-12-31",
+        "days_remaining": 180,
+        "subject": "CN=*.example.com",
+    }
+    (certs_dir / "jira_ca_bundle.pem").write_bytes(b"placeholder")
+    monkeypatch.setattr("app.utils.cert_utils.validate_cert", lambda path: fake_validate_result)
+
+    handler._handle_cert_status()
+    status, data = _json_response(handler)
+
+    assert status == 200
+    assert data["exists"] is True
+    assert data["path"] == "certs/jira_ca_bundle.pem"
+    assert data["valid"] is True
+    assert data["expires_at"] == "2026-12-31"
+    assert data["days_remaining"] == 180
+    assert data["subject"] == "CN=*.example.com"
+    assert "error" not in data
+
+
+def test_handle_cert_status_returns_error_key_when_cert_unreadable(monkeypatch, tmp_path):
+    """_handle_cert_status returns exists=True plus error key when validate_cert fails."""
+    srv, handler = _make_handler(monkeypatch, tmp_path)
+
+    certs_dir = tmp_path / "certs"
+    certs_dir.mkdir()
+    (certs_dir / "jira_ca_bundle.pem").write_bytes(b"not a valid PEM")
+
+    corrupt_result = {
+        "valid": False,
+        "expires_at": None,
+        "days_remaining": None,
+        "subject": None,
+        "error": "Unable to load PEM file",
+    }
+    monkeypatch.setattr("app.utils.cert_utils.validate_cert", lambda path: corrupt_result)
+
+    handler._handle_cert_status()
+    status, data = _json_response(handler)
+
+    assert status == 200
+    assert data["exists"] is True
+    assert data["path"] == "certs/jira_ca_bundle.pem"
+    assert data["valid"] is False
+    assert data["error"] == "Unable to load PEM file"

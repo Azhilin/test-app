@@ -12,7 +12,7 @@ import app.cli as cli
 pytestmark = pytest.mark.unit
 
 
-def test_main_returns_1_when_config_invalid(monkeypatch, capsys):
+def test_main_returns_1_when_config_invalid(monkeypatch, caplog):
     create_client = MagicMock()
 
     monkeypatch.setattr(cli.config, "validate_config", lambda: ["JIRA_URL is not set"])
@@ -22,11 +22,11 @@ def test_main_returns_1_when_config_invalid(monkeypatch, capsys):
     rc = cli.main()
 
     assert rc == 1
-    assert "Config error: JIRA_URL is not set" in capsys.readouterr().err
+    assert "Config error: JIRA_URL is not set" in caplog.text
     create_client.assert_not_called()
 
 
-def test_main_returns_1_when_fetch_sprint_data_fails(monkeypatch, capsys):
+def test_main_returns_1_when_fetch_sprint_data_fails(monkeypatch, caplog):
     mock_jira = object()
 
     monkeypatch.setattr(cli.config, "validate_config", lambda: [])
@@ -41,7 +41,7 @@ def test_main_returns_1_when_fetch_sprint_data_fails(monkeypatch, capsys):
     rc = cli.main()
 
     assert rc == 1
-    assert "Failed to fetch Jira data: boom" in capsys.readouterr().err
+    assert "Failed to fetch Jira data: boom" in caplog.text
 
 
 def test_main_keeps_running_when_filter_name_lookup_fails(monkeypatch, tmp_path):

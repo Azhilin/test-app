@@ -12,6 +12,7 @@ Usage:
 
 import base64
 import json
+import logging
 import os
 import re
 import ssl
@@ -28,6 +29,8 @@ from urllib.parse import quote as urlquote
 from urllib.parse import unquote as urlunquote
 
 from dotenv import dotenv_values, load_dotenv
+
+logger = logging.getLogger(__name__)
 
 from app.core import config
 
@@ -127,10 +130,21 @@ class Handler(BaseHTTPRequestHandler):
         return (ROOT / "generated" / "reports").resolve()
 
     @staticmethod
+    def _sanitise_exc(exc: BaseException, *secrets: str) -> str:
+        """Replace known secret values in an exception string before logging."""
+        msg = str(exc)
+        for s in secrets:
+            if s:
+                msg = msg.replace(s, "***")
+        return msg
+
+    @staticmethod
     def _jira_ssl_context() -> ssl.SSLContext | None:
         if config.JIRA_SSL_CERT is True:
             return None
-        return ssl.create_default_context(cafile=config.JIRA_SSL_CERT)
+        ctx = ssl.create_default_context()
+        ctx.load_verify_locations(cafile=config.JIRA_SSL_CERT)
+        return ctx
 
     def _resolve_report_path(self, requested_path: str) -> Path | None:
         rel = urlunquote(requested_path[len("/generated/reports/") :]).lstrip("/")
@@ -181,6 +195,8 @@ class Handler(BaseHTTPRequestHandler):
             self._handle_get_schemas()
         elif path == "/api/reports":
             self._handle_get_reports()
+        elif path == "/api/filters":
+            self._handle_get_filters()
         elif path.startswith("/api/schema-detail/"):
             filename = path[len("/api/schema-detail/") :]
             self._handle_get_schema_detail(filename)
@@ -206,6 +222,8 @@ class Handler(BaseHTTPRequestHandler):
             self._handle_post_config()
         elif path == "/api/schemas":
             self._handle_post_schema()
+        elif path == "/api/filters":
+            self._handle_post_filter()
         else:
             self.send_response(404)
             self.end_headers()
@@ -218,6 +236,9 @@ class Handler(BaseHTTPRequestHandler):
             self._handle_delete_schema(filename)
         elif path == "/api/schemas":
             self._handle_delete_schema()
+        elif path.startswith("/api/filters/"):
+            slug = urlunquote(path[len("/api/filters/") :])
+            self._handle_delete_filter(slug)
         else:
             self.send_response(404)
             self.end_headers()
@@ -237,6 +258,13 @@ class Handler(BaseHTTPRequestHandler):
         if not url or not email or not token:
             self._send_json(400, {"ok": False, "error": "url, email, and token are required"})
             return
+
+        if token == "***":
+            _, _, env_token = self._read_env_credentials()
+            if not env_token:
+                self._send_json(400, {"ok": False, "error": "No saved token on server"})
+                return
+            token = env_token
 
         endpoint = f"{url}/rest/api/3/myself"
         creds = base64.b64encode(f"{email}:{token}".encode()).decode()
@@ -408,7 +436,7 @@ class Handler(BaseHTTPRequestHandler):
         certs_dir = ROOT / "certs"
         certs_dir.mkdir(exist_ok=True)
         cert_file = certs_dir / "jira_ca_bundle.pem"
-        cert_file.write_text(pem, encoding="ascii")
+        cert_file.write_bytes(pem.encode("ascii"))
 
         self._send_json(200, {"ok": True, "path": "certs/jira_ca_bundle.pem", "host": host})
 
@@ -563,7 +591,7 @@ class Handler(BaseHTTPRequestHandler):
                     populated_fields = [k for k, v in issue_fields.items() if v is not None]
             except (urllib.error.HTTPError, urllib.error.URLError, OSError) as exc:
                 # Best-effort sampling of a recent issue; failure is non-fatal but logged for debugging.
-                print(f"Warning: failed to fetch sample Jira issue for schema inference: {exc}", file=sys.stderr)
+                logger.warning("Failed to fetch sample Jira issue for schema inference: %s", self._sanitise_exc(exc, url, email, token))
 
             filter_jql = None
             if filter_id:
@@ -572,7 +600,7 @@ class Handler(BaseHTTPRequestHandler):
                     filter_jql = filter_data.get("jql")
                 except (urllib.error.HTTPError, urllib.error.URLError, OSError) as exc:
                     # Failure to load filter details is non-fatal; continue without filter JQL.
-                    print(f"Warning: could not fetch Jira filter {filter_id}: {exc}", file=sys.stderr)
+                    logger.warning("Could not fetch Jira filter %s: %s", filter_id, self._sanitise_exc(exc, url, email, token))
 
             created_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S")
             filename = f"{self._slugify(legacy_name)}.json"
@@ -682,6 +710,188 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self._send_json(404, {"ok": False, "error": f"Schema '{name}' not found"})
 
+    # ── Filter management ────────────────────────────────────────────────────
+
+    @staticmethod
+    def _filters_config_path() -> Path:
+        return ROOT / "config" / "jira_filters.json"
+
+    _DEFAULT_FILTER: dict = {
+        "filter_name": "Default_Jira_Filter",
+        "slug": "default_jira_filter",
+        "description": "Default JQL filter template. Set JIRA_PROJECT before saving.",
+        "is_default": True,
+        "created_at": None,
+        "jql": "",
+        "params": {
+            "JIRA_PROJECT": "",
+            "JIRA_TEAM_ID": "",
+            "JIRA_ISSUE_TYPES": "",
+            "JIRA_FILTER_STATUS": "Done",
+            "JIRA_CLOSED_SPRINTS_ONLY": "true",
+            "schema_name": "Default_Jira_Cloud",
+        },
+    }
+
+    def _load_filters(self) -> list[dict]:
+        """Read config/jira_filters.json, creating it with the default entry if missing."""
+        path = self._filters_config_path()
+        if not path.is_file():
+            filters = [self._DEFAULT_FILTER.copy()]
+            path.write_text(json.dumps(filters, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+            return filters
+        try:
+            filters = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(filters, list):
+                filters = []
+        except (OSError, json.JSONDecodeError):
+            filters = []
+        # Ensure the default entry is always present
+        if not any(f.get("is_default") for f in filters):
+            filters.insert(0, self._DEFAULT_FILTER.copy())
+        return filters
+
+    def _save_filters(self, filters: list[dict]) -> None:
+        path = self._filters_config_path()
+        path.write_text(json.dumps(filters, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    @staticmethod
+    def _build_jql_from_params(params: dict, team_jql_field: str = "Team[Team]") -> str:
+        """Build a JQL query from filter params. Mirrors buildJqlLocally() in ui/index.html."""
+
+        def jql_quote(v: str) -> str:
+            if (v.startswith('"') and v.endswith('"')) or (v.startswith("'") and v.endswith("'")):
+                return v
+            if any(c in v for c in " (),=<>"):
+                return f'"{v}"'
+            return v
+
+        raw_project = (params.get("JIRA_PROJECT") or "").strip()
+        projects = [p.strip() for p in raw_project.split(",") if p.strip()]
+        if not projects:
+            return ""
+
+        clauses: list[str] = []
+        if len(projects) == 1:
+            clauses.append(f"project = {projects[0]}")
+        else:
+            clauses.append(f"project IN ({', '.join(projects)})")
+
+        raw_team = (params.get("JIRA_TEAM_ID") or "").strip()
+        team_ids = [t.strip() for t in raw_team.split(",") if t.strip()]
+        if team_ids:
+            quoted = [jql_quote(t) for t in team_ids]
+            tf = f'"{team_jql_field}"'
+            if len(quoted) == 1:
+                clauses.append(f"{tf} = {quoted[0]}")
+            else:
+                clauses.append(f"{tf} IN ({', '.join(quoted)})")
+
+        raw_status = (params.get("JIRA_FILTER_STATUS") or "Done").strip()
+        statuses = [s.strip() for s in raw_status.split(",") if s.strip()] or ["Done"]
+        quoted_st = [jql_quote(s) for s in statuses]
+        if len(quoted_st) == 1:
+            clauses.append(f"status = {quoted_st[0]}")
+        else:
+            clauses.append(f"status IN ({', '.join(quoted_st)})")
+
+        raw_types = (params.get("JIRA_ISSUE_TYPES") or "").strip()
+        types = [t.strip() for t in raw_types.split(",") if t.strip()]
+        if types:
+            clauses.append(f"type IN ({', '.join(jql_quote(t) for t in types)})")
+
+        closed_only = (params.get("JIRA_CLOSED_SPRINTS_ONLY") or "true").strip().lower()
+        if closed_only in ("1", "true", "yes", "on"):
+            clauses.append("sprint in closedSprints()")
+
+        return " AND ".join(clauses)
+
+    def _handle_get_filters(self) -> None:
+        """Return all saved filters from config/jira_filters.json."""
+        filters = self._load_filters()
+        # Normalise for the UI: default first, then user filters newest-first
+        defaults = [f for f in filters if f.get("is_default")]
+        user = [f for f in filters if not f.get("is_default")]
+        user.sort(key=lambda f: f.get("created_at") or "", reverse=True)
+        self._send_json(200, {"ok": True, "filters": defaults + user})
+
+    def _handle_post_filter(self) -> None:
+        """Create or update a named filter in config/jira_filters.json."""
+        body = self._read_json_body()
+        if body is None:
+            self._send_json(400, {"ok": False, "error": "Invalid JSON body"})
+            return
+
+        name = (body.get("name") or "").strip()
+        params = body.get("params") or {}
+
+        if not name:
+            self._send_json(400, {"ok": False, "error": "Filter name is required"})
+            return
+        if not (params.get("JIRA_PROJECT") or "").strip():
+            self._send_json(200, {"ok": False, "error": "JIRA_PROJECT is required to build a JQL filter"})
+            return
+
+        # Resolve team JQL field name from schema
+        team_jql_field = "Team[Team]"
+        schema_name = (params.get("schema_name") or "").strip()
+        if schema_name:
+            try:
+                from app.core import schema as schema_mod
+                schema = schema_mod.get_schema(schema_name)
+                if schema:
+                    team_field = (schema.get("fields") or {}).get("team") or {}
+                    team_jql_field = team_field.get("jql_name") or team_field.get("id") or team_jql_field
+            except Exception:  # noqa: BLE001
+                pass
+
+        jql = self._build_jql_from_params(params, team_jql_field)
+
+        slug = self._slugify(name) or "filter"
+        created_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S")
+
+        filters = self._load_filters()
+        idx = next((i for i, f in enumerate(filters) if f.get("filter_name", "").lower() == name.lower()), None)
+        updated = idx is not None and not filters[idx].get("is_default")
+
+        entry: dict = {
+            "filter_name": name,
+            "slug": slug,
+            "description": "",
+            "is_default": False,
+            "created_at": created_at,
+            "jql": jql,
+            "params": params,
+        }
+
+        if updated:
+            entry["created_at"] = filters[idx].get("created_at") or created_at
+            filters[idx] = entry
+        else:
+            filters.append(entry)
+
+        self._save_filters(filters)
+        self._send_json(200, {"ok": True, "updated": updated, "jql": jql, "slug": slug, "created_at": entry["created_at"]})
+
+    def _handle_delete_filter(self, slug: str) -> None:
+        """Remove a filter entry by slug. The default filter cannot be deleted."""
+        if not slug:
+            self._send_json(400, {"ok": False, "error": "Filter slug is required"})
+            return
+
+        filters = self._load_filters()
+        target = next((f for f in filters if f.get("slug") == slug), None)
+
+        if target is None:
+            self._send_json(200, {"ok": False, "error": "Filter not found"})
+            return
+        if target.get("is_default"):
+            self._send_json(200, {"ok": False, "error": "Cannot delete the default filter"})
+            return
+
+        self._save_filters([f for f in filters if f.get("slug") != slug])
+        self._send_json(200, {"ok": True})
+
     def _handle_generate(self) -> None:
         """Run main.py and stream stdout/stderr as Server-Sent Events."""
         self.send_response(200)
@@ -705,6 +915,28 @@ class Handler(BaseHTTPRequestHandler):
 
         try:
             fresh_env = {**os.environ, **dotenv_values(ROOT / ".env")}
+
+            # JFM-FUT-001: apply selected filter's params to the subprocess env
+            qs = parse_qs(urlparse(self.path).query)
+            filter_slug = urlunquote((qs.get("filter") or [""])[0]).strip()
+            if filter_slug:
+                _FILTER_PARAM_KEYS = [
+                    "JIRA_PROJECT",
+                    "JIRA_TEAM_ID",
+                    "JIRA_ISSUE_TYPES",
+                    "JIRA_FILTER_STATUS",
+                    "JIRA_CLOSED_SPRINTS_ONLY",
+                    "JIRA_FILTER_PAGE_SIZE",
+                ]
+                for _entry in self._load_filters():
+                    if _entry.get("slug") == filter_slug:
+                        _params = _entry.get("params") or {}
+                        for _key in _FILTER_PARAM_KEYS:
+                            _val = (_params.get(_key) or "").strip()
+                            if _val:
+                                fresh_env[_key] = _val
+                        break
+
             proc = subprocess.Popen(
                 [sys.executable, str(ROOT / "main.py")],
                 stdout=subprocess.PIPE,
@@ -738,14 +970,14 @@ def run(port: int = PORT, host: str = HOST) -> None:
     """Start the HTTP server on the given port."""
     server = Server((host, port), Handler)
     url = f"http://localhost:{port}" if host in {"127.0.0.1", "localhost"} else f"http://{host}:{port}"
-    print("  AI Adoption Metrics — dev server")
-    print(f"  Listening on {url}")
-    print("  Press Ctrl+C to stop.\n")
+    logger.info("AI Adoption Metrics — dev server")
+    logger.info("Listening on %s", url)
+    logger.info("Press Ctrl+C to stop.")
     webbrowser.open(url)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\nServer stopped.")
+        logger.info("Server stopped.")
 
 
 if __name__ == "__main__":

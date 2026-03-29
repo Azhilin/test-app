@@ -53,6 +53,13 @@ def test_import_app_cert_utils():
     assert callable(validate_cert)
 
 
+def test_import_app_logging_setup():
+    from app.utils.logging_setup import setup_logging, SUCCESS_LEVEL
+
+    assert callable(setup_logging)
+    assert SUCCESS_LEVEL == 25
+
+
 def test_main_imports_resolve():
     """Import main.py via importlib without executing it — confirms 'from app import ...' resolves."""
     main_path = Path(__file__).resolve().parent.parent.parent / "main.py"

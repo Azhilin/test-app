@@ -25,7 +25,11 @@
       "Bash(echo \"bandit exit: $?\")",
       "Bash(.venv/Scripts/python tests/tools/test_coverage.py 2>&1)",
       "Bash(PYTHONPATH=. .venv/Scripts/python tests/tools/test_coverage.py 2>&1)",
-      "Bash(echo \"Exit code: $?\")"
+      "Bash(echo \"Exit code: $?\")",
+      "Bash(xargs grep:*)",
+      "Bash(python:*)",
+      "Bash(.venv/Scripts/python tests/tools/test_coverage.py)",
+      "Bash(.venv/Scripts/python -m tests.tools.test_coverage)"
     ]
   }
 }

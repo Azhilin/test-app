@@ -20,7 +20,10 @@ def validate_cert(cert_path: Path) -> dict:
         pem_bytes = cert_path.read_bytes()
         cert = x509.load_pem_x509_certificate(pem_bytes)
 
-        expires_utc = cert.not_valid_after_utc
+        try:
+            expires_utc = cert.not_valid_after_utc
+        except AttributeError:
+            expires_utc = cert.not_valid_after.replace(tzinfo=UTC)
         now_utc = datetime.now(UTC)
         days_remaining = (expires_utc - now_utc).days
 
