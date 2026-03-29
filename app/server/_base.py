@@ -11,7 +11,6 @@ import sys
 import sys as _sys
 import urllib.error
 import urllib.request
-import webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs
