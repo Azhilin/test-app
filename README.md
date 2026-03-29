@@ -13,6 +13,7 @@ This will:
 - Detect or install Python 3.12 (per-user, no admin rights needed)
 - Create a `.venv` virtual environment
 - Install all required packages from `requirements.txt`
+- Optionally install dev dependencies (`pytest`, linters, etc.) and the Playwright Chromium browser (required for e2e tests)
 - Create `.env` from `.env.example` when `.env` is missing
 - Prompt to keep or back up and recreate `.env` when it already exists
 
