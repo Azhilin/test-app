@@ -62,7 +62,7 @@ Common fields you may access:
 
 No dedicated configuration variables exist for custom trends. If your metric needs
 configurable parameters, add them to `.env` and `app/core/config.py` following the
-[extension pattern for config variables](../../.cursor/rules/extension-patterns.mdc).
+[extension pattern for config variables](../../../.cursor/rules/extension-patterns.mdc).
 
 ## Calculation
 
@@ -125,7 +125,7 @@ in both the HTML and Markdown reports.
 - **Name keys clearly** — the key names become column headers in the report. Use
   human-readable names like `bug_pct` or `carry_over_count` rather than `x` or `val`.
 - **Document your metric** — copy this file as a template, replace the placeholder content,
-  and commit it to `docs/metrics/` alongside the implementation.
+  and commit it to `docs/product/metrics/` alongside the implementation.
 - **Add a unit test** — follow the pattern in `tests/unit/` using `make_sprint()` and
   `make_issue()` from `tests/conftest.py`. Run `python tests/tools/test_coverage.py` after
   adding tests to update the coverage stats.
@@ -148,7 +148,7 @@ def compute_custom_trends(
 
 **Location in `metrics_dict`:** `metrics["custom_trends"]` — a list (empty by default).
 
-**Full extension checklist** (from the project's [Extension Patterns](../../.cursor/rules/extension-patterns.mdc)):
+**Full extension checklist** (from the project's [Extension Patterns](../../../.cursor/rules/extension-patterns.mdc)):
 
 1. Replace the body of `compute_custom_trends()` in `app/core/metrics.py`. Each returned
    dict must include `sprint_id` and `sprint_name` plus at least one metric value key.
@@ -158,7 +158,7 @@ def compute_custom_trends(
    - `app/reporters/report_md.py` renders a Markdown table.
    - `templates/report.html.j2` renders an HTML table.
 4. Add a test file at `tests/unit/test_custom_trends.py`.
-5. Run `python tests/tools/test_coverage.py` to update `tests/test_coverage.md`.
+5. Run `python tests/tools/test_coverage.py` to update `tests/coverage/test_coverage.md`.
 
 **If you need a completely new metric** (not a replacement for custom_trends), follow the
 full *Adding a New Metric* pattern in `extension-patterns.mdc`, which adds a new key to
