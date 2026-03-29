@@ -102,6 +102,7 @@ class HandlerBase(BaseHTTPRequestHandler):
         try:
             self.wfile.write(data)
         except _CLIENT_DISCONNECT:
+            # Client disconnected before or during write; no further action needed.
             pass
 
     def _cors_headers(self) -> None:
