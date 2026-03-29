@@ -1,7 +1,6 @@
 ---
 name: targeted-test
 description: Add or update tests in the smallest appropriate layer for this repository.
-agent: agent
 argument-hint: Describe the behavior to test and the file under change.
 ---
 
