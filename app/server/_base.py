@@ -202,13 +202,11 @@ class HandlerBase(BaseHTTPRequestHandler):
         elif path.startswith("/generated/reports/"):
             target = self._resolve_report_path(path)
             if target is None:
-                self.send_response(404)
-                self.end_headers()
+                self._send_json(404, {"ok": False, "error": "Not found"})
                 return
             self._serve_file(target)
         else:
-            self.send_response(404)
-            self.end_headers()
+            self._send_json(404, {"ok": False, "error": "Not found"})
 
     def do_POST(self) -> None:
         path = self.path.split("?")[0]
@@ -224,8 +222,7 @@ class HandlerBase(BaseHTTPRequestHandler):
         elif path == "/api/filters":
             self._handle_post_filter()
         else:
-            self.send_response(404)
-            self.end_headers()
+            self._send_json(404, {"ok": False, "error": "Not found"})
 
     def do_DELETE(self) -> None:
         path = self.path.split("?")[0]
@@ -239,5 +236,4 @@ class HandlerBase(BaseHTTPRequestHandler):
             slug = urlunquote(path[len("/api/filters/") :])
             self._handle_delete_filter(slug)
         else:
-            self.send_response(404)
-            self.end_headers()
+            self._send_json(404, {"ok": False, "error": "Not found"})
