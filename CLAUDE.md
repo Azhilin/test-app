@@ -6,6 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 AI Adoption Metrics Report tool — fetches sprint data from Jira Cloud and generates velocity/cycle-time reports in both HTML and Markdown formats.
 
+## Cross-assistant alignment
+
+- `AGENTS.md` is the assistant-neutral routing and token-efficiency layer for this repository.
+- Use `AGENTS.md` for shared repo behavior and task scoping; keep this file focused on Claude-specific guidance plus the richer project architecture detail that helps implementation.
+- When project structure or workflow conventions change, update shared repo facts in `AGENTS.md` first, then refresh this file only where Claude-specific guidance would otherwise drift.
+
 ## Generated and Temporary Files
 
 - Place temporary, scratch, diagnostic, and AI-generated working files under `generated/`.
