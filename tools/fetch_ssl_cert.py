@@ -14,6 +14,8 @@ import sys
 from pathlib import Path
 from urllib.parse import urlparse
 
+import certifi
+
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -60,7 +62,9 @@ def fetch_and_save_cert(jira_url: str, root: Path | None = None) -> str:
     certs_dir.mkdir(exist_ok=True)
 
     cert_file = certs_dir / "jira_ca_bundle.pem"
-    cert_file.write_text(pem, encoding="ascii")
+    ca_bundle = Path(certifi.where()).read_text(encoding="ascii")
+    bundle = pem + "\n" + ca_bundle
+    cert_file.write_bytes(bundle.encode("ascii"))
 
     print(f"Certificate saved -> {cert_file}")
     print("Done. The Jira client will use this certificate automatically.")

@@ -15,21 +15,22 @@
 | Jira Schema Requirements | 29 | 23 | 0 | 2 | 4 | 92% | [→ detail](requirements/jira_schema_requirements_coverage.md) |
 | Jira Filter Management Requirements | 23 | 21 | 0 | 0 | 2 | 100% | [→ detail](requirements/jira_filter_management_requirements_coverage.md) |
 | Logging Requirements | 18 | 16 | 0 | 0 | 2 | 100% | [→ detail](requirements/logging_requirements_coverage.md) |
-| **All** | **274** | **178** | **1** | **13** | **82** | **93%** |  |
+| Report Generation Requirements | 33 | 30 | 0 | 0 | 3 | 100% | [→ detail](requirements/report_generation_requirements_coverage.md) |
+| **All** | **307** | **208** | **1** | **13** | **85** | **94%** |  |
 
 ## Test Pyramid
 
 ```text
-              /  E2E  \              94 tests  (19%)  (Playwright browser UI)  → tests/e2e/
+              /  E2E  \              102 tests  (19%)  (Playwright browser UI)  → tests/e2e/
              /----------\
-            / Integration \           18 tests   (4%)  (cross-module flows, subprocess)       → tests/integration/
+            / Integration \           19 tests   (4%)  (cross-module flows, subprocess)       → tests/integration/
            /----------------\
-          /    Component      \      150 tests  (30%)  (filesystem, HTTP, data shapes)        → tests/component/
+          /    Component      \      155 tests  (29%)  (filesystem, HTTP, data shapes)        → tests/component/
          /--------------------\
-        /        Unit            \   241 tests  (48%)  (pure functions, no I/O)               → tests/unit/
+        /        Unit            \   254 tests  (48%)  (pure functions, no I/O)               → tests/unit/
        /------------------------\
                                      ────────────────
-                                     503 tests total
+                                     530 tests total
 ```
 
 ## Coverage Matrix
@@ -88,21 +89,21 @@ tests\run_e2e_tests.bat
 
 | File                              | Layer       | Count | Covers                              |
 |-----------------------------------|-------------|-------|-------------------------------------|
-| `unit/test_config.py`             | Unit        |   27  | Config loading, validation          |
+| `unit/test_config.py`             | Unit        |   44  | Config loading, validation          |
 | `unit/test_cert_validation.py`    | Unit        |    5  | Certificate validation helpers      |
 | `unit/test_cli.py`                | Unit        |    4  | `app.cli.main()` orchestration      |
-| `unit/test_metrics.py`            | Unit        |   71  | All metrics functions incl. AI      |
+| `unit/test_metrics.py`            | Unit        |   57  | All metrics functions incl. AI      |
 | `unit/test_main_helpers.py`       | Unit        |    5  | `_timestamp_folder_name()`          |
 | `unit/test_jira_client.py`        | Unit        |   28  | All jira_client functions (mocked)  |
 | `unit/test_server_handlers.py`    | Unit        |   24  | Internal `app.server` handler logic |
 | `unit/test_imports.py`            | Unit        |    8  | Module imports (smoke)              |
 | `unit/test_logging_setup.py`      | Unit        |   13  | Logging setup, SUCCESS level, file creation, format |
-| `component/test_report_html.py`   | Component   |   31  | HTML template rendering, visibility |
-| `component/test_report_md.py`     | Component   |   16  | Markdown generation                 |
-| `component/test_server.py`        | Component   |   31  | HTTP routes, CORS, SSE              |
-| `component/test_contracts.py`     | Component   |   12  | Data shapes across boundaries       |
+| `component/test_report_html.py`   | Component   |   28  | HTML template rendering, visibility |
+| `component/test_report_md.py`     | Component   |   18  | Markdown generation                 |
+| `component/test_server.py`        | Component   |   32  | HTTP routes, CORS, SSE              |
+| `component/test_contracts.py`     | Component   |   11  | Data shapes across boundaries       |
 | `integration/test_integration.py` | Integration |    6  | Full pipeline, filter flow, server  |
-| `integration/test_fetch_ssl_cert.py` | Integration |    9  | fetch_ssl_cert function + CLI smoke |
+| `integration/test_fetch_ssl_cert.py` | Integration |   10  | fetch_ssl_cert function + CLI smoke |
 | `e2e/test_e2e.py`                 | E2E         |    3  | CLI subprocess, server health       |
-| `e2e/test_e2e_ui.py`              | E2E         |   24  | Playwright browser UI tests         || `e2e/test_dau_survey_ui.py`      | E2E         |   23  | DAU survey form Playwright tests    |
+| `e2e/test_e2e_ui.py`              | E2E         |   32  | Playwright browser UI tests         || `e2e/test_dau_survey_ui.py`      | E2E         |   23  | DAU survey form Playwright tests    |
 | `e2e/test_e2e_connection.py`     | E2E         |   41  | Connection panel Playwright tests   |

@@ -43,14 +43,6 @@ def test_velocity_value_present(tmp_path, minimal_metrics_dict):
     assert "20.0" in content
 
 
-def test_cycle_time_stats_present(tmp_path, minimal_metrics_dict):
-    out = tmp_path / "report.md"
-    generate_md(minimal_metrics_dict, out)
-    content = out.read_text(encoding="utf-8")
-    assert "3.5" in content  # mean
-    assert "3.0" in content  # median
-
-
 def test_no_velocity_data_message(tmp_path, empty_metrics_dict):
     out = tmp_path / "report.md"
     generate_md(empty_metrics_dict, out)
@@ -58,34 +50,11 @@ def test_no_velocity_data_message(tmp_path, empty_metrics_dict):
     assert "No velocity data" in content
 
 
-def test_no_cycle_time_data_message(tmp_path, empty_metrics_dict):
-    out = tmp_path / "report.md"
-    generate_md(empty_metrics_dict, out)
-    content = out.read_text(encoding="utf-8")
-    assert "No cycle time data" in content
-
-
 def test_bar_chart_present_when_velocity_nonzero(tmp_path, minimal_metrics_dict):
     out = tmp_path / "report.md"
     generate_md(minimal_metrics_dict, out)
     content = out.read_text(encoding="utf-8")
     assert "█" in content
-
-
-def test_custom_trends_section_absent_when_empty(tmp_path, minimal_metrics_dict):
-    out = tmp_path / "report.md"
-    generate_md(minimal_metrics_dict, out)
-    content = out.read_text(encoding="utf-8")
-    assert "## Custom trends" not in content
-
-
-def test_custom_trends_section_present_when_data(tmp_path, minimal_metrics_dict):
-    minimal_metrics_dict["custom_trends"] = [{"sprint_id": 1, "sprint_name": "Sprint Alpha", "ai_usage": 42}]
-    out = tmp_path / "report.md"
-    generate_md(minimal_metrics_dict, out)
-    content = out.read_text(encoding="utf-8")
-    assert "## Custom trends" in content
-    assert "42" in content
 
 
 # ---------------------------------------------------------------------------
@@ -130,3 +99,69 @@ def test_md_report_no_ai_usage_section(tmp_path, minimal_metrics_dict):
     generate_md(minimal_metrics_dict, out)
     content = out.read_text(encoding="utf-8")
     assert "## AI Usage" not in content
+
+
+# ---------------------------------------------------------------------------
+# Project type, estimation type, and velocity label in report header
+# (RG-PT-005, RG-ET-005, RG-ET-007)
+# ---------------------------------------------------------------------------
+
+
+def test_project_type_shown_in_md_header(tmp_path, minimal_metrics_dict):
+    minimal_metrics_dict["project_type"] = "SCRUM"
+    out = tmp_path / "report.md"
+    generate_md(minimal_metrics_dict, out)
+    content = out.read_text(encoding="utf-8")
+    assert "Project Type:" in content
+    assert "SCRUM" in content
+
+
+def test_estimation_type_shown_in_md_header(tmp_path, minimal_metrics_dict):
+    minimal_metrics_dict["estimation_type"] = "StoryPoints"
+    out = tmp_path / "report.md"
+    generate_md(minimal_metrics_dict, out)
+    content = out.read_text(encoding="utf-8")
+    assert "Estimation:" in content
+    assert "StoryPoints" in content
+
+
+def test_velocity_header_label_story_points(tmp_path, minimal_metrics_dict):
+    minimal_metrics_dict["estimation_type"] = "StoryPoints"
+    out = tmp_path / "report.md"
+    generate_md(minimal_metrics_dict, out)
+    content = out.read_text(encoding="utf-8")
+    assert "Velocity (points)" in content
+
+
+def test_velocity_header_label_jira_tickets(tmp_path, minimal_metrics_dict):
+    minimal_metrics_dict["estimation_type"] = "JiraTickets"
+    out = tmp_path / "report.md"
+    generate_md(minimal_metrics_dict, out)
+    content = out.read_text(encoding="utf-8")
+    assert "Velocity (tickets)" in content
+
+
+# ---------------------------------------------------------------------------
+# section_visibility — MD sections hidden when toggled off
+# ---------------------------------------------------------------------------
+
+_ALL_HIDDEN = {
+    "velocity_trend": False,
+    "ai_assistance_trend": False,
+    "ai_usage_details": False,
+    "dau": False,
+}
+
+
+def test_velocity_section_hidden_when_section_visibility_false(tmp_path, minimal_metrics_dict):
+    out = tmp_path / "report.md"
+    generate_md(minimal_metrics_dict, out, section_visibility=_ALL_HIDDEN)
+    content = out.read_text(encoding="utf-8")
+    assert "## Velocity trend" not in content
+
+
+def test_dau_section_hidden_when_section_visibility_false(tmp_path, minimal_metrics_dict):
+    out = tmp_path / "report.md"
+    generate_md(minimal_metrics_dict, out, section_visibility=_ALL_HIDDEN)
+    content = out.read_text(encoding="utf-8")
+    assert "## Daily Active Usage" not in content

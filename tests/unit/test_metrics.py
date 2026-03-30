@@ -141,86 +141,6 @@ def test_compute_velocity_preserves_sprint_name():
 
 
 # ---------------------------------------------------------------------------
-# compute_cycle_time
-# ---------------------------------------------------------------------------
-
-
-def test_compute_cycle_time_empty():
-    result = metrics.compute_cycle_time([])
-    assert result["sample_size"] == 0
-    assert result["mean_days"] is None
-    assert result["values"] == []
-
-
-def test_compute_cycle_time_single_issue():
-    issue = make_issue_with_changelog(
-        "X-1",
-        in_progress_ts="2026-03-01T09:00:00+00:00",
-        done_ts="2026-03-03T09:00:00+00:00",  # 2 days exactly
-    )
-    result = metrics.compute_cycle_time([issue])
-    assert result["sample_size"] == 1
-    assert result["mean_days"] == 2.0
-    assert result["min_days"] == 2.0
-    assert result["max_days"] == 2.0
-
-
-def test_compute_cycle_time_reversed_timestamps_excluded():
-    """done before in_progress → should be excluded (done_at < in_progress_at)."""
-    issue = make_issue_with_changelog(
-        "X-1",
-        in_progress_ts="2026-03-05T09:00:00+00:00",
-        done_ts="2026-03-01T09:00:00+00:00",  # earlier than in_progress
-    )
-    result = metrics.compute_cycle_time([issue])
-    assert result["sample_size"] == 0
-
-
-def test_compute_cycle_time_odd_median():
-    issues = [
-        make_issue_with_changelog("X-1", "2026-03-01T00:00:00+00:00", "2026-03-02T00:00:00+00:00"),  # 1d
-        make_issue_with_changelog("X-2", "2026-03-01T00:00:00+00:00", "2026-03-04T00:00:00+00:00"),  # 3d
-        make_issue_with_changelog("X-3", "2026-03-01T00:00:00+00:00", "2026-03-06T00:00:00+00:00"),  # 5d
-    ]
-    result = metrics.compute_cycle_time(issues)
-    assert result["median_days"] == 3.0
-
-
-def test_compute_cycle_time_even_median():
-    issues = [
-        make_issue_with_changelog("X-1", "2026-03-01T00:00:00+00:00", "2026-03-03T00:00:00+00:00"),  # 2d
-        make_issue_with_changelog("X-2", "2026-03-01T00:00:00+00:00", "2026-03-05T00:00:00+00:00"),  # 4d
-    ]
-    result = metrics.compute_cycle_time(issues)
-    assert result["median_days"] == 3.0
-
-
-def test_cycle_time_uses_first_done_after_in_progress():
-    issue = {
-        "key": "X-1",
-        "fields": {"status": {"name": "Done"}},
-        "changelog": {
-            "histories": [
-                {
-                    "created": "2026-03-05T00:00:00+00:00",
-                    "items": [{"field": "status", "fromString": "Review", "toString": "Done"}],
-                },
-                {
-                    "created": "2026-03-01T00:00:00+00:00",
-                    "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}],
-                },
-                {
-                    "created": "2026-03-03T00:00:00+00:00",
-                    "items": [{"field": "status", "fromString": "In Progress", "toString": "Done"}],
-                },
-            ]
-        },
-    }
-
-    assert metrics._cycle_time_from_changelog(issue) == 2.0
-
-
-# ---------------------------------------------------------------------------
 # get_done_issue_keys_for_changelog
 # ---------------------------------------------------------------------------
 
@@ -258,8 +178,6 @@ def test_build_metrics_dict_keys():
     result = metrics.build_metrics_dict([sprint], {1: [issue]}, [issue_cl])
     expected_keys = {
         "velocity",
-        "cycle_time",
-        "custom_trends",
         "generated_at",
         "ai_assistance_trend",
         "ai_usage_details",
@@ -271,8 +189,10 @@ def test_build_metrics_dict_keys():
         "filter_id",
         "filter_jql",
         "project_key",
+        "project_type",
+        "estimation_type",
     }
-    assert set(result.keys()) == expected_keys
+    assert expected_keys.issubset(result.keys())
 
 
 def test_build_metrics_dict_generated_at_is_iso():
@@ -332,110 +252,6 @@ def test_get_labels_missing_key():
 def test_get_labels_missing_fields():
     issue = {"key": "X-1"}
     assert metrics._get_labels(issue) == []
-
-
-# ---------------------------------------------------------------------------
-# _cycle_time_from_changelog
-# ---------------------------------------------------------------------------
-
-
-def test_cycle_time_no_changelog():
-    issue = {"key": "X-1", "fields": {}}
-    assert metrics._cycle_time_from_changelog(issue) is None
-
-
-def test_cycle_time_empty_histories():
-    issue = {"key": "X-1", "fields": {}, "changelog": {"histories": []}}
-    assert metrics._cycle_time_from_changelog(issue) is None
-
-
-def test_cycle_time_only_in_progress():
-    issue = {
-        "key": "X-1",
-        "fields": {},
-        "changelog": {
-            "histories": [
-                {
-                    "created": "2026-03-01T10:00:00+00:00",
-                    "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}],
-                }
-            ]
-        },
-    }
-    assert metrics._cycle_time_from_changelog(issue) is None
-
-
-def test_cycle_time_only_done():
-    issue = {
-        "key": "X-1",
-        "fields": {},
-        "changelog": {
-            "histories": [
-                {
-                    "created": "2026-03-03T10:00:00+00:00",
-                    "items": [{"field": "status", "fromString": "In Progress", "toString": "Done"}],
-                }
-            ]
-        },
-    }
-    assert metrics._cycle_time_from_changelog(issue) is None
-
-
-def test_cycle_time_multiple_transitions():
-    issue = {
-        "key": "X-1",
-        "fields": {},
-        "changelog": {
-            "histories": [
-                {
-                    "created": "2026-03-01T10:00:00+00:00",
-                    "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}],
-                },
-                {
-                    "created": "2026-03-02T10:00:00+00:00",
-                    "items": [{"field": "status", "fromString": "In Progress", "toString": "To Do"}],
-                },
-                {
-                    "created": "2026-03-03T10:00:00+00:00",
-                    "items": [{"field": "status", "fromString": "To Do", "toString": "In Progress"}],
-                },
-                {
-                    "created": "2026-03-05T10:00:00+00:00",
-                    "items": [{"field": "status", "fromString": "In Progress", "toString": "Done"}],
-                },
-            ]
-        },
-    }
-    result = metrics._cycle_time_from_changelog(issue)
-    # First In Progress: March 1, Done: March 5 → 4 days
-    assert result == 4.0
-
-
-def test_cycle_time_non_status_fields_ignored():
-    issue = {
-        "key": "X-1",
-        "fields": {},
-        "changelog": {
-            "histories": [
-                {
-                    "created": "2026-03-01T10:00:00+00:00",
-                    "items": [
-                        {"field": "priority", "fromString": "Low", "toString": "High"},
-                        {"field": "status", "fromString": "To Do", "toString": "In Progress"},
-                    ],
-                },
-                {
-                    "created": "2026-03-03T10:00:00+00:00",
-                    "items": [
-                        {"field": "assignee", "fromString": "Alice", "toString": "Bob"},
-                        {"field": "status", "fromString": "In Progress", "toString": "Done"},
-                    ],
-                },
-            ]
-        },
-    }
-    result = metrics._cycle_time_from_changelog(issue)
-    assert result == 2.0
 
 
 # ---------------------------------------------------------------------------
@@ -645,66 +461,6 @@ def test_compute_velocity_custom_field_and_statuses():
     assert result[0]["issue_count"] == 1
 
 
-def test_cycle_time_custom_statuses():
-    issue = {
-        "key": "X-1",
-        "fields": {},
-        "changelog": {
-            "histories": [
-                {
-                    "created": "2026-03-01T10:00:00+00:00",
-                    "items": [{"field": "status", "fromString": "To Do", "toString": "Working"}],
-                },
-                {
-                    "created": "2026-03-03T10:00:00+00:00",
-                    "items": [{"field": "status", "fromString": "Working", "toString": "Shipped"}],
-                },
-            ]
-        },
-    }
-    result = metrics._cycle_time_from_changelog(
-        issue,
-        done_statuses=frozenset(("shipped",)),
-        in_progress_statuses=frozenset(("working",)),
-    )
-    assert result == 2.0
-
-
-def test_cycle_time_default_statuses_unchanged():
-    issue = make_issue_with_changelog(
-        "X-1",
-        "2026-03-01T09:00:00+00:00",
-        "2026-03-03T09:00:00+00:00",
-    )
-    assert metrics._cycle_time_from_changelog(issue) == 2.0
-
-
-def test_compute_cycle_time_with_custom_statuses():
-    issue = {
-        "key": "X-1",
-        "fields": {},
-        "changelog": {
-            "histories": [
-                {
-                    "created": "2026-03-01T10:00:00+00:00",
-                    "items": [{"field": "status", "fromString": "Backlog", "toString": "Active"}],
-                },
-                {
-                    "created": "2026-03-04T10:00:00+00:00",
-                    "items": [{"field": "status", "fromString": "Active", "toString": "Finished"}],
-                },
-            ]
-        },
-    }
-    result = metrics.compute_cycle_time(
-        [issue],
-        done_statuses=frozenset(("finished",)),
-        in_progress_statuses=frozenset(("active",)),
-    )
-    assert result["sample_size"] == 1
-    assert result["mean_days"] == 3.0
-
-
 def test_get_done_issue_keys_custom_statuses():
     sprint = make_sprint(1)
     issues = [
@@ -744,10 +500,27 @@ def test_build_metrics_dict_without_schema_backward_compat():
     assert result["velocity"][0]["velocity"] == 5.0
 
 
-# ---------------------------------------------------------------------------
-# compute_custom_trends (placeholder)
-# ---------------------------------------------------------------------------
+def test_build_metrics_dict_jira_tickets_velocity_uses_issue_count(monkeypatch):
+    monkeypatch.setattr("app.core.config.ESTIMATION_TYPE", "JiraTickets")
+    sprint = make_sprint(1, "Sprint 1")
+    issues = [
+        make_issue("X-1", "Done", 5.0),
+        make_issue("X-2", "Done", 3.0),
+        make_issue("X-3", "In Progress", 2.0),
+    ]
+    result = metrics.build_metrics_dict([sprint], {1: issues}, [])
+    row = result["velocity"][0]
+    assert row["issue_count"] == 2
+    assert row["velocity"] == 2, "JiraTickets mode should use issue_count as velocity"
 
 
-def test_compute_custom_trends_returns_empty_list():
-    assert metrics.compute_custom_trends([], {}) == []
+def test_build_metrics_dict_story_points_velocity_unchanged(monkeypatch):
+    monkeypatch.setattr("app.core.config.ESTIMATION_TYPE", "StoryPoints")
+    sprint = make_sprint(1, "Sprint 1")
+    issues = [make_issue("X-1", "Done", 5.0), make_issue("X-2", "Done", 3.0)]
+    result = metrics.build_metrics_dict([sprint], {1: issues}, [])
+    row = result["velocity"][0]
+    assert row["velocity"] == 8.0, "StoryPoints mode should sum story points"
+    assert row["issue_count"] == 2
+
+

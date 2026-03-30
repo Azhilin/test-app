@@ -36,10 +36,10 @@ JIRA_FILTER_ID = int(_filter_id) if _filter_id.isdigit() else None
 # Optional: Jira project key (e.g. "MYPROJ"). Used to scope issue queries and shown in reports.
 JIRA_PROJECT = os.getenv("JIRA_PROJECT", "").strip() or None
 
-# DAU survey responses directory (default: generated/ in project root)
+# DAU survey responses directory (default: config/dau/ in project root)
 DAU_RESPONSES_DIR: str = os.getenv(
     "DAU_RESPONSES_DIR",
-    str(Path(__file__).resolve().parent.parent.parent / "generated"),
+    str(Path(__file__).resolve().parent.parent.parent / "config" / "dau"),
 )
 
 # AI Adoption metrics labels
@@ -51,6 +51,31 @@ AI_EXCLUDE_LABELS = [lbl.strip() for lbl in os.getenv("AI_EXCLUDE_LABELS", "").s
 AI_TOOL_LABELS = [lbl.strip() for lbl in os.getenv("AI_TOOL_LABELS", "").split(",") if lbl.strip()]
 # Comma-separated labels identifying AI use-cases (e.g. AI_Case_CodeGen,AI_Case_Review)
 AI_ACTION_LABELS = [lbl.strip() for lbl in os.getenv("AI_ACTION_LABELS", "").split(",") if lbl.strip()]
+
+# Project type: SCRUM or KANBAN (default: SCRUM)
+_project_type_raw = os.getenv("PROJECT_TYPE", "SCRUM").strip().upper()
+PROJECT_TYPE: str = _project_type_raw if _project_type_raw in ("SCRUM", "KANBAN") else "SCRUM"
+
+# Estimation type: StoryPoints or JiraTickets (default: StoryPoints)
+_estimation_type_raw = os.getenv("ESTIMATION_TYPE", "StoryPoints").strip()
+ESTIMATION_TYPE: str = _estimation_type_raw if _estimation_type_raw in ("StoryPoints", "JiraTickets") else "StoryPoints"
+
+
+# Metric toggle flags (all default to True)
+def _env_bool(key: str, default: bool = True) -> bool:
+    val = os.getenv(key, "").strip().lower()
+    if not val:
+        return default
+    return val in ("1", "true", "yes")
+
+
+METRIC_VELOCITY: bool = _env_bool("METRIC_VELOCITY")
+METRIC_CYCLE_TIME: bool = _env_bool("METRIC_CYCLE_TIME")
+METRIC_AI_ASSISTANCE_TREND: bool = _env_bool("METRIC_AI_ASSISTANCE_TREND")
+METRIC_AI_USAGE_DETAILS: bool = _env_bool("METRIC_AI_USAGE_DETAILS")
+METRIC_CUSTOM_TRENDS: bool = _env_bool("METRIC_CUSTOM_TRENDS")
+METRIC_DAU: bool = _env_bool("METRIC_DAU")
+METRIC_DAU_TREND: bool = _env_bool("METRIC_DAU_TREND")
 
 
 def validate_config() -> list[str]:

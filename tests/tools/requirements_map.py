@@ -2378,6 +2378,338 @@ LOGGING_REQUIREMENTS: list[dict] = [
     },
 ]
 
+# ── Report Generation Requirements ─────────────────────────────────────────
+
+REPORT_GENERATION_REQUIREMENTS: list[dict] = [
+    # ── 1. Filter Selection ──
+    {
+        "id": "RG-FS-001",
+        "description": "Generate tab shows a filter dropdown populated from saved filters",
+        "type": FUNCTIONAL,
+        "section": "Filter Selection",
+        "tests": [
+            "unit/test_filter_handlers.py::test_default_filter_entry_is_present_and_correct",
+            "component/test_server_filters.py::test_get_filters_default_is_first",
+            "e2e/test_e2e_filters.py::test_filter_list_displayed_on_load",
+        ],
+    },
+    {
+        "id": "RG-FS-002",
+        "description": "Project Default Filter is the pre-selected option when a default filter exists",
+        "type": FUNCTIONAL,
+        "section": "Filter Selection",
+        "tests": [
+            "component/test_server_filters.py::test_get_filters_default_is_first",
+            "e2e/test_e2e_filters.py::test_filter_name_prepopulated_on_empty_load",
+        ],
+    },
+    {
+        "id": "RG-FS-003",
+        "description": "Selected filter slug is passed to the /api/generate SSE endpoint",
+        "type": FUNCTIONAL,
+        "section": "Filter Selection",
+        "tests": [
+            "unit/test_filter_handlers.py::test_generate_applies_filter_params_to_subprocess_env",
+            "e2e/test_e2e_ui.py::test_generate_with_filter_sse_streaming",
+        ],
+    },
+    # ── 2. Project Type ──
+    {
+        "id": "RG-PT-001",
+        "description": "Generate tab shows SCRUM / KANBAN radio buttons",
+        "type": FUNCTIONAL,
+        "section": "Project Type",
+        "tests": [
+            "e2e/test_e2e_ui.py::test_project_type_radios_visible",
+        ],
+    },
+    {
+        "id": "RG-PT-002",
+        "description": "SCRUM is the default project type",
+        "type": FUNCTIONAL,
+        "section": "Project Type",
+        "tests": [
+            "unit/test_config.py::test_project_type_default_scrum",
+        ],
+    },
+    {
+        "id": "RG-PT-003",
+        "description": "Selected project type is sent to the generate endpoint",
+        "type": FUNCTIONAL,
+        "section": "Project Type",
+        "tests": [
+            "unit/test_filter_handlers.py::test_generate_applies_filter_params_to_subprocess_env",
+        ],
+    },
+    {
+        "id": "RG-PT-004",
+        "description": "Project type selection persists across page reloads via localStorage",
+        "type": FUNCTIONAL,
+        "section": "Project Type",
+        "tests": [
+            "e2e/test_e2e_ui.py::test_project_type_persists_in_localstorage",
+        ],
+    },
+    {
+        "id": "RG-PT-005",
+        "description": "Project type is included in the report header",
+        "type": FUNCTIONAL,
+        "section": "Project Type",
+        "tests": [
+            "component/test_report_html.py::test_project_type_shown_in_header",
+            "component/test_report_md.py::test_project_type_shown_in_md_header",
+        ],
+    },
+    # ── 3. Estimation Type ──
+    {
+        "id": "RG-ET-001",
+        "description": "Generate tab shows StoryPoints / JiraTickets radio buttons",
+        "type": FUNCTIONAL,
+        "section": "Estimation Type",
+        "tests": [
+            "e2e/test_e2e_ui.py::test_estimation_type_radios_visible",
+        ],
+    },
+    {
+        "id": "RG-ET-002",
+        "description": "StoryPoints is the default estimation type",
+        "type": FUNCTIONAL,
+        "section": "Estimation Type",
+        "tests": [
+            "unit/test_config.py::test_estimation_type_default_story_points",
+        ],
+    },
+    {
+        "id": "RG-ET-003",
+        "description": "Selected estimation type is sent to the generate endpoint",
+        "type": FUNCTIONAL,
+        "section": "Estimation Type",
+        "tests": [
+            "unit/test_filter_handlers.py::test_generate_applies_filter_params_to_subprocess_env",
+        ],
+    },
+    {
+        "id": "RG-ET-004",
+        "description": "Estimation type selection persists across page reloads via localStorage",
+        "type": FUNCTIONAL,
+        "section": "Estimation Type",
+        "tests": [
+            "e2e/test_e2e_ui.py::test_estimation_type_persists_in_localstorage",
+        ],
+    },
+    {
+        "id": "RG-ET-005",
+        "description": "Estimation type is included in the report header",
+        "type": FUNCTIONAL,
+        "section": "Estimation Type",
+        "tests": [
+            "component/test_report_html.py::test_estimation_type_shown_in_header",
+            "component/test_report_md.py::test_estimation_type_shown_in_md_header",
+        ],
+    },
+    {
+        "id": "RG-ET-006",
+        "description": "When JiraTickets is selected, velocity uses issue count instead of story points",
+        "type": FUNCTIONAL,
+        "section": "Estimation Type",
+        "tests": [
+            "unit/test_metrics.py::test_build_metrics_dict_jira_tickets_velocity_uses_issue_count",
+            "unit/test_metrics.py::test_build_metrics_dict_story_points_velocity_unchanged",
+        ],
+    },
+    {
+        "id": "RG-ET-007",
+        "description": "Report labels reflect estimation type",
+        "type": FUNCTIONAL,
+        "section": "Estimation Type",
+        "tests": [
+            "component/test_report_html.py::test_velocity_header_reflects_estimation_type_tickets",
+            "component/test_report_md.py::test_velocity_header_label_story_points",
+            "component/test_report_md.py::test_velocity_header_label_jira_tickets",
+        ],
+    },
+    # ── 4. Metric Toggles ──
+    {
+        "id": "RG-MT-001",
+        "description": "Generate tab shows 6 metric toggle checkboxes",
+        "type": FUNCTIONAL,
+        "section": "Metric Toggles",
+        "tests": [
+            "e2e/test_e2e_ui.py::test_metric_toggle_checkboxes_visible",
+        ],
+    },
+    {
+        "id": "RG-MT-002",
+        "description": "All metric toggles default to enabled",
+        "type": FUNCTIONAL,
+        "section": "Metric Toggles",
+        "tests": [
+            "unit/test_config.py::test_metric_toggles_default_true",
+        ],
+    },
+    {
+        "id": "RG-MT-003",
+        "description": "Disabled metrics are excluded from the generated report",
+        "type": FUNCTIONAL,
+        "section": "Metric Toggles",
+        "tests": [
+            "component/test_report_html.py::test_velocity_section_hidden_when_section_visibility_false",
+            "component/test_report_html.py::test_ai_assistance_section_hidden_when_section_visibility_false",
+            "component/test_report_html.py::test_ai_usage_section_hidden_when_section_visibility_false",
+            "component/test_dau_report.py::test_html_dau_section_hidden_when_visibility_false",
+        ],
+    },
+    {
+        "id": "RG-MT-004",
+        "description": "Metric toggle state is sent to the generate endpoint",
+        "type": FUNCTIONAL,
+        "section": "Metric Toggles",
+        "tests": [
+            "unit/test_filter_handlers.py::test_generate_applies_filter_params_to_subprocess_env",
+        ],
+    },
+    {
+        "id": "RG-MT-005",
+        "description": "Metric toggle state persists across page reloads via localStorage",
+        "type": FUNCTIONAL,
+        "section": "Metric Toggles",
+        "tests": [
+            "e2e/test_e2e_ui.py::test_metric_toggles_persist_in_localstorage",
+        ],
+    },
+    {
+        "id": "RG-MT-006",
+        "description": "At least one metric must be enabled to generate a report",
+        "type": FUNCTIONAL,
+        "section": "Metric Toggles",
+        "tests": [
+            "e2e/test_e2e_ui.py::test_generate_button_disabled_when_all_metrics_unchecked",
+        ],
+    },
+    # ── 5. Report Output ──
+    {
+        "id": "RG-RO-001",
+        "description": "HTML report is generated and linked in the UI report list",
+        "type": FUNCTIONAL,
+        "section": "Report Output",
+        "tests": [
+            "component/test_report_html.py::test_file_created",
+            "component/test_server.py::test_generate_returns_sse_content_type",
+            "component/test_server.py::test_generate_ends_with_close_event",
+        ],
+    },
+    {
+        "id": "RG-RO-002",
+        "description": "MD report is generated alongside the HTML report",
+        "type": FUNCTIONAL,
+        "section": "Report Output",
+        "tests": [
+            "component/test_report_md.py::test_file_created",
+        ],
+    },
+    {
+        "id": "RG-RO-003",
+        "description": "Only HTML reports are linked in the UI",
+        "type": FUNCTIONAL,
+        "section": "Report Output",
+        "tests": [
+            "e2e/test_e2e_ui.py::test_reports_list_links_only_html",
+        ],
+    },
+    {
+        "id": "RG-RO-004",
+        "description": "Section visibility in HTML matches metric toggle state",
+        "type": FUNCTIONAL,
+        "section": "Report Output",
+        "tests": [
+            "component/test_report_html.py::test_velocity_section_hidden_when_section_visibility_false",
+            "component/test_report_html.py::test_ai_assistance_section_hidden_when_section_visibility_false",
+            "component/test_report_html.py::test_ai_usage_section_hidden_when_section_visibility_false",
+            "component/test_dau_report.py::test_html_dau_section_hidden_when_visibility_false",
+        ],
+    },
+    {
+        "id": "RG-RO-005",
+        "description": "Section visibility in MD matches metric toggle state",
+        "type": FUNCTIONAL,
+        "section": "Report Output",
+        "tests": [
+            "component/test_report_md.py::test_velocity_section_hidden_when_section_visibility_false",
+            "component/test_report_md.py::test_dau_section_hidden_when_section_visibility_false",
+        ],
+    },
+    # ── 6. Configuration ──
+    {
+        "id": "RG-CF-001",
+        "description": "PROJECT_TYPE env var controls default project type",
+        "type": FUNCTIONAL,
+        "section": "Configuration",
+        "tests": [
+            "unit/test_config.py::test_project_type_default_scrum",
+            "unit/test_config.py::test_project_type_kanban",
+            "unit/test_config.py::test_project_type_invalid_falls_back",
+        ],
+    },
+    {
+        "id": "RG-CF-002",
+        "description": "ESTIMATION_TYPE env var controls default estimation type",
+        "type": FUNCTIONAL,
+        "section": "Configuration",
+        "tests": [
+            "unit/test_config.py::test_estimation_type_default_story_points",
+            "unit/test_config.py::test_estimation_type_jira_tickets",
+            "unit/test_config.py::test_estimation_type_invalid_falls_back",
+        ],
+    },
+    {
+        "id": "RG-CF-003",
+        "description": "Individual METRIC_* env vars control metric inclusion",
+        "type": FUNCTIONAL,
+        "section": "Configuration",
+        "tests": [
+            "unit/test_config.py::test_metric_toggles_default_true",
+            "unit/test_config.py::test_metric_toggles_explicit_false",
+        ],
+    },
+    {
+        "id": "RG-CF-004",
+        "description": "All new env vars have sensible defaults",
+        "type": FUNCTIONAL,
+        "section": "Configuration",
+        "tests": [
+            "unit/test_config.py::test_project_type_default_scrum",
+            "unit/test_config.py::test_estimation_type_default_story_points",
+            "unit/test_config.py::test_metric_toggles_default_true",
+        ],
+    },
+    # ── 7. Non-Functional Requirements ──
+    {
+        "id": "RG-NFR-001",
+        "description": "UI state persistence uses localStorage only",
+        "type": OPERATIONAL,
+        "section": "Non-Functional Requirements",
+        "tests": [],
+    },
+    {
+        "id": "RG-NFR-002",
+        "description": "New parameters do not break existing filter overlay mechanism",
+        "type": OPERATIONAL,
+        "section": "Non-Functional Requirements",
+        "tests": [
+            "integration/test_integration.py::test_filter_metadata_in_html",
+        ],
+    },
+    {
+        "id": "RG-NFR-003",
+        "description": "Report generation time is not significantly impacted by new controls",
+        "type": OPERATIONAL,
+        "section": "Non-Functional Requirements",
+        "tests": [
+            "component/test_report_performance.py::test_report_generation_completes_within_time_limit",
+        ],
+    },
+]
+
 # ── All requirements combined ──────────────────────────────────────────────
 
 ALL_REQUIREMENTS: dict[str, list[dict]] = {
@@ -2390,4 +2722,5 @@ ALL_REQUIREMENTS: dict[str, list[dict]] = {
     "jira_schema_requirements": JIRA_SCHEMA_REQUIREMENTS,
     "jira_filter_management_requirements": JIRA_FILTER_MANAGEMENT_REQUIREMENTS,
     "logging_requirements": LOGGING_REQUIREMENTS,
+    "report_generation_requirements": REPORT_GENERATION_REQUIREMENTS,
 }

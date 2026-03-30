@@ -6,6 +6,8 @@ import os
 import ssl
 from urllib.parse import urlparse
 
+import certifi
+
 from ._base import _root
 
 
@@ -61,6 +63,9 @@ class CertHandlerMixin:
         certs_dir = _root() / "certs"
         certs_dir.mkdir(exist_ok=True)
         cert_file = certs_dir / "jira_ca_bundle.pem"
-        cert_file.write_bytes(pem.encode("ascii"))
+
+        ca_bundle = open(certifi.where(), encoding="ascii").read()
+        bundle = pem + "\n" + ca_bundle
+        cert_file.write_bytes(bundle.encode("ascii"))
 
         self._send_json(200, {"ok": True, "path": "certs/jira_ca_bundle.pem", "host": host})

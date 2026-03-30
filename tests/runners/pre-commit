@@ -1,0 +1,13 @@
+#!/bin/sh
+# Pre-commit hook — delegates to tests/runners/run_lint.bat
+# Tracked source: tests/runners/pre-commit
+# Install:  cp tests/runners/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+
+# Resolve project root: when installed, this script lives at .git/hooks/pre-commit,
+# so the repo root is two levels up.
+REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+
+echo "Running lint checks before commit..."
+cmd.exe /c "$(cygpath -w "$REPO_ROOT/tests/runners/run_lint.bat")"
+
+exit $?

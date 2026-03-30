@@ -59,7 +59,7 @@ def _is_done(
 
 def compute_velocity(
     sprints: list[dict[str, Any]],
-    sprint_issues: dict[int, list[dict[str, Any]]],
+    sprint_issues: dict[int | str, list[dict[str, Any]]],
     story_points_field: str | None = None,
     done_statuses: frozenset[str] | None = None,
 ) -> list[dict[str, Any]]:
@@ -170,7 +170,7 @@ def compute_cycle_time(
 
 def get_done_issue_keys_for_changelog(
     sprints: list[dict[str, Any]],
-    sprint_issues: dict[int, list[dict[str, Any]]],
+    sprint_issues: dict[int | str, list[dict[str, Any]]],
     max_count: int = 100,
     done_statuses: frozenset[str] | None = None,
 ) -> list[str]:
@@ -201,7 +201,7 @@ def _get_labels(issue: dict[str, Any]) -> list[str]:
 
 def compute_ai_assistance_trend(
     sprints: list[dict[str, Any]],
-    sprint_issues: dict[int, list[dict[str, Any]]],
+    sprint_issues: dict[int | str, list[dict[str, Any]]],
     ai_assisted_label: str | None = None,
     ai_exclude_labels: list[str] | None = None,
     story_points_field: str | None = None,
@@ -258,7 +258,7 @@ def compute_ai_assistance_trend(
 
 def compute_ai_usage_details(
     sprints: list[dict[str, Any]],
-    sprint_issues: dict[int, list[dict[str, Any]]],
+    sprint_issues: dict[int | str, list[dict[str, Any]]],
     ai_assisted_label: str | None = None,
     ai_tool_labels: list[str] | None = None,
     ai_action_labels: list[str] | None = None,
@@ -316,7 +316,7 @@ def compute_ai_usage_details(
 
 def compute_custom_trends(
     _sprints: list[dict[str, Any]],
-    _sprint_issues: dict[int, list[dict[str, Any]]],
+    _sprint_issues: dict[int | str, list[dict[str, Any]]],
 ) -> list[dict[str, Any]]:
     """
     Placeholder for custom metric trends. Extend with your custom field and aggregation.
@@ -332,11 +332,12 @@ _DAU_SCORE_MAP: dict[str, float] = {
     "Not used": 0.0,
 }
 
+_DAU_MAX_SCORE = 5.0
 
-def compute_dau_metrics(responses_dir: str | Path) -> dict[str, Any]:
-    """Load DAU survey responses from disk and compute aggregate metrics."""
+
+def _load_dau_records(responses_dir: str | Path) -> list[dict[str, Any]]:
+    """Load all dau_*.json files from *responses_dir* and return parsed dicts."""
     import json
-    from collections import Counter
 
     path = Path(responses_dir)
     records: list[dict[str, Any]] = []
@@ -348,12 +349,38 @@ def compute_dau_metrics(responses_dir: str | Path) -> dict[str, Any]:
                     records.append(data)
             except Exception:  # nosec B112
                 continue
+    return records
+
+
+def _dedup_by_user_week(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Keep only the latest response per (username, week) pair."""
+    best: dict[tuple[str, str], dict[str, Any]] = {}
+    for rec in records:
+        key = (rec.get("username", ""), rec.get("week", ""))
+        existing = best.get(key)
+        if existing is None or rec.get("timestamp", "") > existing.get("timestamp", ""):
+            best[key] = rec
+    return list(best.values())
+
+
+def compute_dau_metrics(responses_dir: str | Path) -> dict[str, Any]:
+    """Load DAU survey responses from disk and compute aggregate metrics."""
+    from collections import Counter
+
+    records = _load_dau_records(responses_dir)
 
     if not records:
-        return {"team_avg": None, "response_count": 0, "by_role": [], "breakdown": []}
+        return {
+            "team_avg": None,
+            "team_avg_pct": None,
+            "response_count": 0,
+            "by_role": [],
+            "breakdown": [],
+        }
 
     scores = [_DAU_SCORE_MAP.get(record.get("usage", ""), 0.0) for record in records]
     team_avg = round(sum(scores) / len(scores), 2)
+    team_avg_pct = round(team_avg / _DAU_MAX_SCORE * 100, 1)
 
     role_data: dict[str, list[float]] = {}
     for record, score in zip(records, scores):
@@ -361,24 +388,73 @@ def compute_dau_metrics(responses_dir: str | Path) -> dict[str, Any]:
         role_data.setdefault(role, []).append(score)
     by_role = sorted(
         [
-            {"role": role, "avg": round(sum(vals) / len(vals), 2), "count": len(vals)}
+            {
+                "role": role,
+                "avg": round(sum(vals) / len(vals), 2),
+                "avg_pct": round(sum(vals) / len(vals) / _DAU_MAX_SCORE * 100, 1),
+                "count": len(vals),
+            }
             for role, vals in role_data.items()
         ],
         key=lambda item: str(item.get("role", "")),
     )
 
+    total = len(records)
     counts: Counter[str] = Counter(record.get("usage", "") for record in records)
     breakdown = sorted(
-        [{"answer": answer, "count": count} for answer, count in counts.items()],
+        [
+            {
+                "answer": answer,
+                "count": count,
+                "pct": round(count / total * 100, 1),
+            }
+            for answer, count in counts.items()
+        ],
         key=lambda item: -int(str(item["count"])),
     )
 
     return {
         "team_avg": team_avg,
+        "team_avg_pct": team_avg_pct,
         "response_count": len(records),
         "by_role": by_role,
         "breakdown": breakdown,
     }
+
+
+def compute_dau_trend(responses_dir: str | Path) -> list[dict[str, Any]]:
+    """Compute weekly DAU trend from survey responses.
+
+    Returns a chronologically sorted list of per-week rows:
+    ``[{week, team_avg, team_avg_pct, response_count}, ...]``
+    """
+    records = _load_dau_records(responses_dir)
+    if not records:
+        return []
+
+    deduped = _dedup_by_user_week(records)
+
+    weeks: dict[str, list[float]] = {}
+    for rec in deduped:
+        week = rec.get("week", "")
+        if not week:
+            continue
+        score = _DAU_SCORE_MAP.get(rec.get("usage", ""), 0.0)
+        weeks.setdefault(week, []).append(score)
+
+    rows: list[dict[str, Any]] = []
+    for week in sorted(weeks):
+        scores = weeks[week]
+        avg = round(sum(scores) / len(scores), 2)
+        rows.append(
+            {
+                "week": week,
+                "team_avg": avg,
+                "team_avg_pct": round(avg / _DAU_MAX_SCORE * 100, 1),
+                "response_count": len(scores),
+            }
+        )
+    return rows
 
 
 def _resolve_schema_params(
@@ -400,7 +476,7 @@ def _resolve_schema_params(
 
 def build_metrics_dict(
     sprints: list[dict[str, Any]],
-    sprint_issues: dict[int, list[dict[str, Any]]],
+    sprint_issues: dict[int | str, list[dict[str, Any]]],
     issues_with_changelog: list[dict[str, Any]],
     schema: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
@@ -413,6 +489,9 @@ def build_metrics_dict(
     )
 
     velocity = compute_velocity(sprints, sprint_issues, sp_field, done_fs)
+    if config.ESTIMATION_TYPE == "JiraTickets":
+        for row in velocity:
+            row["velocity"] = row["issue_count"]
     logger.debug(
         "Velocity computed for %s sprint(s); totals: %s",
         len(velocity),
@@ -439,6 +518,7 @@ def build_metrics_dict(
         done_statuses=done_fs,
     )
     dau = compute_dau_metrics(config.DAU_RESPONSES_DIR)
+    dau_trend = compute_dau_trend(config.DAU_RESPONSES_DIR)
     return {
         "velocity": velocity,
         "cycle_time": cycle_time,
@@ -448,7 +528,10 @@ def build_metrics_dict(
         "ai_assisted_label": config.AI_ASSISTED_LABEL,
         "ai_exclude_labels": config.AI_EXCLUDE_LABELS,
         "dau": dau,
+        "dau_trend": dau_trend,
         "schema_name": (schema or {}).get("schema_name"),
+        "project_type": config.PROJECT_TYPE,
+        "estimation_type": config.ESTIMATION_TYPE,
         "filter_name": None,
         "filter_id": None,
         "filter_jql": None,

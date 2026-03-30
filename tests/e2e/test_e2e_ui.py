@@ -598,6 +598,196 @@ def test_fetch_cert_button_success(page: Page, live_server_url: str):
 
 
 # ---------------------------------------------------------------------------
+# Group 8: Report Options — radios, checkboxes, localStorage, Generate state
+# (RG-PT-001, RG-PT-004, RG-ET-001, RG-ET-004, RG-MT-001, RG-MT-005,
+#  RG-MT-006, RG-RO-003)
+# ---------------------------------------------------------------------------
+
+
+def _open_report_options(page: Page) -> None:
+    """Ensure the Report Options <details> panel is expanded."""
+    details = page.locator("#report-options")
+    if not details.get_attribute("open"):
+        details.locator("summary").click()
+        page.wait_for_timeout(200)
+
+
+def test_project_type_radios_visible(page: Page, live_server_url: str):
+    """Generate tab shows SCRUM / KANBAN radio buttons (RG-PT-001)."""
+    _goto(page, live_server_url)
+    page.get_by_role("tab", name="Generate Report").click()
+    _open_report_options(page)
+
+    scrum = page.locator('input[name="rpt-project-type"][value="SCRUM"]')
+    kanban = page.locator('input[name="rpt-project-type"][value="KANBAN"]')
+    expect(scrum).to_be_visible()
+    expect(kanban).to_be_visible()
+    # SCRUM is checked by default
+    expect(scrum).to_be_checked()
+
+
+def test_estimation_type_radios_visible(page: Page, live_server_url: str):
+    """Generate tab shows StoryPoints / JiraTickets radio buttons (RG-ET-001)."""
+    _goto(page, live_server_url)
+    page.get_by_role("tab", name="Generate Report").click()
+    _open_report_options(page)
+
+    sp = page.locator('input[name="rpt-estimation-type"][value="StoryPoints"]')
+    jt = page.locator('input[name="rpt-estimation-type"][value="JiraTickets"]')
+    expect(sp).to_be_visible()
+    expect(jt).to_be_visible()
+    # StoryPoints is checked by default
+    expect(sp).to_be_checked()
+
+
+def test_metric_toggle_checkboxes_visible(page: Page, live_server_url: str):
+    """Generate tab shows metric toggle checkboxes, all checked by default (RG-MT-001)."""
+    _goto(page, live_server_url)
+    page.get_by_role("tab", name="Generate Report").click()
+    _open_report_options(page)
+
+    metric_ids = [
+        "rpt-metric-velocity",
+        "rpt-metric-ai-trend",
+        "rpt-metric-ai-usage",
+        "rpt-metric-dau",
+        "rpt-metric-dau-trend",
+    ]
+    for mid in metric_ids:
+        cb = page.locator(f"#{mid}")
+        expect(cb).to_be_visible()
+        expect(cb).to_be_checked()
+
+
+def test_project_type_persists_in_localstorage(page: Page, live_server_url: str):
+    """Project type selection persists across page reloads via localStorage (RG-PT-004)."""
+    _goto(page, live_server_url)
+    page.get_by_role("tab", name="Generate Report").click()
+    _open_report_options(page)
+
+    # Select KANBAN
+    page.locator('input[name="rpt-project-type"][value="KANBAN"]').check()
+    page.wait_for_timeout(300)
+
+    # Reload page (route mocks persist across navigation)
+    page.reload(wait_until="domcontentloaded")
+    page.get_by_role("tab", name="Generate Report").click()
+    _open_report_options(page)
+
+    expect(page.locator('input[name="rpt-project-type"][value="KANBAN"]')).to_be_checked()
+
+
+def test_estimation_type_persists_in_localstorage(page: Page, live_server_url: str):
+    """Estimation type selection persists across page reloads via localStorage (RG-ET-004)."""
+    _goto(page, live_server_url)
+    page.get_by_role("tab", name="Generate Report").click()
+    _open_report_options(page)
+
+    # Select JiraTickets
+    page.locator('input[name="rpt-estimation-type"][value="JiraTickets"]').check()
+    page.wait_for_timeout(300)
+
+    # Reload page
+    page.reload(wait_until="domcontentloaded")
+    page.get_by_role("tab", name="Generate Report").click()
+    _open_report_options(page)
+
+    expect(page.locator('input[name="rpt-estimation-type"][value="JiraTickets"]')).to_be_checked()
+
+
+def test_metric_toggles_persist_in_localstorage(page: Page, live_server_url: str):
+    """Metric toggle state persists across page reloads via localStorage (RG-MT-005)."""
+    _goto(page, live_server_url)
+    page.get_by_role("tab", name="Generate Report").click()
+    _open_report_options(page)
+
+    # Uncheck velocity and DAU
+    page.locator("#rpt-metric-velocity").uncheck()
+    page.locator("#rpt-metric-dau").uncheck()
+    page.wait_for_timeout(300)
+
+    # Reload page
+    page.reload(wait_until="domcontentloaded")
+    page.get_by_role("tab", name="Generate Report").click()
+    _open_report_options(page)
+
+    expect(page.locator("#rpt-metric-velocity")).not_to_be_checked()
+    expect(page.locator("#rpt-metric-dau")).not_to_be_checked()
+    # Others remain checked
+    expect(page.locator("#rpt-metric-ai-trend")).to_be_checked()
+
+
+def test_generate_button_disabled_when_all_metrics_unchecked(page: Page, live_server_url: str):
+    """Generate button is disabled when all metric checkboxes are unchecked (RG-MT-006)."""
+    _goto(page, live_server_url)
+    page.get_by_role("tab", name="Generate Report").click()
+    _open_report_options(page)
+
+    metric_ids = [
+        "rpt-metric-velocity",
+        "rpt-metric-ai-trend",
+        "rpt-metric-ai-usage",
+        "rpt-metric-dau",
+        "rpt-metric-dau-trend",
+    ]
+    # Uncheck all metrics
+    for mid in metric_ids:
+        page.locator(f"#{mid}").uncheck()
+
+    btn = page.locator("#btn-generate")
+    expect(btn).to_be_disabled()
+
+    # Error message visible
+    err = page.locator("#err-no-metrics")
+    expect(err).to_have_class(re.compile(r"visible"))
+
+    # Re-check one — button should re-enable
+    page.locator("#rpt-metric-velocity").check()
+    expect(btn).to_be_enabled()
+
+
+def test_reports_list_links_only_html(page: Page, live_server_url: str):
+    """Reports list shows only HTML links, no MD files (RG-RO-003)."""
+    # Override /api/reports to return entries with HTML files
+    page.route(
+        "**/api/reports",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps(
+                {
+                    "reports": [
+                        {"ts": "2026-03-25T12-00-00", "html_file": "report.html"},
+                        {"ts": "2026-03-24T10-00-00", "html_file": "report.html"},
+                    ]
+                }
+            ),
+        ),
+    )
+    page.route(
+        "**/api/config",
+        lambda route: route.fulfill(
+            status=200,
+            content_type="application/json",
+            body=json.dumps({"ok": True, "configured": True, "config": {}}),
+        ),
+    )
+    page.goto(live_server_url, wait_until="domcontentloaded", timeout=15000)
+
+    reports_list = page.locator("#reports-list")
+    links = reports_list.locator("a")
+    expect(links.first).to_be_visible(timeout=5000)
+
+    count = links.count()
+    assert count == 2, f"Expected 2 report links, got {count}"
+
+    for i in range(count):
+        href = links.nth(i).get_attribute("href") or ""
+        assert href.endswith(".html"), f"Report link should be .html, got: {href}"
+        assert ".md" not in href, f"Report link should not reference .md: {href}"
+
+
+# ---------------------------------------------------------------------------
 # Accessibility: ARIA attributes (NFR-A-002, NFR-A-003, NFR-A-004)
 # ---------------------------------------------------------------------------
 

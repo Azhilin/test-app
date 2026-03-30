@@ -19,7 +19,7 @@ For any non-trivial code change (new feature, behavioral fix, refactor), follow 
 1. **Maintain requirements** — identify the relevant file(s) using `docs/product/requirements/README.md` (lists all files and their ID prefixes); update the `Status` column (`✓ Met`, `✗ Not met`, `⬜ N/T`) for rows whose acceptance criterion is affected. Do not add rows or create new files.
 2. **Maintain application functionality** — implement the feature, fix, or refactor.
 3. **Maintain tests** — write or update tests in the narrowest layer that proves the changed behavior.
-4. **Complete testing and verification** — run the test suite; fix all failures before proceeding.
+4. **Complete testing and verification** — run `python tests/runners/run_all_checks.py`; fix all failures before proceeding.
 5. **Maintain test coverage** — run `python tests/tools/test_coverage.py` after adding, removing, or renaming test functions.
 6. **Maintain project documentation** — update relevant docs when behavior changes:
    - `docs/product/metrics/` — when metric behavior or output shape changes
@@ -63,7 +63,13 @@ python main.py --clean-logs       # delete all generated/logs/ and exit
 python server.py                  # http://localhost:8080
 python server.py 9000             # custom port
 
-# Run tests (no Jira connection required)
+# Run all CI checks in parallel (lint + unit + component + windows + security)
+python tests/runners/run_all_checks.py
+python tests/runners/run_all_checks.py --integration   # also run integration tests
+python tests/runners/run_all_checks.py --e2e           # also run e2e tests
+python tests/runners/run_all_checks.py --all           # run everything
+
+# Run a specific pytest subset directly
 pytest tests/ -v
 
 # Update tests/coverage/test_coverage.md after adding/removing tests (never hand-edit it)
@@ -206,12 +212,14 @@ Exact dict shapes crossing module boundaries:
 ## Testing Conventions
 
 ```bash
-# Run all tests (Windows)
-.venv/Scripts/pytest tests/ -v
-# Run all tests (Mac/Linux)
-.venv/bin/pytest tests/ -v
-# Run subset
-.venv/Scripts/pytest tests/ -v -k "test_velocity"
+# Preferred: run all CI stages in parallel (lint, unit, component, windows, security)
+python tests/runners/run_all_checks.py
+python tests/runners/run_all_checks.py --integration   # add integration
+python tests/runners/run_all_checks.py --e2e           # add e2e
+python tests/runners/run_all_checks.py --all           # everything
+
+# Run a specific subset directly
+pytest tests/ -v -k "test_velocity"
 ```
 
 **Test coverage stats** in `tests/coverage/test_coverage.md` are auto-generated — never edit the

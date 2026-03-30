@@ -21,7 +21,6 @@ def test_import_app_metrics():
     from app.core import metrics
 
     assert callable(metrics.compute_velocity)
-    assert callable(metrics.compute_cycle_time)
     assert callable(metrics.build_metrics_dict)
     assert callable(metrics.get_done_issue_keys_for_changelog)
 

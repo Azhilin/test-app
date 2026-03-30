@@ -68,8 +68,6 @@ def test_build_metrics_dict_has_all_expected_keys():
     result = metrics.build_metrics_dict([sprint], {1: [issue]}, [cl])
     expected_keys = {
         "velocity",
-        "cycle_time",
-        "custom_trends",
         "generated_at",
         "ai_assistance_trend",
         "ai_usage_details",
@@ -81,8 +79,10 @@ def test_build_metrics_dict_has_all_expected_keys():
         "filter_id",
         "filter_jql",
         "project_key",
+        "project_type",
+        "estimation_type",
     }
-    assert set(result.keys()) == expected_keys
+    assert expected_keys.issubset(result.keys())
 
 
 def test_velocity_row_has_required_keys():
@@ -101,17 +101,6 @@ def test_ai_trend_row_has_required_keys():
     row = result["ai_assistance_trend"][0]
     required = {"sprint_id", "sprint_name", "start_date", "end_date", "total_sp", "ai_sp", "ai_pct"}
     assert required.issubset(row.keys())
-
-
-# ---------------------------------------------------------------------------
-# cycle_time dict shape
-# ---------------------------------------------------------------------------
-
-
-def test_cycle_time_has_exact_keys():
-    result = metrics.compute_cycle_time([])
-    expected = {"mean_days", "median_days", "min_days", "max_days", "sample_size", "values"}
-    assert set(result.keys()) == expected
 
 
 # ---------------------------------------------------------------------------

@@ -49,7 +49,7 @@ def test_main_keeps_running_when_filter_name_lookup_fails(monkeypatch, tmp_path)
     mock_jira._session.get.side_effect = RuntimeError("filter lookup failed")
     captured_metrics: list[dict] = []
 
-    def _capture_html(metrics_dict, output_path):
+    def _capture_html(metrics_dict, output_path, section_visibility=None):
         captured_metrics.append(metrics_dict.copy())
 
     monkeypatch.setattr(cli.config, "validate_config", lambda: [])
@@ -63,13 +63,11 @@ def test_main_keeps_running_when_filter_name_lookup_fails(monkeypatch, tmp_path)
         lambda *args, **kwargs: {
             "generated_at": "2026-03-26T10:00:00+00:00",
             "velocity": [],
-            "cycle_time": {"sample_size": 0, "values": []},
-            "custom_trends": [],
         },
     )
     monkeypatch.setattr(cli.jira_client, "get_filter_jql", lambda jira: "project = TEST")
     monkeypatch.setattr(cli.report_html, "generate_html", _capture_html)
-    monkeypatch.setattr(cli.report_md, "generate_md", lambda metrics_dict, output_path: None)
+    monkeypatch.setattr(cli.report_md, "generate_md", lambda metrics_dict, output_path, section_visibility=None: None)
     monkeypatch.setattr(cli, "REPORTS_DIR", tmp_path / "generated" / "reports")
     monkeypatch.setattr("sys.argv", ["main.py"])
 
@@ -100,12 +98,10 @@ def test_main_generates_reports_in_parallel(monkeypatch, tmp_path):
         lambda *a, **kw: {
             "generated_at": "2026-01-01T00:00:00+00:00",
             "velocity": [],
-            "cycle_time": {"sample_size": 0, "values": []},
-            "custom_trends": [],
         },
     )
-    monkeypatch.setattr(cli.report_html, "generate_html", lambda m, p: None)
-    monkeypatch.setattr(cli.report_md, "generate_md", lambda m, p: None)
+    monkeypatch.setattr(cli.report_html, "generate_html", lambda m, p, s=None: None)
+    monkeypatch.setattr(cli.report_md, "generate_md", lambda m, p, s=None: None)
     monkeypatch.setattr(cli, "REPORTS_DIR", tmp_path / "generated" / "reports")
     monkeypatch.setattr("sys.argv", ["main.py"])
 

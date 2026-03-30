@@ -2,6 +2,7 @@
 .env
 dau_*.json
 .vscode/mcp.json
+settings.local.json
 
 # Virtual environments
 .tmplib/

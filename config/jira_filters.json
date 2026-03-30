@@ -14,5 +14,21 @@
       "JIRA_CLOSED_SPRINTS_ONLY": "true",
       "schema_name": "Default_Jira_Cloud"
     }
+  },
+  {
+    "filter_name": "SCRUM Test",
+    "slug": "scrum_test",
+    "description": "",
+    "is_default": false,
+    "created_at": "2026-03-29T22:11:30",
+    "jql": "project = SCRUM AND status = Done AND sprint in closedSprints()",
+    "params": {
+      "JIRA_PROJECT": "SCRUM",
+      "JIRA_TEAM_ID": "",
+      "JIRA_ISSUE_TYPES": "",
+      "JIRA_FILTER_STATUS": "Done",
+      "JIRA_CLOSED_SPRINTS_ONLY": "true",
+      "schema_name": "SCRUM Cloud"
+    }
   }
 ]

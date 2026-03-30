@@ -17,6 +17,7 @@ _SECTION_KEYS = [
     "cycle_time",
     "custom_trends",
     "dau",
+    "dau_trend",
 ]
 
 

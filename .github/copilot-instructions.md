@@ -49,6 +49,8 @@ Do not move real source files into `generated/`; this applies only to generated 
 - Run the app: `python main.py` (delegates to `app/cli.py`; `--clean` removes reports, `--clean-logs` removes logs)
 - Run the local server: `python server.py`
 - Run tests on Windows: `.venv/Scripts/pytest tests/ -v`
+- Run lint (ruff + mypy + bandit): `tests/runners/run_lint.bat`
+- Install pre-commit hook (run once after clone): `cp tests/runners/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit`
 
 Choose the smallest relevant validation for the task instead of defaulting to the full suite for every change.
 
@@ -71,7 +73,7 @@ For any non-trivial code change, follow these steps in order. See `.github/instr
 1. **Maintain requirements** — use `docs/product/requirements/README.md` to find the relevant file(s); update `Status` in affected rows. Do not add rows or create files.
 2. **Maintain application functionality** — implement the feature, fix, or refactor.
 3. **Maintain tests** — write or update tests in the narrowest layer that proves the behavior.
-4. **Complete testing and verification** — run the test suite; fix all failures.
+4. **Complete testing and verification** — run the test suite and `tests/runners/run_lint.bat`; fix all failures. The pre-commit hook runs lint automatically on `git commit` once installed.
 5. **Maintain test coverage** — run `python tests/tools/test_coverage.py` after adding, removing, or renaming test functions.
 6. **Maintain project documentation** — update `docs/product/metrics/`, `docs/development/architecture.md`, `README.md`, or `docs/product/features/features.md` when behavior changes.
 
