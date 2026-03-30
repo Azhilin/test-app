@@ -27,10 +27,10 @@
            /----------------\
           /    Component      \      155 tests  (29%)  (filesystem, HTTP, data shapes)        → tests/component/
          /--------------------\
-        /        Unit            \   254 tests  (48%)  (pure functions, no I/O)               → tests/unit/
+        /        Unit            \   258 tests  (48%)  (pure functions, no I/O)               → tests/unit/
        /------------------------\
                                      ────────────────
-                                     530 tests total
+                                     534 tests total
 ```
 
 ## Coverage Matrix
