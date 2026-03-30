@@ -18,6 +18,7 @@ set LOG_DIR=generated\logs
 set LOG_FILE=
 set ENV_FILE=.env
 set ENV_TEMPLATE=.env.example
+set INSTALLER_LOCAL_DIR=installers
 set SKIP_COUNTDOWN=0
 set SMOKE_TEST_MODE=0
 set ENV_EXISTING_ACTION=prompt
@@ -94,9 +95,19 @@ call :LOG "[INFO]" "Writing setup log to '%LOG_FILE_PATH%'."
 
 call :LOG "[INFO]" "OS validated: Windows_NT + Architecture: %ARCH%-bit"
 
+:: ============================================================
+:: SECTION 2a - ENVIRONMENT FILE BOOTSTRAP (early, no Python required)
+:: Creates .env from .env.example before any step that may exit early.
+:: ============================================================
+call :ENSURE_ENV_FILE
+if errorlevel 1 (
+    call :COUNTDOWN
+    exit /b 1
+)
+
 if "%SMOKE_TEST_MODE%"=="1" (
     call :LOG "[INFO]" "Smoke-test mode enabled. Skipping Python installation and dependency setup."
-    goto :BOOTSTRAP_ENV
+    goto :AFTER_DEPS
 )
 
 :: ============================================================
@@ -230,10 +241,25 @@ if "%ARCH%"=="64" (
     set INSTALLER_FILE=%TEMP%\python-%PYTHON_INSTALL_VERSION%-win32.exe
 )
 
+:: Check for a bundled installer first (offline / avoids SSL issues)
+if "%ARCH%"=="64" (
+    if exist "%INSTALLER_LOCAL_DIR%\python-%PYTHON_INSTALL_VERSION%-amd64.exe" (
+        set INSTALLER_FILE=%INSTALLER_LOCAL_DIR%\python-%PYTHON_INSTALL_VERSION%-amd64.exe
+        call :LOG "[INFO]" "Bundled installer found: '!INSTALLER_FILE!'. Skipping download."
+        goto :VERIFY_INSTALLER
+    )
+) else (
+    if exist "%INSTALLER_LOCAL_DIR%\python-%PYTHON_INSTALL_VERSION%.exe" (
+        set INSTALLER_FILE=%INSTALLER_LOCAL_DIR%\python-%PYTHON_INSTALL_VERSION%.exe
+        call :LOG "[INFO]" "Bundled installer found: '!INSTALLER_FILE!'. Skipping download."
+        goto :VERIFY_INSTALLER
+    )
+)
+
 call :LOG "[INFO]" "Download URL: !INSTALLER_URL!"
 call :LOG "[INFO]" "Installer will be saved to: !INSTALLER_FILE!"
 
-:: Secure download via PowerShell with forced TLS 1.2
+:: Strategy 1: Secure download via PowerShell with forced TLS 1.2
 call :LOG "[INFO]" "Downloading installer (forcing TLS 1.2)..."
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; " ^
@@ -246,19 +272,45 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "  exit 1 " ^
     "}"
 
+if %errorlevel% equ 0 goto :DOWNLOAD_DONE
+
+:: Strategy 2: Fallback via bitsadmin (built-in, handles SSL differently on restricted systems)
+call :LOG "[WARNING]" "Primary download failed. Retrying via bitsadmin..."
+bitsadmin /transfer "PythonInstaller" /download /priority NORMAL "!INSTALLER_URL!" "!INSTALLER_FILE!" >nul 2>&1
+
 if %errorlevel% neq 0 (
-    call :LOG "[ERROR]" "Download failed. Check your internet connection and try again."
+    call :LOG "[ERROR]" "Both download methods failed."
+    echo.
+    echo  ================================================================
+    echo   Could not download the Python installer automatically.
+    echo   This is usually caused by SSL certificate restrictions on
+    echo   your network.
+    echo.
+    echo   SOLUTION: Ask your IT team (or a technical colleague) to
+    echo   download the file manually and place it here:
+    echo.
+    if "%ARCH%"=="64" (
+        echo     %INSTALLER_LOCAL_DIR%\python-%PYTHON_INSTALL_VERSION%-amd64.exe
+    ) else (
+        echo     %INSTALLER_LOCAL_DIR%\python-%PYTHON_INSTALL_VERSION%.exe
+    )
+    echo.
+    echo   Then run project_setup.bat again.
+    echo  ================================================================
+    echo.
     call :COUNTDOWN
     exit /b 1
 )
 
+:DOWNLOAD_DONE
 if not exist "!INSTALLER_FILE!" (
     call :LOG "[ERROR]" "Installer file not found after download: !INSTALLER_FILE!"
     call :COUNTDOWN
     exit /b 1
 )
 
-call :LOG "[INFO]" "Download complete. Verifying SHA-256 checksum..."
+:VERIFY_INSTALLER
+call :LOG "[INFO]" "Verifying SHA-256 checksum..."
 
 :: SHA-256 checksum validation
 for /f "usebackq delims=" %%H in (`powershell -NoProfile -Command "(Get-FileHash '!INSTALLER_FILE!' -Algorithm SHA256).Hash.ToLower()"`) do (
@@ -430,17 +482,8 @@ if exist "requirements-dev.txt" (
 )
 
 :: ============================================================
-:: SECTION 6 - ENVIRONMENT FILE BOOTSTRAP
-:: ============================================================
-:BOOTSTRAP_ENV
-call :ENSURE_ENV_FILE
-if errorlevel 1 (
-    call :COUNTDOWN
-    exit /b 1
-)
-
-:: ============================================================
 :: SECTION 7 - .GITIGNORE SAFETY CHECK
+:AFTER_DEPS
 :: ============================================================
 if exist ".gitignore" (
     findstr /i /c:".venv" .gitignore >nul 2>&1
