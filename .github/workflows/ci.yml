@@ -400,7 +400,7 @@ jobs:
           path: allure-results/
 
       - name: Generate Allure report with history
-        uses: simple-elf/allure-report-action@v1.7
+        uses: simple-elf/allure-report-action@v1.13
         with:
           allure_results: allure-results
           allure_report: allure-report
