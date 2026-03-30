@@ -55,6 +55,9 @@ class GenerateHandlerMixin:
                             _val = (_params.get(_key) or "").strip()
                             if _val:
                                 fresh_env[_key] = _val
+                        _schema_name = (_params.get("schema_name") or "").strip()
+                        if _schema_name:
+                            fresh_env["JIRA_SCHEMA_NAME"] = _schema_name
                         break
 
             # Report generation params from UI query string
