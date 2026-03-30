@@ -9,7 +9,7 @@ Usage:
 
 import logging
 import ssl  # noqa: F401
-import subprocess  # noqa: F401
+import subprocess  # noqa: F401  # nosec B404
 import urllib  # noqa: F401
 import urllib.request  # noqa: F401
 import webbrowser

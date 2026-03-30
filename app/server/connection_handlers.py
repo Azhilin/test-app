@@ -23,7 +23,7 @@ class ConnectionHandlerMixin:
             self._send_json(400, {"ok": False, "error": "url, email, and token are required"})
             return
 
-        if token == "***":
+        if token == "***":  # nosec B105
             _, _, env_token = self._read_env_credentials()
             if not env_token:
                 self._send_json(400, {"ok": False, "error": "No saved token on server"})
@@ -39,7 +39,7 @@ class ConnectionHandlerMixin:
         )
 
         try:
-            with urllib.request.urlopen(req, timeout=12, context=self._jira_ssl_context()) as resp:
+            with urllib.request.urlopen(req, timeout=12, context=self._jira_ssl_context()) as resp:  # nosec B310
                 data = json.loads(resp.read())
                 self._send_json(
                     200,

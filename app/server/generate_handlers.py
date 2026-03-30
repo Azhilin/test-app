@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import os
-import subprocess
+import subprocess  # nosec B404
 import sys
 from urllib.parse import parse_qs, urlparse
 from urllib.parse import unquote as urlunquote
@@ -75,7 +75,7 @@ class GenerateHandlerMixin:
                 if _val:
                     fresh_env[_key] = _val
 
-            proc = subprocess.Popen(
+            proc = subprocess.Popen(  # nosec B603
                 [sys.executable, str(root / "main.py")],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,

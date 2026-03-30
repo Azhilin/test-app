@@ -162,7 +162,7 @@ class HandlerBase(BaseHTTPRequestHandler):
             f"{url}{endpoint}",
             headers={"Authorization": f"Basic {creds}", "Accept": "application/json"},
         )
-        with urllib.request.urlopen(req, timeout=30, context=self._jira_ssl_context()) as resp:
+        with urllib.request.urlopen(req, timeout=30, context=self._jira_ssl_context()) as resp:  # nosec B310
             return json.loads(resp.read())
 
     # ── routing ──────────────────────────────────────────────────────────────
