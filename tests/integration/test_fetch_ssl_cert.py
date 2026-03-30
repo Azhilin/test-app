@@ -27,7 +27,7 @@ FAKE_PEM = "-----BEGIN CERTIFICATE-----\nMIIBfake\n-----END CERTIFICATE-----\n"
 
 
 def test_fetch_cert_happy_path(tmp_path):
-    with patch("fetch_ssl_cert.ssl.get_server_certificate", return_value=FAKE_PEM):
+    with patch("fetch_ssl_cert._fetch_cert_chain", return_value=FAKE_PEM):
         result = fetch_and_save_cert("https://example.atlassian.net", root=tmp_path)
     cert = tmp_path / "certs" / "jira_ca_bundle.pem"
     assert cert.exists()
@@ -38,7 +38,7 @@ def test_fetch_cert_happy_path(tmp_path):
 
 def test_fetch_cert_creates_certs_dir(tmp_path):
     assert not (tmp_path / "certs").exists()
-    with patch("fetch_ssl_cert.ssl.get_server_certificate", return_value=FAKE_PEM):
+    with patch("fetch_ssl_cert._fetch_cert_chain", return_value=FAKE_PEM):
         fetch_and_save_cert("https://example.atlassian.net", root=tmp_path)
     assert (tmp_path / "certs").is_dir()
 
@@ -47,7 +47,7 @@ def test_fetch_cert_overwrites_existing(tmp_path):
     certs_dir = tmp_path / "certs"
     certs_dir.mkdir()
     (certs_dir / "jira_ca_bundle.pem").write_text("OLD CERT", encoding="ascii")
-    with patch("fetch_ssl_cert.ssl.get_server_certificate", return_value=FAKE_PEM):
+    with patch("fetch_ssl_cert._fetch_cert_chain", return_value=FAKE_PEM):
         fetch_and_save_cert("https://example.atlassian.net", root=tmp_path)
     content = (certs_dir / "jira_ca_bundle.pem").read_text(encoding="ascii")
     assert content.startswith(FAKE_PEM)
@@ -55,14 +55,14 @@ def test_fetch_cert_overwrites_existing(tmp_path):
 
 
 def test_fetch_cert_parses_custom_port(tmp_path):
-    with patch("fetch_ssl_cert.ssl.get_server_certificate", return_value=FAKE_PEM) as mock_get:
+    with patch("fetch_ssl_cert._fetch_cert_chain", return_value=FAKE_PEM) as mock_chain:
         fetch_and_save_cert("https://jira.corp.local:8443", root=tmp_path)
-    mock_get.assert_called_once_with(("jira.corp.local", 8443))
+    mock_chain.assert_called_once_with("jira.corp.local", 8443)
 
 
 def test_fetch_cert_bundle_contains_certifi_cas(tmp_path):
     """Saved PEM bundle includes the leaf cert followed by the certifi CA store."""
-    with patch("fetch_ssl_cert.ssl.get_server_certificate", return_value=FAKE_PEM):
+    with patch("fetch_ssl_cert._fetch_cert_chain", return_value=FAKE_PEM):
         fetch_and_save_cert("https://example.atlassian.net", root=tmp_path)
     content = (tmp_path / "certs" / "jira_ca_bundle.pem").read_text(encoding="ascii")
     ca_bundle = Path(certifi.where()).read_text(encoding="ascii")
@@ -89,7 +89,7 @@ def test_fetch_cert_exits_when_hostname_unparseable(tmp_path):
 
 def test_fetch_cert_exits_on_ssl_error(tmp_path):
     with patch(
-        "fetch_ssl_cert.ssl.get_server_certificate",
+        "fetch_ssl_cert._fetch_cert_chain",
         side_effect=ssl.SSLError("handshake failure"),
     ):
         with pytest.raises(SystemExit) as exc_info:
@@ -99,7 +99,7 @@ def test_fetch_cert_exits_on_ssl_error(tmp_path):
 
 def test_fetch_cert_exits_on_os_error(tmp_path):
     with patch(
-        "fetch_ssl_cert.ssl.get_server_certificate",
+        "fetch_ssl_cert._fetch_cert_chain",
         side_effect=OSError("connection refused"),
     ):
         with pytest.raises(SystemExit) as exc_info:
