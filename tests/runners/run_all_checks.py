@@ -59,8 +59,8 @@ def _find_pip_audit(python: str) -> list[str] | None:
 
 def main() -> int:
     argv = set(sys.argv[1:])
-    run_integration = True
-    run_e2e = True
+    run_integration = "--integration" in argv or "--all" in argv
+    run_e2e = "--e2e" in argv or "--all" in argv
 
     python = r".venv\Scripts\python.exe" if os.path.exists(r".venv\Scripts\python.exe") else "python"
     pip_audit = _find_pip_audit(python)

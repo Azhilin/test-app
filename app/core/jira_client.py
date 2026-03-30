@@ -119,7 +119,7 @@ def get_issues_with_changelog(jira: Jira, issue_keys: list[str]) -> list[dict[st
     return out
 
 
-def fetch_sprint_data(jira: Jira) -> tuple[list[dict[str, Any]], dict[int, list[dict[str, Any]]]]:
+def fetch_sprint_data(jira: Jira) -> tuple[list[dict[str, Any]], dict[int | str, list[dict[str, Any]]]]:
     """
     Fetch sprints and their issues for the configured board.
     If JIRA_FILTER_ID is set, only issues matching that filter's JQL are included.
@@ -131,7 +131,7 @@ def fetch_sprint_data(jira: Jira) -> tuple[list[dict[str, Any]], dict[int, list[
     filter_jql = get_filter_jql(jira)
     if filter_jql:
         logger.debug("Applying filter JQL: %s", filter_jql)
-    sprint_issues: dict[int, list[dict[str, Any]]] = {}
+    sprint_issues: dict[int | str, list[dict[str, Any]]] = {}
     for sprint in sprints:
         sid = sprint.get("id")
         if sid is None:

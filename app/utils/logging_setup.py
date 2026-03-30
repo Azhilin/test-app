@@ -24,7 +24,7 @@ logging.addLevelName(SUCCESS_LEVEL, "SUCCESS")
 
 def _success(self: logging.Logger, message: str, *args: object, **kwargs: object) -> None:
     if self.isEnabledFor(SUCCESS_LEVEL):
-        self._log(SUCCESS_LEVEL, message, args, **kwargs)
+        self._log(SUCCESS_LEVEL, message, args, **kwargs)  # type: ignore[arg-type]
 
 
 logging.Logger.success = _success  # type: ignore[attr-defined]
