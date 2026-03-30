@@ -243,12 +243,11 @@ class SchemaHandlerMixin:
                 )
 
         # Probe a sample issue to collect populated field IDs
-        populated_fields: list[str] = []
+        populated_fields = []
         if project_keys:
             proj_clause = project_keys[0] if len(project_keys) == 1 else f"({', '.join(project_keys)})"
             jql = (
-                f"project {'= ' + proj_clause if len(project_keys) == 1 else 'IN ' + proj_clause}"
-                " ORDER BY created DESC"
+                f"project {'= ' + proj_clause if len(project_keys) == 1 else 'IN ' + proj_clause} ORDER BY created DESC"
             )
             try:
                 search_result = self._jira_api_get(
