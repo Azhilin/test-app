@@ -3,12 +3,46 @@
 from __future__ import annotations
 
 import os
+import socket
 import ssl
 from urllib.parse import urlparse
 
 import certifi
 
 from ._base import _root
+
+
+def _fetch_cert_chain(host: str, port: int) -> str:
+    """Return the full TLS certificate chain as concatenated PEM.
+
+    Connects without verification (CERT_NONE) so the chain can be captured
+    even when the server's CA is not trusted by certifi — the common case for
+    corporate SSL-inspection proxies. Uses get_unverified_chain() (Python 3.11+)
+    to return all certs in the chain: leaf, intermediates, and the root CA.
+    Falls back to the leaf cert only if the chain API is unavailable.
+    """
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE  # nosec B501 — intentional: fetching cert for trust bootstrap
+
+    pem_parts: list[str] = []
+    with socket.create_connection((host, port), timeout=10) as raw:
+        with ctx.wrap_socket(raw, server_hostname=host) as ssock:
+            try:
+                chain = ssock.get_unverified_chain()
+                for cert in chain:
+                    pem_parts.append(cert.public_bytes(ssl.ENCODING_PEM).decode("ascii"))
+            except (AttributeError, TypeError):
+                pass
+            if not pem_parts:
+                der = ssock.getpeercert(binary_form=True)
+                if der:
+                    pem_parts.append(ssl.DER_cert_to_PEM_cert(der))
+
+    if not pem_parts:
+        pem_parts.append(ssl.get_server_certificate((host, port)))
+
+    return "\n".join(pem_parts)
 
 
 class CertHandlerMixin:
@@ -52,7 +86,7 @@ class CertHandlerMixin:
             return
 
         try:
-            pem = ssl.get_server_certificate((host, port))
+            pem = _fetch_cert_chain(host, port)
         except ssl.SSLError as exc:
             self._send_json(200, {"ok": False, "error": f"SSL error from {host}:{port}: {exc}"})
             return
