@@ -388,7 +388,7 @@ def test_fetch_cert_saves_full_ca_bundle(server_url, tmp_path):
     orig = srv.ROOT
     srv.ROOT = tmp_path
     try:
-        with patch("app.server.cert_handlers.ssl.get_server_certificate", return_value=fake_pem):
+        with patch("app.server.cert_handlers._fetch_cert_chain", return_value=fake_pem):
             body = json.dumps({"url": "https://example.atlassian.net"}).encode()
             req = urllib.request.Request(
                 f"{server_url}/api/fetch-cert",
@@ -570,8 +570,6 @@ def test_fetch_cert_saves_pem_without_crlf_line_endings(server_url, tmp_path):
     string with \\n endings; the saved bytes must not contain \\r\\n sequences, which would
     make cryptography fail to parse the cert on Windows.
     """
-    import ssl
-
     import app.server as srv
 
     sample_pem = _make_test_pem(90).decode("ascii")
@@ -580,7 +578,7 @@ def test_fetch_cert_saves_pem_without_crlf_line_endings(server_url, tmp_path):
     orig_root = srv.ROOT
     srv.ROOT = tmp_path
     try:
-        with patch.object(ssl, "get_server_certificate", return_value=sample_pem):
+        with patch("app.server.cert_handlers._fetch_cert_chain", return_value=sample_pem):
             body = json.dumps({"url": "https://test.atlassian.net"}).encode()
             req = urllib.request.Request(
                 f"{server_url}/api/fetch-cert",

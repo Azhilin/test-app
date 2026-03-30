@@ -256,3 +256,130 @@ def test_build_schema_from_fields_preserves_team_jql_name():
     result = schema_mod.build_schema_from_fields(jira_fields, "Team Test")
     assert result["fields"]["team"]["id"] == "customfield_50000"
     assert result["fields"]["team"]["jql_name"] == "Team[Team]"
+
+
+def test_build_schema_from_fields_detects_story_points_by_float_type():
+    """Float custom type is detected as story_points."""
+    jira_fields = [
+        {
+            "id": "customfield_10016",
+            "name": "Story Points",
+            "custom": True,
+            "schema": {
+                "type": "number",
+                "custom": "com.atlassian.jira.plugin.system.customfieldtypes:float",
+            },
+        },
+    ]
+    result = schema_mod.build_schema_from_fields(jira_fields, "Float Test")
+    assert result["fields"]["story_points"]["id"] == "customfield_10016"
+
+
+def test_build_schema_from_fields_disambiguates_float_fields_by_name():
+    """When multiple float fields exist the best-named one is chosen for story_points."""
+    jira_fields = [
+        {
+            "id": "customfield_10100",
+            "name": "Budget Estimate",
+            "custom": True,
+            "schema": {
+                "type": "number",
+                "custom": "com.atlassian.jira.plugin.system.customfieldtypes:float",
+            },
+        },
+        {
+            "id": "customfield_10016",
+            "name": "Story Points",
+            "custom": True,
+            "schema": {
+                "type": "number",
+                "custom": "com.atlassian.jira.plugin.system.customfieldtypes:float",
+            },
+        },
+    ]
+    result = schema_mod.build_schema_from_fields(jira_fields, "Disambig Test")
+    assert result["fields"]["story_points"]["id"] == "customfield_10016"
+
+
+def test_build_schema_from_fields_uses_populated_fields_for_disambiguation():
+    """When names are ambiguous, populated_fields presence breaks the tie."""
+    jira_fields = [
+        {
+            "id": "customfield_10100",
+            "name": "Estimate",
+            "custom": True,
+            "schema": {
+                "type": "number",
+                "custom": "com.atlassian.jira.plugin.system.customfieldtypes:float",
+            },
+        },
+        {
+            "id": "customfield_10200",
+            "name": "Points",
+            "custom": True,
+            "schema": {
+                "type": "number",
+                "custom": "com.atlassian.jira.plugin.system.customfieldtypes:float",
+            },
+        },
+    ]
+    # "Points" has a slightly better name score (+2) but "Estimate" is populated
+    # "Points" name score = 2 (contains "point"), not populated → total 2
+    # "Estimate" name score = 0, but populated → total 1
+    # So "Points" still wins due to higher name score
+    result = schema_mod.build_schema_from_fields(jira_fields, "Populated Test", populated_fields=["customfield_10100"])
+    assert result["fields"]["story_points"]["id"] == "customfield_10200"
+
+
+def test_build_schema_from_fields_populated_fields_breaks_equal_name_score():
+    """populated_fields decides between equally-named float fields."""
+    jira_fields = [
+        {
+            "id": "customfield_10100",
+            "name": "Custom Float A",
+            "custom": True,
+            "schema": {
+                "type": "number",
+                "custom": "com.atlassian.jira.plugin.system.customfieldtypes:float",
+            },
+        },
+        {
+            "id": "customfield_10200",
+            "name": "Custom Float B",
+            "custom": True,
+            "schema": {
+                "type": "number",
+                "custom": "com.atlassian.jira.plugin.system.customfieldtypes:float",
+            },
+        },
+    ]
+    # Both score 0 on name; only 10200 is populated → it wins
+    result = schema_mod.build_schema_from_fields(jira_fields, "Tie Test", populated_fields=["customfield_10200"])
+    assert result["fields"]["story_points"]["id"] == "customfield_10200"
+
+
+def test_build_schema_from_fields_applies_board_statuses():
+    """board_statuses overrides the static default status_mapping."""
+    board_statuses = {
+        "done_statuses": ["Completed", "Shipped"],
+        "in_progress_statuses": ["In Dev", "In Review"],
+    }
+    result = schema_mod.build_schema_from_fields([], "Status Test", board_statuses=board_statuses)
+    assert result["status_mapping"]["done_statuses"] == ["Completed", "Shipped"]
+    assert result["status_mapping"]["in_progress_statuses"] == ["In Dev", "In Review"]
+
+
+def test_build_schema_from_fields_partial_board_statuses_only_done():
+    """Only done_statuses in board_statuses; in_progress falls back to default."""
+    board_statuses = {"done_statuses": ["Closed"], "in_progress_statuses": []}
+    result = schema_mod.build_schema_from_fields([], "Partial Status Test", board_statuses=board_statuses)
+    assert result["status_mapping"]["done_statuses"] == ["Closed"]
+    # Empty in_progress_statuses in board_statuses → keeps default
+    expected_in_progress = schema_mod._DEFAULT_SCHEMA["status_mapping"]["in_progress_statuses"]
+    assert result["status_mapping"]["in_progress_statuses"] == expected_in_progress
+
+
+def test_build_schema_from_fields_none_board_statuses_uses_defaults():
+    """When board_statuses is None the default status_mapping is preserved."""
+    result = schema_mod.build_schema_from_fields([], "Default Status Test")
+    assert result["status_mapping"] == schema_mod._DEFAULT_SCHEMA["status_mapping"]

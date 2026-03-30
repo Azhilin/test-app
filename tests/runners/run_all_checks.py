@@ -3,7 +3,7 @@ Parallel CI stage runner — orchestrates all run_all_checks stages concurrently
 Called by tests/runners/run_all_checks.bat; can also be invoked directly.
 
 Usage:
-    python tests/runners/run_all_checks.py [--integration] [--e2e] [--all]
+    python tests/runners/run_all_checks.py
 """
 
 from __future__ import annotations
@@ -58,10 +58,6 @@ def _find_pip_audit(python: str) -> list[str] | None:
 
 
 def main() -> int:
-    argv = set(sys.argv[1:])
-    run_integration = "--integration" in argv or "--all" in argv
-    run_e2e = "--e2e" in argv or "--all" in argv
-
     python = r".venv\Scripts\python.exe" if os.path.exists(r".venv\Scripts\python.exe") else "python"
     pip_audit = _find_pip_audit(python)
 
@@ -72,13 +68,12 @@ def main() -> int:
         Stage("Unit", [python, "-m", "pytest", "tests/unit", "-m", "unit and not windows_only", *xdist]),
         Stage("Component", [python, "-m", "pytest", "tests/component", "-m", "component and not windows_only", *xdist]),
         Stage("Windows", [python, "-m", "pytest", "tests", "-m", "windows_only", *xdist]),
-        Stage("Security", (pip_audit or ["pip-audit"]) + ["-r", "requirements.txt"], skip=pip_audit is None),
+        Stage("Security", (pip_audit or ["pip-audit"]) + ["-r", "requirements.txt"]),
         Stage(
             "Integration",
             [python, "-m", "pytest", "tests/integration", "-m", "integration and not windows_only", *xdist],
-            skip=not run_integration,
         ),
-        Stage("E2E", [python, "-m", "pytest", "tests/e2e", "-m", "e2e and not windows_only", *xdist], skip=not run_e2e),
+        Stage("E2E", [python, "-m", "pytest", "tests/e2e", "-m", "e2e and not windows_only", *xdist]),
     ]
 
     active = [s for s in stages if not s.skip]
@@ -88,7 +83,7 @@ def main() -> int:
     print("  LOCAL CI CHECKS  (parallel)")
     print(SEP)
     if pip_audit is None:
-        print("\n  WARNING: pip-audit not found — Security stage skipped.")
+        print("\n  WARNING: pip-audit not found — Security stage will FAIL.")
         print("           Install with: pip install pip-audit")
     print(f"\n  Running {len(active)} stage(s) concurrently: {', '.join(s.name for s in active)}\n")
 
@@ -123,7 +118,7 @@ def main() -> int:
     # ── Summary ───────────────────────────────────────────────────────────────
     print(f"\n{SEP}\n  SUMMARY\n{SEP}\n")
     print(f"  {'Stage':<25} Result")
-    print(f"  {'─' * 23} {'─' * 6}")
+    print(f"  {'-' * 23} {'-' * 6}")
     for s in stages:
         if s.skip:
             label = "SKIP"

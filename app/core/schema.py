@@ -212,19 +212,50 @@ KNOWN_NAME_PATTERNS: dict[str, list[str]] = {
 }
 
 
+_FLOAT_CUSTOM_TYPE = "com.atlassian.jira.plugin.system.customfieldtypes:float"
+
+
+def _score_story_points_candidate(fname: str, fid: str, populated: set[str]) -> int:
+    """Score a float custom field as a story-points candidate (higher = better match)."""
+    name_lower = fname.lower()
+    score = 0
+    if "story point" in name_lower or "story_point" in name_lower:
+        score += 3
+    elif "point" in name_lower:
+        score += 2
+    if name_lower.split() and "sp" in name_lower.split():
+        score += 2
+    if fid in populated:
+        score += 1
+    return score
+
+
 def build_schema_from_fields(
     jira_fields: list[dict[str, Any]],
     schema_name: str,
     jira_url: str = "",
     description: str = "",
+    *,
+    populated_fields: list[str] | None = None,
+    board_statuses: dict[str, list[str]] | None = None,
 ) -> dict[str, Any]:
     """Build a schema dict from Jira's GET /rest/api/2/field response.
 
     Matches custom fields by their schema.custom identifier first, then falls back
     to name-based heuristics. Standard fields (priority, labels, etc.) are always
     included with their canonical IDs.
+
+    Args:
+        populated_fields: Field IDs present on a sample issue; used to validate and
+            disambiguate detections (e.g. choosing among multiple float fields).
+        board_statuses: Pre-detected status categorisation from the Jira instance
+            ({"done_statuses": [...], "in_progress_statuses": [...]}). When supplied
+            overrides the static default status_mapping.
     """
     detected: dict[str, dict[str, Any]] = {}
+    # Collect all float-type candidates; pick the best one after the loop
+    _sp_candidates: list[tuple[str, str, dict[str, Any]]] = []  # (fid, fname, info)
+    populated_set: set[str] = set(populated_fields or [])
 
     for field in jira_fields:
         fid = field.get("id", "")
@@ -232,6 +263,16 @@ def build_schema_from_fields(
         is_custom = field.get("custom", False)
         schema_info = field.get("schema") or {}
         custom_type = schema_info.get("custom", "")
+
+        if is_custom and custom_type == _FLOAT_CUSTOM_TYPE:
+            _sp_candidates.append(
+                (
+                    fid,
+                    fname,
+                    {"id": fid, "type": schema_info.get("type", "string"), "description": fname},
+                )
+            )
+            continue
 
         if is_custom and custom_type in KNOWN_FIELD_SCHEMAS:
             key = KNOWN_FIELD_SCHEMAS[custom_type]
@@ -253,6 +294,14 @@ def build_schema_from_fields(
                     }
                     break
 
+    # Pick the best story-points candidate from all float fields
+    if _sp_candidates and "story_points" not in detected:
+        best = max(
+            _sp_candidates,
+            key=lambda c: _score_story_points_candidate(c[1], c[0], populated_set),
+        )
+        detected["story_points"] = best[2]
+
     # Start from default and overlay detected fields
     fields = json.loads(json.dumps(_DEFAULT_SCHEMA["fields"]))
     for key, info in detected.items():
@@ -267,10 +316,17 @@ def build_schema_from_fields(
     if "team" in detected and "jql_name" not in detected["team"]:
         fields["team"]["jql_name"] = _DEFAULT_SCHEMA["fields"]["team"]["jql_name"]
 
+    status_mapping = json.loads(json.dumps(_DEFAULT_SCHEMA["status_mapping"]))
+    if board_statuses:
+        if board_statuses.get("done_statuses"):
+            status_mapping["done_statuses"] = list(board_statuses["done_statuses"])
+        if board_statuses.get("in_progress_statuses"):
+            status_mapping["in_progress_statuses"] = list(board_statuses["in_progress_statuses"])
+
     return {
         "schema_name": schema_name,
         "description": description or f"Auto-detected from {jira_url}",
         "jira_url_pattern": jira_url,
         "fields": fields,
-        "status_mapping": json.loads(json.dumps(_DEFAULT_SCHEMA["status_mapping"])),
+        "status_mapping": status_mapping,
     }
