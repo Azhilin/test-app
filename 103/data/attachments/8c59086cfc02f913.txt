@@ -1,3 +1,0 @@
-Fetching TLS certificate from example.atlassian.net:443 ...
-Certificate saved -> /tmp/pytest-of-runner/pytest-0/test_fetch_cert_creates_certs_0/certs/jira_ca_bundle.pem
-Done. The Jira client will use this certificate automatically.

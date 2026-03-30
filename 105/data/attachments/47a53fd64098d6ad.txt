@@ -1,0 +1,1 @@
+ERROR: Could not connect to jira.corp.local:8443: [Errno -3] Temporary failure in name resolution
