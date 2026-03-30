@@ -65,6 +65,12 @@ def main() -> int:
         sprints, sprint_issues = jira_client.fetch_sprint_data(jira)
     except Exception as e:
         logger.error("Failed to fetch Jira data: %s", jira_client._sanitise_error(str(e)))
+        if "certificate verify failed" in str(e).lower():
+            logger.error(
+                "SSL certificate verification failed. "
+                "Open the browser UI \u2192 Jira Connection tab \u2192 click 'Fetch Certificate', "
+                "then re-run the report. Or run: python tools/fetch_ssl_cert.py"
+            )
         return 1
 
     active_schema = schema_mod.get_active_schema(schema_name=config.JIRA_SCHEMA_NAME)
