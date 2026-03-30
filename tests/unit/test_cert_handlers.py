@@ -46,9 +46,7 @@ def test_get_windows_ca_certs_returns_pem_list_on_windows() -> None:
     assert isinstance(result, list)
     assert len(result) > 0
     for pem in result:
-        assert pem.startswith("-----BEGIN CERTIFICATE-----"), (
-            f"Expected PEM cert; got: {pem[:80]!r}"
-        )
+        assert pem.startswith("-----BEGIN CERTIFICATE-----"), f"Expected PEM cert; got: {pem[:80]!r}"
 
 
 @pytest.mark.skipif(sys.platform != "win32", reason="Windows cert store only available on Windows")
@@ -57,8 +55,6 @@ def test_get_windows_ca_certs_mocked_returns_pem_strings(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """With a mocked ssl.enum_certificates, confirm DER→PEM conversion and x509_asn filter."""
-    import base64
-
     # Minimal valid DER bytes for a dummy cert (just needs to survive DER_cert_to_PEM_cert)
     # ssl.DER_cert_to_PEM_cert simply base64-encodes with headers — any bytes are valid input
     fake_der = b"\x30\x82\x01\x00"  # truncated — fine for a header-only round-trip
