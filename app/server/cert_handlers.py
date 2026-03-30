@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import socket
 import ssl
+import sys
 from urllib.parse import urlparse
 
 import certifi
@@ -12,14 +13,39 @@ import certifi
 from ._base import _root
 
 
+def _get_windows_ca_certs() -> list[str]:
+    """Return all CA certificates from the Windows trust store as PEM strings.
+
+    Reads from both the ROOT (trusted root CAs, including GPO-pushed corporate
+    CAs) and CA (intermediate CAs) stores via ssl.enum_certificates().
+    Returns an empty list on non-Windows platforms or on any error.
+    """
+    if sys.platform != "win32":
+        return []
+    pem_parts: list[str] = []
+    try:
+        for store_name in ("ROOT", "CA"):
+            for cert_bytes, encoding_type, _trust in ssl.enum_certificates(store_name):  # type: ignore[attr-defined]
+                if encoding_type == "x509_asn":
+                    pem_parts.append(ssl.DER_cert_to_PEM_cert(cert_bytes))
+    except Exception:  # noqa: BLE001
+        pass
+    return pem_parts
+
+
 def _fetch_cert_chain(host: str, port: int) -> str:
-    """Return the full TLS certificate chain as concatenated PEM.
+    """Return the TLS certificate chain + Windows CA store as concatenated PEM.
 
     Connects without verification (CERT_NONE) so the chain can be captured
     even when the server's CA is not trusted by certifi — the common case for
-    corporate SSL-inspection proxies. Uses get_unverified_chain() (Python 3.11+)
+    corporate SSL-inspection proxies. Uses get_unverified_chain() (Python 3.13+)
     to return all certs in the chain: leaf, intermediates, and the root CA.
     Falls back to the leaf cert only if the chain API is unavailable.
+
+    On Windows, the Windows ROOT and CA cert stores are appended to the bundle
+    via _get_windows_ca_certs(). This captures corporate CA roots pushed by GPO
+    that are never transmitted during a TLS handshake (TLS spec: root CAs are
+    not sent by the server).
     """
     ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
     ctx.check_hostname = False
@@ -41,6 +67,9 @@ def _fetch_cert_chain(host: str, port: int) -> str:
 
     if not pem_parts:
         pem_parts.append(ssl.get_server_certificate((host, port)))
+
+    # Always include Windows CA certs (captures corporate root CAs from GPO)
+    pem_parts.extend(_get_windows_ca_certs())
 
     return "\n".join(pem_parts)
 
