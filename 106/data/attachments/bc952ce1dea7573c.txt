@@ -1,0 +1,3 @@
+Fetching TLS certificate chain from jira.corp.local:8443 ...
+Certificate saved -> /tmp/pytest-of-runner/pytest-0/test_fetch_cert_parses_custom_0/certs/jira_ca_bundle.pem
+Done. The Jira client will use this certificate automatically.

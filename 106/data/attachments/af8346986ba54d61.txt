@@ -1,0 +1,1 @@
+ERROR: SSL error while contacting bad.host.example:443: ('handshake failure',)
