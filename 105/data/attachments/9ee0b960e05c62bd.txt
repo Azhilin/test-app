@@ -1,5 +1,0 @@
-DEBUG    app.core.schema:schema.py:125 Active schema: 'Default_Jira_Cloud' (default from file, 17 fields)
-DEBUG    app.core.metrics:metrics.py:485 Computing metrics: 1 sprint(s), 1 changelog issue(s)
-DEBUG    app.core.metrics:metrics.py:495 Velocity computed for 1 sprint(s); totals: ['Sprint 1=5.0sp']
-DEBUG    app.core.metrics:metrics.py:502 Cycle time: sample_size=1, mean=3.0 days, median=3.0 days
-SUCCESS  app.cli:cli.py:126 Reports written: /tmp/pytest-of-runner/pytest-0/test_filter_metadata_in_html0/generated/reports/2026-03-30T18-33-50/report.html, /tmp/pytest-of-runner/pytest-0/test_filter_metadata_in_html0/generated/reports/2026-03-30T18-33-50/report.md
