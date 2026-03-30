@@ -1,0 +1,1 @@
+DEBUG    app.core.jira_client:jira_client.py:37 Using configured board ID: 42

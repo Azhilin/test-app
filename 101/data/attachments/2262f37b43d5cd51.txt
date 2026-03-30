@@ -1,0 +1,2 @@
+DEBUG    app.core.jira_client:jira_client.py:104 Fetching changelog for 2 issue(s)
+DEBUG    app.core.jira_client:jira_client.py:114 Changelog fetch complete: 2 succeeded, 0 failed

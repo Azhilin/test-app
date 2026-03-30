@@ -1,0 +1,1 @@
+ERROR: Could not parse a hostname from JIRA_URL='not-a-url'

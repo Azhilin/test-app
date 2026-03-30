@@ -1,0 +1,3 @@
+DEBUG    app.core.metrics:metrics.py:485 Computing metrics: 0 sprint(s), 0 changelog issue(s)
+DEBUG    app.core.metrics:metrics.py:495 Velocity computed for 0 sprint(s); totals: []
+DEBUG    app.core.metrics:metrics.py:502 Cycle time: sample_size=0, mean=None days, median=None days
