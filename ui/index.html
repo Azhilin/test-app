@@ -509,6 +509,63 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
+    /* ── Report-options panel ── */
+    .report-options {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+    }
+    .report-options summary {
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text);
+      padding: 10px 14px;
+      list-style: none;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .report-options summary::-webkit-details-marker { display: none; }
+    .report-options summary::before {
+      content: '▸';
+      display: inline-block;
+      transition: transform 0.15s;
+      font-size: 0.72rem;
+    }
+    .report-options[open] summary::before { transform: rotate(90deg); }
+    .report-options-body {
+      padding: 4px 14px 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+    }
+    .option-group {
+      flex: 1;
+      min-width: 180px;
+    }
+    .option-group-label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .radio-row, .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.82rem;
+      color: var(--text);
+      padding: 3px 0;
+      cursor: pointer;
+    }
+    .radio-row input, .checkbox-row input {
+      accent-color: var(--accent);
+      margin: 0;
+      cursor: pointer;
+    }
+
     /* ── Responsive ── */
     @media (max-width: 600px) {
       .app-header { padding: 20px 0 16px; }
@@ -611,7 +668,58 @@
           </button>
         </div>
         <p class="form-error" id="err-generate-filter" style="margin-bottom:12px;">Please select a saved filter before generating the report. <a href="#" id="goto-filter-tab" style="color:var(--accent);font-weight:500;">Go to Jira Filter tab →</a></p>
+        <p class="form-error" id="err-no-metrics" style="margin-bottom:12px;">Select at least one metric section to generate a report.</p>
         <p class="form-helper" style="margin-bottom:16px;">The selected filter's JQL will be used to scope sprint issues for the report.</p>
+
+        <!-- Report options -->
+        <details class="report-options" id="report-options">
+          <summary>Report Options</summary>
+          <div class="report-options-body">
+
+            <!-- Project type -->
+            <div class="option-group">
+              <div class="option-group-label">Project Type</div>
+              <label class="radio-row">
+                <input type="radio" name="rpt-project-type" value="SCRUM" checked> SCRUM
+              </label>
+              <label class="radio-row">
+                <input type="radio" name="rpt-project-type" value="KANBAN"> KANBAN
+              </label>
+            </div>
+
+            <!-- Estimation type -->
+            <div class="option-group">
+              <div class="option-group-label">Estimation Type</div>
+              <label class="radio-row">
+                <input type="radio" name="rpt-estimation-type" value="StoryPoints" checked> Story Points
+              </label>
+              <label class="radio-row">
+                <input type="radio" name="rpt-estimation-type" value="JiraTickets"> Jira Tickets
+              </label>
+            </div>
+
+            <!-- Metric toggles -->
+            <div class="option-group" style="min-width:200px;">
+              <div class="option-group-label">Metric Sections</div>
+              <label class="checkbox-row">
+                <input type="checkbox" id="rpt-metric-velocity" checked> Velocity Trend
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" id="rpt-metric-ai-trend" checked> AI Assistance Trend
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" id="rpt-metric-ai-usage" checked> AI Usage Details
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" id="rpt-metric-dau" checked> DAU Survey
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" id="rpt-metric-dau-trend" checked> DAU Trend
+              </label>
+            </div>
+
+          </div>
+        </details>
 
         <div class="log-wrap" aria-live="polite" aria-label="Report generation output">
           <div class="log-toolbar">
@@ -1831,9 +1939,89 @@
       const btnGenerate  = document.getElementById('btn-generate');
       const GENERATE_BTN_IDLE = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg> Generate Report`;
 
+      /* ── Report option controls ── */
+      const REPORT_OPTS_STORAGE_KEY = 'report-options';
+      const _rptMetricIds = {
+        METRIC_VELOCITY:            'rpt-metric-velocity',
+        METRIC_AI_ASSISTANCE_TREND: 'rpt-metric-ai-trend',
+        METRIC_AI_USAGE_DETAILS:    'rpt-metric-ai-usage',
+        METRIC_DAU:                 'rpt-metric-dau',
+        METRIC_DAU_TREND:           'rpt-metric-dau-trend',
+      };
+
+      function getReportOptions() {
+        const projectType   = document.querySelector('input[name="rpt-project-type"]:checked')?.value || 'SCRUM';
+        const estimationType = document.querySelector('input[name="rpt-estimation-type"]:checked')?.value || 'StoryPoints';
+        const metrics = {};
+        for (const [key, elId] of Object.entries(_rptMetricIds)) {
+          const cb = document.getElementById(elId);
+          metrics[key] = cb ? cb.checked : true;
+        }
+        return { PROJECT_TYPE: projectType, ESTIMATION_TYPE: estimationType, ...metrics };
+      }
+
+      function buildReportQueryString(filterFilename) {
+        const params = new URLSearchParams();
+        params.set('filter', filterFilename);
+        const opts = getReportOptions();
+        for (const [k, v] of Object.entries(opts)) {
+          params.set(k, typeof v === 'boolean' ? (v ? '1' : '0') : v);
+        }
+        return params.toString();
+      }
+
+      function saveReportOptions() {
+        try { localStorage.setItem(REPORT_OPTS_STORAGE_KEY, JSON.stringify(getReportOptions())); } catch (_) {}
+      }
+
+      function restoreReportOptions() {
+        try {
+          const raw = localStorage.getItem(REPORT_OPTS_STORAGE_KEY);
+          if (!raw) return;
+          const opts = JSON.parse(raw);
+          if (opts.PROJECT_TYPE) {
+            const radio = document.querySelector(`input[name="rpt-project-type"][value="${opts.PROJECT_TYPE}"]`);
+            if (radio) radio.checked = true;
+          }
+          if (opts.ESTIMATION_TYPE) {
+            const radio = document.querySelector(`input[name="rpt-estimation-type"][value="${opts.ESTIMATION_TYPE}"]`);
+            if (radio) radio.checked = true;
+          }
+          for (const [key, elId] of Object.entries(_rptMetricIds)) {
+            if (key in opts) {
+              const cb = document.getElementById(elId);
+              if (cb) cb.checked = !!opts[key];
+            }
+          }
+        } catch (_) {}
+      }
+
+      // Persist on change
+      document.getElementById('report-options').addEventListener('change', () => {
+        saveReportOptions();
+        updateGenerateButtonState();
+      });
+      restoreReportOptions();
+
+      const errNoMetrics = document.getElementById('err-no-metrics');
+
+      function updateGenerateButtonState() {
+        const anyChecked = Object.values(_rptMetricIds).some(
+          elId => document.getElementById(elId)?.checked
+        );
+        if (anyChecked) {
+          btnGenerate.disabled = false;
+          errNoMetrics.classList.remove('visible');
+        } else {
+          btnGenerate.disabled = true;
+          errNoMetrics.classList.add('visible');
+        }
+      }
+      updateGenerateButtonState();
+
       function resetGenerateBtn() {
-        btnGenerate.disabled = false;
         btnGenerate.innerHTML = GENERATE_BTN_IDLE;
+        updateGenerateButtonState();
       }
 
       function setGenerateBusy() {
@@ -1885,7 +2073,7 @@
         let lastReportTs = null;
         let lastHtmlFile = null;
         let lastMdFile   = null;
-        const evtSource  = new EventSource('/api/generate?filter=' + encodeURIComponent(filterFilename));
+        const evtSource  = new EventSource('/api/generate?' + buildReportQueryString(filterFilename));
 
         evtSource.onmessage = (e) => {
           const data = e.data;

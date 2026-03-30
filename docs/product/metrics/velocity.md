@@ -74,6 +74,24 @@ velocity(sprint) = Σ story_points(issue)  for all issues where status ∈ done_
 No weighting, averaging, or normalisation is applied within a single sprint. The HTML report
 overlays a running average line for visual trend interpretation.
 
+## Estimation Type
+
+The velocity metric adapts to the configured estimation type (`ESTIMATION_TYPE` env var or
+UI radio button):
+
+| Mode | `velocity` value | Unit label |
+|---|---|---|
+| `StoryPoints` (default) | Sum of story points for done issues | "points" |
+| `JiraTickets` | Count of done issues (`issue_count`) | "issues" |
+
+When `JiraTickets` is active, `build_metrics_dict()` post-processes velocity rows by setting
+`velocity = issue_count` for each sprint. The underlying `compute_velocity()` function always
+computes both `velocity` (points) and `issue_count`; the estimation type only changes which
+value is surfaced as the primary velocity number.
+
+Report column headers adjust automatically (e.g. "Velocity (issues)" instead of
+"Velocity (points)").
+
 ## Recommendations
 
 - **Estimate all issues** — velocity is meaningless if a large share of issues have no story

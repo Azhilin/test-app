@@ -184,7 +184,7 @@ test-app/                          ← project root
 | `app/core/metrics.py` | Pure functions: `compute_velocity`, `compute_cycle_time`, `compute_ai_assistance_trend`, `compute_ai_usage_details`, `compute_custom_trends` (placeholder). `build_metrics_dict()` assembles all results into a single dict consumed by both reporters. |
 | `app/core/schema.py` | Loads/saves/queries Jira field schemas from `config/jira_schema.json`. Provides field ID lookups, status mapping accessors, and auto-detection from Jira's `/rest/api/2/field` response. Ships a built-in `Default_Jira_Cloud` schema as fallback. |
 | `app/reporters/report_html.py` | Renders `templates/report.html.j2` via Jinja2. Accepts a `section_visibility` dict to hide/show individual report sections. |
-| `app/reporters/report_md.py` | Builds a Markdown string (velocity bar chart, tables, cycle time stats) and writes to disk. |
+| `app/reporters/report_md.py` | Builds a Markdown string (velocity bar chart, tables, cycle time stats) and writes to disk. Accepts a `section_visibility` dict to hide/show individual sections. |
 | `app/utils/cert_utils.py` | `validate_cert(Path)` — parses a PEM file with `cryptography`, returns a dict: `{valid, expires_at, days_remaining, subject}` (plus `error` on failure). |
 | `app/utils/logging_setup.py` | `setup_logging()` — configures the root logger with a timestamped `FileHandler` (`generated/logs/app-YYYYMMDD-HHMMSS.log`) and a `StreamHandler`; defines `SUCCESS_LEVEL = 25` and patches `.success()` onto `logging.Logger`. Called once per entry point. |
 | `app/cli.py` | Orchestrates the full report pipeline. Validates config, fetches Jira data, computes metrics, enriches with filter metadata, and generates HTML + MD in parallel via `ThreadPoolExecutor(max_workers=2)`. |
@@ -243,6 +243,8 @@ test-app/                          ← project root
     "custom_trends": list[dict],   # extensible; empty by default
     "ai_assisted_label": str,
     "ai_exclude_labels": list[str],
+    "project_type": str,           # "Scrum" or "Kanban"
+    "estimation_type": str,        # "StoryPoints" or "JiraTickets"
     "filter_name": str | None,     # enriched after Jira fetch
     "filter_id": int | None,
     "filter_jql": str | None,
@@ -283,8 +285,8 @@ app.core.metrics.build_metrics_dict(sprints, sprint_issues, issues_with_changelo
       │
       ▼
   ThreadPoolExecutor(max_workers=2)
-      ├── app.reporters.report_html.generate_html(metrics_dict, path_html)
-      └── app.reporters.report_md.generate_md(metrics_dict, path_md)
+      ├── app.reporters.report_html.generate_html(metrics_dict, path_html, section_visibility)
+      └── app.reporters.report_md.generate_md(metrics_dict, path_md, section_visibility)
       │
       ▼
 generated/reports/<YYYY-MM-DDTHH-MM-SS>/

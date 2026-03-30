@@ -52,12 +52,12 @@ For the metric definition, scoring rationale, and `compute_dau_metrics()` output
 
 | ID | Requirement | Acceptance Criterion | Status |
 |----|-------------|----------------------|--------|
-| DAU-F-017 | `compute_dau_metrics(responses_dir)` reads all `dau_*.json` files from the given directory | Calling the function with a directory containing 3 response files returns `response_count` of 3; calling it with an empty directory or a missing directory returns `response_count` of 0 and `team_avg` of `None` | ✗ Not met |
-| DAU-F-018 | `compute_dau_metrics` maps each `usage` answer to its score and computes the team average | Given responses with scores 5, 3.5, and 1.5, `team_avg` equals `10.0 / 3 ≈ 3.33`; given all "Not used" responses, `team_avg` equals `0.0` | ✗ Not met |
-| DAU-F-019 | `compute_dau_metrics` returns a `by_role` list with per-role averages and counts | A response set containing 2 Developers (scores 5 and 3.5) and 1 QA (score 1.5) returns `by_role` with entries `{"role": "Developer", "avg": 4.25, "count": 2}` and `{"role": "QA / Test Engineer", "avg": 1.5, "count": 1}` | ✗ Not met |
-| DAU-F-020 | `compute_dau_metrics` returns a `breakdown` list with per-answer counts | Given 2 "Every day" responses and 1 "Not used" response, `breakdown` contains `{"answer": "Every day (5 days)", "count": 2}` and `{"answer": "Not used", "count": 1}` | ✗ Not met |
-| DAU-F-021 | `build_metrics_dict()` calls `compute_dau_metrics()` and includes a `"dau"` key | The dict returned by `build_metrics_dict()` always contains a `"dau"` key whose value matches the shape defined in `dau_metric.md` | ✗ Not met |
-| DAU-F-022 | The responses directory is configurable via `DAU_RESPONSES_DIR` environment variable | Setting `DAU_RESPONSES_DIR=/custom/path` causes `compute_dau_metrics` to read from that path; if unset, the default is `generated/` | ✗ Not met |
+| DAU-F-017 | `compute_dau_metrics(responses_dir)` reads all `dau_*.json` files from the given directory | Calling the function with a directory containing 3 response files returns `response_count` of 3; calling it with an empty directory or a missing directory returns `response_count` of 0 and `team_avg` of `None` | ✓ Met |
+| DAU-F-018 | `compute_dau_metrics` maps each `usage` answer to its score and computes the team average | Given responses with scores 5, 3.5, and 1.5, `team_avg` equals `10.0 / 3 ≈ 3.33`; given all "Not used" responses, `team_avg` equals `0.0` | ✓ Met |
+| DAU-F-019 | `compute_dau_metrics` returns a `by_role` list with per-role averages and counts | A response set containing 2 Developers (scores 5 and 3.5) and 1 QA (score 1.5) returns `by_role` with entries `{"role": "Developer", "avg": 4.25, "count": 2}` and `{"role": "QA / Test Engineer", "avg": 1.5, "count": 1}` | ✓ Met |
+| DAU-F-020 | `compute_dau_metrics` returns a `breakdown` list with per-answer counts | Given 2 "Every day" responses and 1 "Not used" response, `breakdown` contains `{"answer": "Every day (5 days)", "count": 2}` and `{"answer": "Not used", "count": 1}` | ✓ Met |
+| DAU-F-021 | `build_metrics_dict()` calls `compute_dau_metrics()` and includes a `"dau"` key | The dict returned by `build_metrics_dict()` always contains a `"dau"` key whose value matches the shape defined in `dau_metric.md` | ✓ Met |
+| DAU-F-022 | The responses directory is configurable via `DAU_RESPONSES_DIR` environment variable | Setting `DAU_RESPONSES_DIR=/custom/path` causes `compute_dau_metrics` to read from that path; if unset, the default is `generated/` | ✓ Met |
 
 ---
 
@@ -65,10 +65,10 @@ For the metric definition, scoring rationale, and `compute_dau_metrics()` output
 
 | ID | Requirement | Acceptance Criterion | Status |
 |----|-------------|----------------------|--------|
-| DAU-F-023 | The HTML report includes a DAU section below the Cycle Time section | The rendered HTML contains a `<section>` with team DAU average, response count, a per-role table, and a horizontal bar chart for the usage-frequency breakdown using Chart.js | ✗ Not met |
-| DAU-F-024 | The HTML report DAU section is omitted when there are no responses | When `metrics["dau"]["response_count"]` is 0, the DAU section is not rendered and no placeholder text is shown | ✗ Not met |
-| DAU-F-025 | The Markdown report includes a `## Daily Active Usage (DAU)` section | The generated `report.md` contains a summary table with team average and response count followed by a per-role breakdown table | ✗ Not met |
-| DAU-F-026 | The Markdown DAU section is omitted when there are no responses | When `response_count` is 0, the DAU section is absent from `report.md` | ✗ Not met |
+| DAU-F-023 | The HTML report includes a DAU section | The rendered HTML contains a `<section>` with team DAU average, response count, a per-role table, and a horizontal bar chart for the usage-frequency breakdown using Chart.js | ✓ Met |
+| DAU-F-024 | The HTML report DAU section is omitted when there are no responses | When `metrics["dau"]["response_count"]` is 0, the DAU section is not rendered and no placeholder text is shown | ✓ Met |
+| DAU-F-025 | The Markdown report includes a `## Daily Active Usage (DAU)` section | The generated `report.md` contains a summary table with team average and response count followed by a per-role breakdown table | ✓ Met |
+| DAU-F-026 | The Markdown DAU section is omitted when there are no responses | When `response_count` is 0, the DAU section is absent from `report.md` | ✓ Met |
 
 ---
 

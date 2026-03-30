@@ -17,6 +17,7 @@ All standard requirements files follow the naming convention `<topic>_requiremen
 | [`jira_filter_management_requirements.md`](jira_filter_management_requirements.md) | Default filter, CRUD operations, UI behaviour | `JFM-D-`, `JFM-C-`, `JFM-U-` |
 | [`jira_schema_requirements.md`](jira_schema_requirements.md) | Schema loading, field lookup, status mapping, auto-detection | `JSR-L-`, `JSR-F-`, `JSR-S-`, `JSR-D-` |
 | [`logging_requirements.md`](logging_requirements.md) | Log file creation, log level, log format, log cleanup | `LOG-` |
+| [`report_generation_requirements.md`](report_generation_requirements.md) | Report generation config, project type, estimation type, metric toggles, UI controls, template labels | `RG-` |
 | [`installation_requirements.md`](installation_requirements.md) | Zip contents, setup steps, uninstall | *(no standard ID — uses descriptive sections)* |
 | [`technical_requirements.md`](technical_requirements.md) | OS compatibility, Python version, dependencies | *(no standard ID — uses descriptive sections)* |
 

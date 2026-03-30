@@ -299,3 +299,85 @@ def test_jira_schema_name_default():
 def test_jira_schema_name_custom():
     cfg = _reload_config({**_BASE_ENV, "JIRA_SCHEMA_NAME": "My Schema"})
     assert cfg.JIRA_SCHEMA_NAME == "My Schema"
+
+
+# Report generation config vars
+# ---------------------------------------------------------------------------
+
+
+def test_project_type_default_scrum():
+    cfg = _reload_config(_BASE_ENV)
+    assert cfg.PROJECT_TYPE == "SCRUM"
+
+
+def test_project_type_kanban():
+    cfg = _reload_config({**_BASE_ENV, "PROJECT_TYPE": "kanban"})
+    assert cfg.PROJECT_TYPE == "KANBAN"
+
+
+def test_project_type_invalid_falls_back():
+    cfg = _reload_config({**_BASE_ENV, "PROJECT_TYPE": "waterfall"})
+    assert cfg.PROJECT_TYPE == "SCRUM"
+
+
+def test_estimation_type_default_story_points():
+    cfg = _reload_config(_BASE_ENV)
+    assert cfg.ESTIMATION_TYPE == "StoryPoints"
+
+
+def test_estimation_type_jira_tickets():
+    cfg = _reload_config({**_BASE_ENV, "ESTIMATION_TYPE": "JiraTickets"})
+    assert cfg.ESTIMATION_TYPE == "JiraTickets"
+
+
+def test_estimation_type_invalid_falls_back():
+    cfg = _reload_config({**_BASE_ENV, "ESTIMATION_TYPE": "hours"})
+    assert cfg.ESTIMATION_TYPE == "StoryPoints"
+
+
+@pytest.mark.parametrize(
+    "raw, expected",
+    [
+        ("1", True),
+        ("true", True),
+        ("True", True),
+        ("yes", True),
+        ("YES", True),
+        ("0", False),
+        ("false", False),
+        ("no", False),
+        ("", True),  # empty → uses default (True)
+    ],
+)
+def test_env_bool_values(raw, expected):
+    cfg = _reload_config({**_BASE_ENV, "METRIC_VELOCITY": raw})
+    assert cfg.METRIC_VELOCITY is expected
+
+
+def test_metric_toggles_default_true():
+    cfg = _reload_config(_BASE_ENV)
+    assert cfg.METRIC_VELOCITY is True
+    assert cfg.METRIC_CYCLE_TIME is True
+    assert cfg.METRIC_AI_ASSISTANCE_TREND is True
+    assert cfg.METRIC_AI_USAGE_DETAILS is True
+    assert cfg.METRIC_CUSTOM_TRENDS is True
+    assert cfg.METRIC_DAU is True
+
+
+def test_metric_toggles_explicit_false():
+    env = {
+        **_BASE_ENV,
+        "METRIC_VELOCITY": "false",
+        "METRIC_CYCLE_TIME": "0",
+        "METRIC_AI_ASSISTANCE_TREND": "no",
+        "METRIC_AI_USAGE_DETAILS": "false",
+        "METRIC_CUSTOM_TRENDS": "0",
+        "METRIC_DAU": "no",
+    }
+    cfg = _reload_config(env)
+    assert cfg.METRIC_VELOCITY is False
+    assert cfg.METRIC_CYCLE_TIME is False
+    assert cfg.METRIC_AI_ASSISTANCE_TREND is False
+    assert cfg.METRIC_AI_USAGE_DETAILS is False
+    assert cfg.METRIC_CUSTOM_TRENDS is False
+    assert cfg.METRIC_DAU is False

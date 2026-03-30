@@ -61,6 +61,16 @@ if errorlevel 8 ( echo [ERROR] Failed to copy templates\ & goto :ABORT )
 robocopy "ui"        "%STAGING_DIR%\ui"        /E /XD %ROBOCOPY_DIR_EXCLUDES% /XF %ROBOCOPY_FILE_EXCLUDES% /NFL /NDL /NJH /NJS >nul
 if errorlevel 8 ( echo [ERROR] Failed to copy ui\        & goto :ABORT )
 
+echo  Copying config (schemas and filters)...
+robocopy "config"    "%STAGING_DIR%\config"    /E /XD %ROBOCOPY_DIR_EXCLUDES% /XF %ROBOCOPY_FILE_EXCLUDES% /NFL /NDL /NJH /NJS >nul
+if errorlevel 8 ( echo [ERROR] Failed to copy config\ & goto :ABORT )
+
+echo  Copying tools...
+mkdir "%STAGING_DIR%\tools"
+if errorlevel 1 ( echo [ERROR] Failed to create tools\ & goto :ABORT )
+copy /Y "tools\fetch_ssl_cert.py" "%STAGING_DIR%\tools\" >nul
+if errorlevel 1 ( echo [ERROR] Failed to copy tools\fetch_ssl_cert.py & goto :ABORT )
+
 echo  Copying schema storage...
 if exist "docs\product\schemas" (
     robocopy "docs\product\schemas" "%STAGING_DIR%\docs\product\schemas" /E /XD %ROBOCOPY_DIR_EXCLUDES% /XF %ROBOCOPY_FILE_EXCLUDES% /NFL /NDL /NJH /NJS >nul

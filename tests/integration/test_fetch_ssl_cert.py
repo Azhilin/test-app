@@ -9,6 +9,7 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
+import certifi
 import pytest
 
 # Import the refactored function
@@ -30,7 +31,8 @@ def test_fetch_cert_happy_path(tmp_path):
         result = fetch_and_save_cert("https://example.atlassian.net", root=tmp_path)
     cert = tmp_path / "certs" / "jira_ca_bundle.pem"
     assert cert.exists()
-    assert cert.read_text(encoding="ascii") == FAKE_PEM
+    content = cert.read_text(encoding="ascii")
+    assert content.startswith(FAKE_PEM)
     assert result == str(cert)
 
 
@@ -47,13 +49,25 @@ def test_fetch_cert_overwrites_existing(tmp_path):
     (certs_dir / "jira_ca_bundle.pem").write_text("OLD CERT", encoding="ascii")
     with patch("fetch_ssl_cert.ssl.get_server_certificate", return_value=FAKE_PEM):
         fetch_and_save_cert("https://example.atlassian.net", root=tmp_path)
-    assert (certs_dir / "jira_ca_bundle.pem").read_text(encoding="ascii") == FAKE_PEM
+    content = (certs_dir / "jira_ca_bundle.pem").read_text(encoding="ascii")
+    assert content.startswith(FAKE_PEM)
+    assert "OLD CERT" not in content
 
 
 def test_fetch_cert_parses_custom_port(tmp_path):
     with patch("fetch_ssl_cert.ssl.get_server_certificate", return_value=FAKE_PEM) as mock_get:
         fetch_and_save_cert("https://jira.corp.local:8443", root=tmp_path)
     mock_get.assert_called_once_with(("jira.corp.local", 8443))
+
+
+def test_fetch_cert_bundle_contains_certifi_cas(tmp_path):
+    """Saved PEM bundle includes the leaf cert followed by the certifi CA store."""
+    with patch("fetch_ssl_cert.ssl.get_server_certificate", return_value=FAKE_PEM):
+        fetch_and_save_cert("https://example.atlassian.net", root=tmp_path)
+    content = (tmp_path / "certs" / "jira_ca_bundle.pem").read_text(encoding="ascii")
+    ca_bundle = Path(certifi.where()).read_text(encoding="ascii")
+    assert content.startswith(FAKE_PEM)
+    assert ca_bundle in content
 
 
 # ---------------------------------------------------------------------------

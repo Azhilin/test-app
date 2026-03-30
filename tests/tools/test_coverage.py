@@ -46,6 +46,7 @@ _DETAIL_FILES: dict[str, Path] = {
     "jira_schema_requirements": COVERAGE_REQS_DIR / "jira_schema_requirements_coverage.md",
     "jira_filter_management_requirements": COVERAGE_REQS_DIR / "jira_filter_management_requirements_coverage.md",
     "logging_requirements": COVERAGE_REQS_DIR / "logging_requirements_coverage.md",
+    "report_generation_requirements": COVERAGE_REQS_DIR / "report_generation_requirements_coverage.md",
 }
 
 # Mapping: ALL_REQUIREMENTS key → source document (relative to repo root)
@@ -59,6 +60,7 @@ _SOURCE_DOCS: dict[str, str] = {
     "jira_schema_requirements": "docs/product/requirements/jira_schema_requirements.md",
     "jira_filter_management_requirements": "docs/product/requirements/jira_filter_management_requirements.md",
     "logging_requirements": "docs/product/requirements/logging_requirements.md",
+    "report_generation_requirements": "docs/product/requirements/report_generation_requirements.md",
 }
 
 # Layer name → folder (relative to TESTS_DIR), description, path label

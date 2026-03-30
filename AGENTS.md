@@ -27,7 +27,7 @@ For any non-trivial code change (new feature, behavioral fix, refactor), follow 
 1. **Maintain requirements** — identify the relevant file(s) using `docs/product/requirements/README.md` (lists all files and their ID prefixes); update the `Status` column (`✓ Met`, `✗ Not met`, `⬜ N/T`) for rows whose acceptance criterion is affected. Do not add rows or create new files.
 2. **Maintain application functionality** — implement the feature, fix, or refactor.
 3. **Maintain tests** — write or update tests in the narrowest layer that proves the changed behavior.
-4. **Complete testing and verification** — run the test suite; fix all failures before proceeding.
+4. **Complete testing and verification** — run the test suite and `tests/runners/run_lint.bat`; fix all failures before proceeding. The pre-commit hook enforces lint automatically on `git commit` once installed.
 5. **Maintain test coverage** — run `python tests/tools/test_coverage.py` after adding, removing, or renaming test functions.
 6. **Maintain project documentation** — update relevant docs when behavior changes:
    - `docs/product/metrics/` — when metric behavior or output shape changes

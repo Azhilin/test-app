@@ -4,7 +4,7 @@
 
 AI Adoption Manager is a browser-based tool that connects to your Jira Cloud account and generates sprint metrics reports. Open the app in your browser, enter your Jira credentials once, define which projects to track, and click one button to produce a ready-to-share report — all without writing any code or queries.
 
-Reports measure velocity (story points completed per sprint), cycle time (how quickly issues move from start to done), and ticket throughput over your recent sprint history. Each run saves a self-contained HTML page and a Markdown file that you can email, attach to a wiki, or open offline.
+Reports measure velocity (story points completed per sprint) and ticket throughput over your recent sprint history. Each run saves a self-contained HTML page and a Markdown file that you can email, attach to a wiki, or open offline.
 
 ---
 
@@ -29,6 +29,28 @@ The Generate Report tab is where you produce your metrics report. It is the firs
 ### Selecting a Filter
 
 Before generating, choose a saved filter from the **Saved Filter** drop-down. The filter tells the app which Jira projects and issue types to include. If the drop-down is empty, create a filter first in the **Jira Filter** tab.
+
+### Report Options
+
+Click **Report Options** to expand the configuration panel below the filter selector. These settings control what goes into the generated report.
+
+**Project Type** — choose **Scrum** (default) or **Kanban**. This determines how the app fetches sprint data from Jira and is shown in the report header.
+
+**Estimation Type** — choose **Story Points** (default) or **Jira Tickets**. When Story Points is selected, velocity is measured as the sum of story point values. When Jira Tickets is selected, velocity counts the number of completed issues instead.
+
+**Metric Sections** — five checkboxes control which sections appear in the report:
+
+| Checkbox | Section in report |
+|----------|-------------------|
+| Velocity Trend | Sprint-by-sprint velocity bar chart and data table |
+| AI Assistance Trend | Per-sprint percentage of AI-assisted story points |
+| AI Usage Details | AI tool and use-case breakdowns |
+| DAU Survey | Developer Adoption & Usage survey results (days/week and % scale) |
+| DAU Trend | Week-over-week DAU adoption trend combo chart (bar = avg days, line = %) |
+
+All checkboxes default to enabled. Unchecking a section removes it from both the HTML and Markdown outputs. At least one section must be enabled — the Generate button is disabled when all are unchecked.
+
+All Report Options selections are saved to your browser's localStorage and restored automatically on the next visit.
 
 ### Generating a Report
 

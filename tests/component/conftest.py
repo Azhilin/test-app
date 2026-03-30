@@ -19,15 +19,6 @@ def minimal_metrics_dict() -> dict:
                 "issue_count": 4,
             }
         ],
-        "cycle_time": {
-            "mean_days": 3.5,
-            "median_days": 3.0,
-            "min_days": 1.0,
-            "max_days": 6.0,
-            "sample_size": 4,
-            "values": [1.0, 3.0, 4.0, 6.0],
-        },
-        "custom_trends": [],
         "ai_assisted_label": "AI_assistance",
         "ai_exclude_labels": [],
         "ai_assistance_trend": [
@@ -58,13 +49,22 @@ def minimal_metrics_dict() -> dict:
         "project_key": None,
         "dau": {
             "team_avg": 3.5,
+            "team_avg_pct": 70.0,
             "response_count": 2,
-            "by_role": [{"role": "Developer", "avg": 4.25, "count": 2}],
+            "by_role": [{"role": "Developer", "avg": 4.25, "avg_pct": 85.0, "count": 2}],
             "breakdown": [
-                {"answer": "Every day (5 days)", "count": 1},
-                {"answer": "Most days (3\u20134 days)", "count": 1},
+                {"answer": "Every day (5 days)", "count": 1, "pct": 50.0},
+                {"answer": "Most days (3\u20134 days)", "count": 1, "pct": 50.0},
             ],
         },
+        "dau_trend": [
+            {
+                "week": "2026-W13",
+                "team_avg": 3.5,
+                "team_avg_pct": 70.0,
+                "response_count": 2,
+            }
+        ],
     }
 
 
@@ -73,15 +73,6 @@ def empty_metrics_dict() -> dict:
     return {
         "generated_at": "2026-03-25T12:00:00+00:00",
         "velocity": [],
-        "cycle_time": {
-            "mean_days": None,
-            "median_days": None,
-            "min_days": None,
-            "max_days": None,
-            "sample_size": 0,
-            "values": [],
-        },
-        "custom_trends": [],
         "ai_assisted_label": "AI_assistance",
         "ai_exclude_labels": [],
         "ai_assistance_trend": [],
@@ -95,5 +86,6 @@ def empty_metrics_dict() -> dict:
         "filter_id": None,
         "filter_jql": None,
         "project_key": None,
-        "dau": {"team_avg": None, "response_count": 0, "by_role": [], "breakdown": []},
+        "dau": {"team_avg": None, "team_avg_pct": None, "response_count": 0, "by_role": [], "breakdown": []},
+        "dau_trend": [],
     }

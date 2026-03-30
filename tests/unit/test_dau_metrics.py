@@ -1,7 +1,9 @@
-"""Unit tests for compute_dau_metrics() and the DAU integration with build_metrics_dict().
+"""Unit tests for DAU metrics: compute_dau_metrics(), compute_dau_trend(),
+_load_dau_records(), _dedup_by_user_week(), and build_metrics_dict integration.
 
 Requirements covered:
-    DAU-F-017, DAU-F-018, DAU-F-019, DAU-F-020, DAU-F-021, DAU-F-022
+    DAU-F-017, DAU-F-018, DAU-F-019, DAU-F-020, DAU-F-021, DAU-F-022,
+    DAU-F-027, DAU-F-028, DAU-F-029
 """
 
 from __future__ import annotations
@@ -12,7 +14,12 @@ from pathlib import Path
 
 import pytest
 
-from app.core.metrics import compute_dau_metrics
+from app.core.metrics import (
+    _dedup_by_user_week,
+    _load_dau_records,
+    compute_dau_metrics,
+    compute_dau_trend,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -27,8 +34,10 @@ def _write(dirpath: Path, filename: str, payload: dict) -> None:
     (dirpath / filename).write_text(json.dumps(payload), encoding="utf-8")
 
 
-def _response(username: str, usage: str, role: str = "Developer") -> dict:
-    return {"username": username, "role": role, "usage": usage}
+def _response(
+    username: str, usage: str, role: str = "Developer", week: str = "2026-W13", timestamp: str = "2026-03-27T10:00:00Z"
+) -> dict:
+    return {"username": username, "role": role, "usage": usage, "week": week, "timestamp": timestamp}
 
 
 # ---------------------------------------------------------------------------
@@ -40,6 +49,7 @@ def test_empty_dir_returns_zero_count(tmp_path: Path) -> None:
     result = compute_dau_metrics(tmp_path)
     assert result["response_count"] == 0
     assert result["team_avg"] is None
+    assert result["team_avg_pct"] is None
     assert result["by_role"] == []
     assert result["breakdown"] == []
 
@@ -78,6 +88,7 @@ def test_mixed_scores_correct_avg(tmp_path: Path) -> None:
     result = compute_dau_metrics(tmp_path)
     assert result["response_count"] == 3
     assert result["team_avg"] == pytest.approx(3.33, abs=0.01)
+    assert result["team_avg_pct"] == pytest.approx(66.6, abs=0.1)
 
 
 def test_all_not_used_avg_is_zero(tmp_path: Path) -> None:
@@ -115,8 +126,8 @@ def test_by_role_correct_avg_and_count(tmp_path: Path) -> None:
     result = compute_dau_metrics(tmp_path)
     dev = next(r for r in result["by_role"] if r["role"] == "Developer")
     qa = next(r for r in result["by_role"] if r["role"] == "QA / Test Engineer")
-    assert dev == {"role": "Developer", "avg": 4.25, "count": 2}
-    assert qa == {"role": "QA / Test Engineer", "avg": 1.5, "count": 1}
+    assert dev == {"role": "Developer", "avg": 4.25, "avg_pct": 85.0, "count": 2}
+    assert qa == {"role": "QA / Test Engineer", "avg": 1.5, "avg_pct": 30.0, "count": 1}
 
 
 # ---------------------------------------------------------------------------
@@ -133,6 +144,8 @@ def test_breakdown_sorted_descending_by_count(tmp_path: Path) -> None:
     assert counts == sorted(counts, reverse=True)
     assert result["breakdown"][0]["answer"] == "Every day (5 days)"
     assert result["breakdown"][0]["count"] == 2
+    assert result["breakdown"][0]["pct"] == pytest.approx(66.7, abs=0.1)
+    assert result["breakdown"][1]["pct"] == pytest.approx(33.3, abs=0.1)
 
 
 # ---------------------------------------------------------------------------
@@ -162,6 +175,8 @@ def test_build_metrics_dict_includes_dau_key(tmp_path: Path, monkeypatch: pytest
     result = build_metrics_dict([], {}, [])
     assert "dau" in result
     assert result["dau"]["response_count"] == 0
+    assert "dau_trend" in result
+    assert result["dau_trend"] == []
 
 
 def test_dau_responses_dir_env_var_overrides_default(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -176,3 +191,105 @@ def test_dau_responses_dir_env_var_overrides_default(tmp_path: Path, monkeypatch
     result = metrics_mod.compute_dau_metrics(config.DAU_RESPONSES_DIR)
     assert result["response_count"] == 1
     assert result["team_avg"] == 5.0
+
+
+# ---------------------------------------------------------------------------
+# DAU-F-027: _load_dau_records
+# ---------------------------------------------------------------------------
+
+
+def test_load_dau_records_returns_list(tmp_path: Path) -> None:
+    _write(tmp_path, "dau_a_20260101T000000Z.json", _response("a", "Every day (5 days)"))
+    _write(tmp_path, "dau_b_20260102T000000Z.json", _response("b", "Not used"))
+    records = _load_dau_records(tmp_path)
+    assert len(records) == 2
+    assert all("username" in r for r in records)
+
+
+def test_load_dau_records_skips_malformed(tmp_path: Path) -> None:
+    (tmp_path / "dau_bad_20260101T000000Z.json").write_text("{bad", encoding="utf-8")
+    _write(tmp_path, "dau_ok_20260102T000000Z.json", _response("ok", "Not used"))
+    records = _load_dau_records(tmp_path)
+    assert len(records) == 1
+
+
+def test_load_dau_records_empty_dir(tmp_path: Path) -> None:
+    assert _load_dau_records(tmp_path) == []
+
+
+# ---------------------------------------------------------------------------
+# DAU-F-028: _dedup_by_user_week
+# ---------------------------------------------------------------------------
+
+
+def test_dedup_keeps_latest_per_user_week() -> None:
+    records = [
+        {"username": "alice", "week": "2026-W13", "usage": "Not used", "timestamp": "2026-03-27T08:00:00Z"},
+        {"username": "alice", "week": "2026-W13", "usage": "Every day (5 days)", "timestamp": "2026-03-27T16:00:00Z"},
+        {"username": "bob", "week": "2026-W13", "usage": "Rarely (1\u20132 days)", "timestamp": "2026-03-27T09:00:00Z"},
+    ]
+    deduped = _dedup_by_user_week(records)
+    assert len(deduped) == 2
+    alice = next(r for r in deduped if r["username"] == "alice")
+    assert alice["usage"] == "Every day (5 days)"
+
+
+def test_dedup_different_weeks_kept_separate() -> None:
+    records = [
+        {"username": "alice", "week": "2026-W12", "usage": "Not used", "timestamp": "2026-03-20T10:00:00Z"},
+        {"username": "alice", "week": "2026-W13", "usage": "Every day (5 days)", "timestamp": "2026-03-27T10:00:00Z"},
+    ]
+    deduped = _dedup_by_user_week(records)
+    assert len(deduped) == 2
+
+
+def test_dedup_empty_list() -> None:
+    assert _dedup_by_user_week([]) == []
+
+
+# ---------------------------------------------------------------------------
+# DAU-F-029: compute_dau_trend
+# ---------------------------------------------------------------------------
+
+
+def test_compute_dau_trend_single_week(tmp_path: Path) -> None:
+    _write(tmp_path, "dau_a_20260327T100000Z.json", _response("a", "Every day (5 days)", week="2026-W13"))
+    _write(tmp_path, "dau_b_20260327T110000Z.json", _response("b", "Most days (3\u20134 days)", week="2026-W13"))
+    trend = compute_dau_trend(tmp_path)
+    assert len(trend) == 1
+    row = trend[0]
+    assert row["week"] == "2026-W13"
+    assert row["response_count"] == 2
+    assert row["team_avg"] == pytest.approx(4.25, abs=0.01)
+    assert row["team_avg_pct"] == pytest.approx(85.0, abs=0.1)
+
+
+def test_compute_dau_trend_multiple_weeks_sorted(tmp_path: Path) -> None:
+    _write(tmp_path, "dau_a_20260320T100000Z.json", _response("a", "Not used", week="2026-W12"))
+    _write(tmp_path, "dau_b_20260327T100000Z.json", _response("b", "Every day (5 days)", week="2026-W13"))
+    trend = compute_dau_trend(tmp_path)
+    assert len(trend) == 2
+    assert trend[0]["week"] == "2026-W12"
+    assert trend[1]["week"] == "2026-W13"
+
+
+def test_compute_dau_trend_empty_dir(tmp_path: Path) -> None:
+    assert compute_dau_trend(tmp_path) == []
+
+
+def test_compute_dau_trend_dedup_applied(tmp_path: Path) -> None:
+    """Two responses from same user in same week → only latest counts."""
+    _write(
+        tmp_path,
+        "dau_a1_20260327T080000Z.json",
+        _response("alice", "Not used", week="2026-W13", timestamp="2026-03-27T08:00:00Z"),
+    )
+    _write(
+        tmp_path,
+        "dau_a2_20260327T160000Z.json",
+        _response("alice", "Every day (5 days)", week="2026-W13", timestamp="2026-03-27T16:00:00Z"),
+    )
+    trend = compute_dau_trend(tmp_path)
+    assert len(trend) == 1
+    assert trend[0]["response_count"] == 1
+    assert trend[0]["team_avg"] == pytest.approx(5.0, abs=0.01)

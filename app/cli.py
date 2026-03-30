@@ -101,9 +101,19 @@ def main() -> int:
     path_html = report_dir / "report.html"
     path_md = report_dir / "report.md"
 
+    section_visibility = {
+        "velocity_trend": config.METRIC_VELOCITY,
+        "ai_assistance_trend": config.METRIC_AI_ASSISTANCE_TREND,
+        "ai_usage_details": config.METRIC_AI_USAGE_DETAILS,
+        "cycle_time": config.METRIC_CYCLE_TIME,
+        "custom_trends": config.METRIC_CUSTOM_TRENDS,
+        "dau": config.METRIC_DAU,
+        "dau_trend": config.METRIC_DAU_TREND,
+    }
+
     with ThreadPoolExecutor(max_workers=2) as executor:
-        f_html = executor.submit(report_html.generate_html, metrics_dict, path_html)
-        f_md = executor.submit(report_md.generate_md, metrics_dict, path_md)
+        f_html = executor.submit(report_html.generate_html, metrics_dict, path_html, section_visibility)
+        f_md = executor.submit(report_md.generate_md, metrics_dict, path_md, section_visibility)
         wait([f_html, f_md])
         f_html.result()
         f_md.result()

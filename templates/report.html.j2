@@ -27,8 +27,12 @@
 </head>
 <body>
   <h1>AI Adoption Metrics Report</h1>
+  {% set unit_label = 'tickets' if metrics.estimation_type == 'JiraTickets' else 'points' %}
+  {% set unit_abbr = 'Tickets' if metrics.estimation_type == 'JiraTickets' else 'SP' %}
   <p class="meta">
     Reported Date: {{ metrics.generated_at[:10] }}
+    {%- if metrics.project_type %} &nbsp;·&nbsp; Project Type: <strong>{{ metrics.project_type }}</strong>{% endif %}
+    {%- if metrics.estimation_type %} &nbsp;·&nbsp; Estimation: <strong>{{ metrics.estimation_type }}</strong>{% endif %}
     {%- if metrics.filter_name %} &nbsp;·&nbsp; Filter: <strong>{{ metrics.filter_name }}</strong>{% if metrics.filter_id %} <span style="opacity:0.6">(#{{ metrics.filter_id }})</span>{% endif %}{% endif %}
     {%- if metrics.project_key %} &nbsp;·&nbsp; Project: <strong>{{ metrics.project_key }}</strong>{% endif %}
     {%- if metrics.filter_jql %} &nbsp;·&nbsp; JQL: <code style="font-size:0.8em;opacity:0.85">{{ metrics.filter_jql }}</code>{% endif %}
@@ -47,7 +51,7 @@
           <th>Sprint</th>
           <th>Start</th>
           <th>End</th>
-          <th class="number">Velocity (points)</th>
+          <th class="number">Velocity ({{ unit_label }})</th>
           <th class="number">Issues done</th>
         </tr>
       </thead>
@@ -82,7 +86,7 @@
   <section>
     <h2>AI Assistance trend</h2>
     <p style="color:#666;font-size:0.85rem;margin:0 0 0.75rem 0">
-      Percentage of Story Points (done issues) attributed to tickets labelled <code>{{ metrics.ai_assisted_label or 'AI_assistance' }}</code> per sprint.
+      Percentage of {{ unit_abbr }} (done issues) attributed to tickets labelled <code>{{ metrics.ai_assisted_label or 'AI_assistance' }}</code> per sprint.
       {% if metrics.ai_exclude_labels %}
       Tickets with any of these labels are excluded from the formula: <code>{{ metrics.ai_exclude_labels | join(', ') }}</code>.
       {% endif %}
@@ -93,7 +97,7 @@
     </div>
     {% if metrics.ai_exclude_labels %}
     <p style="color:#666;font-size:0.8rem;margin:0 0 0.5rem 0">
-      <strong>Legend:</strong> <code>Total SP (done, excl. labels)</code> excludes issues with labels from <code>AI_EXCLUDE_LABELS</code>.
+      <strong>Legend:</strong> <code>Total {{ unit_abbr }} (done, excl. labels)</code> excludes issues with labels from <code>AI_EXCLUDE_LABELS</code>.
     </p>
     {% endif %}
     <table>
@@ -102,8 +106,8 @@
           <th>Sprint</th>
           <th>Start</th>
           <th>End</th>
-          <th class="number">{% if metrics.ai_exclude_labels %}Total SP (done, excl. labels){% else %}Total SP (done){% endif %}</th>
-          <th class="number">AI-labeled SP</th>
+          <th class="number">{% if metrics.ai_exclude_labels %}Total {{ unit_abbr }} (done, excl. labels){% else %}Total {{ unit_abbr }} (done){% endif %}</th>
+          <th class="number">AI-labeled {{ unit_abbr }}</th>
           <th class="number">AI %</th>
         </tr>
       </thead>
@@ -464,7 +468,7 @@
           datasets: [
             {
               type: 'bar',
-              label: 'Velocity (points)',
+              label: 'Velocity ({{ unit_label }})',
               data: values,
               backgroundColor: 'rgba(0, 255, 127, 0.85)',
               borderColor: 'rgb(0, 255, 127)',
@@ -516,7 +520,7 @@
     {% set dau = metrics.dau or {} %}
     {% if dau.response_count %}
     <p style="color:#666;font-size:0.85rem;margin:0 0 0.75rem 0">
-      Team average: <strong>{{ dau.team_avg }} / 5</strong> across {{ dau.response_count }} response(s).
+      Team average: <strong>{{ dau.team_avg }} / 5</strong>{% if dau.team_avg_pct is not none %} ({{ dau.team_avg_pct }}%){% endif %} across {{ dau.response_count }} response(s).
     </p>
     {% if dau.by_role %}
     <div class="chart-container" style="height:220px;margin-bottom:1rem;">
@@ -527,6 +531,7 @@
         <tr>
           <th>Role</th>
           <th class="number">Avg days/week</th>
+          <th class="number">Avg %</th>
           <th class="number">Responses</th>
         </tr>
       </thead>
@@ -535,7 +540,28 @@
         <tr>
           <td>{{ row.role }}</td>
           <td class="number">{{ row.avg }}</td>
+          <td class="number">{% if row.avg_pct is defined and row.avg_pct is not none %}{{ row.avg_pct }}%{% else %}&mdash;{% endif %}</td>
           <td class="number">{{ row.count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+    {% if dau.breakdown %}
+    <table style="margin-top:0.75rem;">
+      <thead>
+        <tr>
+          <th>Answer</th>
+          <th class="number">Count</th>
+          <th class="number">%</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in dau.breakdown %}
+        <tr>
+          <td>{{ row.answer }}</td>
+          <td class="number">{{ row.count }}</td>
+          <td class="number">{% if row.pct is defined and row.pct is not none %}{{ row.pct }}%{% else %}&mdash;{% endif %}</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -587,6 +613,148 @@
               grid: { borderDash: [4, 4] }
             },
             y: { grid: { display: false } }
+          }
+        }
+      });
+    })();
+  </script>
+  {% endif %}
+
+  {% if section_visibility.dau_trend and metrics.dau_trend %}
+  <section>
+    <h2>DAU Trend</h2>
+    <div class="chart-container" style="height:300px;margin-bottom:1rem;">
+      <canvas id="dauTrendChart" aria-label="DAU weekly trend combo chart"></canvas>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Week</th>
+          <th class="number">Team Avg</th>
+          <th class="number">Team Avg %</th>
+          <th class="number">Responses</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in metrics.dau_trend %}
+        <tr>
+          <td>{{ row.week }}</td>
+          <td class="number">{{ row.team_avg }}</td>
+          <td class="number">{{ row.team_avg_pct }}%</td>
+          <td class="number">{{ row.response_count }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  <script>
+    (function() {
+      Chart.register({
+        id: 'avgDauLabels',
+        afterDatasetsDraw: function(chart) {
+          var lineIdx = 1;
+          if (!chart.data.datasets[lineIdx] || chart.data.datasets[lineIdx].type !== 'line') return;
+          var meta = chart.getDatasetMeta(lineIdx);
+          if (!meta || !meta.data.length) return;
+          var ctx = chart.ctx;
+          var dataset = chart.data.datasets[lineIdx];
+          var padding = 4;
+          var fontSize = 11;
+          var labelOffset = 16;
+          ctx.save();
+          ctx.font = fontSize + 'px system-ui, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          for (var i = 0; i < meta.data.length; i++) {
+            var point = meta.data[i];
+            var value = dataset.data[i];
+            var text = value + '%';
+            var w = ctx.measureText(text).width + padding * 2;
+            var h = fontSize + padding;
+            var x = point.x;
+            var y = point.y - labelOffset;
+            if (y - h < chart.chartArea.top) y = chart.chartArea.top + h + 2;
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.98)';
+            ctx.strokeStyle = 'rgb(0, 82, 204)';
+            ctx.lineWidth = 1;
+            if (ctx.roundRect) {
+              ctx.beginPath();
+              ctx.roundRect(x - w / 2, y - h, w, h, 3);
+              ctx.fill();
+              ctx.stroke();
+            } else {
+              ctx.fillRect(x - w / 2, y - h, w, h);
+              ctx.strokeRect(x - w / 2, y - h, w, h);
+            }
+            ctx.fillStyle = 'rgb(0, 82, 204)';
+            ctx.fillText(text, x, y - padding / 2);
+          }
+          ctx.restore();
+        }
+      });
+      var ctx = document.getElementById('dauTrendChart').getContext('2d');
+      var trendData = {{ metrics.dau_trend | tojson }};
+      var labels = trendData.map(function(r) { return r.week; });
+      var avgValues = trendData.map(function(r) { return r.team_avg; });
+      var pctValues = trendData.map(function(r) { return r.team_avg_pct; });
+      new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              type: 'bar',
+              label: 'Team Avg (days)',
+              data: avgValues,
+              backgroundColor: 'rgba(41, 182, 246, 0.75)',
+              borderColor: 'rgb(2, 136, 209)',
+              borderWidth: 1,
+              barPercentage: 0.45,
+              categoryPercentage: 0.8,
+              yAxisID: 'y',
+              order: 2
+            },
+            {
+              type: 'line',
+              label: 'Team Avg %',
+              data: pctValues,
+              borderColor: 'rgb(0, 82, 204)',
+              backgroundColor: 'transparent',
+              borderWidth: 2.5,
+              pointRadius: 3,
+              pointBackgroundColor: 'rgb(0, 82, 204)',
+              fill: false,
+              tension: 0.1,
+              yAxisID: 'y1',
+              order: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true }
+          },
+          scales: {
+            x: {
+              grid: { display: false }
+            },
+            y: {
+              beginAtZero: true,
+              max: 5,
+              ticks: { stepSize: 1 },
+              grid: { borderDash: [4, 4] },
+              title: { display: true, text: 'Avg (days)' }
+            },
+            y1: {
+              position: 'right',
+              beginAtZero: true,
+              max: 100,
+              ticks: { stepSize: 20, callback: function(v) { return v + '%'; } },
+              grid: { display: false },
+              title: { display: true, text: '%' }
+            }
           }
         }
       });

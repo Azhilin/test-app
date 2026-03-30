@@ -377,6 +377,38 @@ def test_fetch_cert_unreachable_host_returns_error(server_url):
     assert "error" in data
 
 
+def test_fetch_cert_saves_full_ca_bundle(server_url, tmp_path):
+    """POST /api/fetch-cert writes the server cert + certifi CA bundle to disk."""
+    import certifi
+
+    import app.server as srv
+
+    fake_pem = "-----BEGIN CERTIFICATE-----\nMIIBfake\n-----END CERTIFICATE-----\n"
+
+    orig = srv.ROOT
+    srv.ROOT = tmp_path
+    try:
+        with patch("app.server.cert_handlers.ssl.get_server_certificate", return_value=fake_pem):
+            body = json.dumps({"url": "https://example.atlassian.net"}).encode()
+            req = urllib.request.Request(
+                f"{server_url}/api/fetch-cert",
+                data=body,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            resp = urllib.request.urlopen(req)
+            data = json.loads(resp.read())
+    finally:
+        srv.ROOT = orig
+
+    assert data["ok"] is True
+
+    saved = (tmp_path / "certs" / "jira_ca_bundle.pem").read_text(encoding="ascii")
+    ca_bundle = open(certifi.where(), encoding="ascii").read()
+    assert saved.startswith(fake_pem)
+    assert ca_bundle in saved
+
+
 # ---------------------------------------------------------------------------
 # Windows-specific: socket error suppression
 # ---------------------------------------------------------------------------

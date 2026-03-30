@@ -57,6 +57,24 @@ class GenerateHandlerMixin:
                                 fresh_env[_key] = _val
                         break
 
+            # Report generation params from UI query string
+            _REPORT_PARAM_KEYS = [
+                "PROJECT_TYPE",
+                "ESTIMATION_TYPE",
+                "METRIC_VELOCITY",
+                "METRIC_CYCLE_TIME",
+                "METRIC_AI_ASSISTANCE_TREND",
+                "METRIC_AI_USAGE_DETAILS",
+                "METRIC_CUSTOM_TRENDS",
+                "METRIC_DAU",
+                "METRIC_DAU_TREND",
+            ]
+            for _key in _REPORT_PARAM_KEYS:
+                _vals = qs.get(_key) or qs.get(_key.lower()) or []
+                _val = urlunquote(_vals[0] if _vals else "").strip()
+                if _val:
+                    fresh_env[_key] = _val
+
             proc = subprocess.Popen(
                 [sys.executable, str(root / "main.py")],
                 stdout=subprocess.PIPE,

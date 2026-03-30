@@ -46,7 +46,13 @@
       "Bash(powershell -Command \"Stop-Process -Id 45668 -Force -ErrorAction SilentlyContinue; Write-Host 'done'\")",
       "Bash(powershell -Command \"netstat -ano | Select-String ':8080'\")",
       "mcp__playwright__browser_wait_for",
-      "mcp__playwright__browser_snapshot"
+      "mcp__playwright__browser_snapshot",
+      "Bash(cp /c/Users/Oleksii_Zhylin/VSCodeProjects/test-app/tests/runners/pre-commit /c/Users/Oleksii_Zhylin/VSCodeProjects/test-app/.git/hooks/pre-commit)",
+      "Bash(chmod +x /c/Users/Oleksii_Zhylin/VSCodeProjects/test-app/.git/hooks/pre-commit)",
+      "Bash(.venv/Scripts/python -m pytest tests/unit/ -m \"unit and not windows_only\" -n auto --dist=loadscope --tb=short --co -q)",
+      "Bash(.venv/Scripts/python tests/runners/run_all_checks.py --help)",
+      "Bash(echo \"exit: $?\")",
+      "Bash(grep -n \"fetch_ssl_cert\\\\|tools/\" /c/Users/Oleksii_Zhylin/VSCodeProjects/test-app/app/server/*.py)"
     ]
   }
 }
