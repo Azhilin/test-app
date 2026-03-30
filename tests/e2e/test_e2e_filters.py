@@ -80,13 +80,15 @@ def _route_filters_get(page: Page, filters: list) -> None:
     """Mock GET /api/filters to return the given filter list."""
     page.route(
         "**/api/filters",
-        lambda route: route.fulfill(
-            status=200,
-            content_type="application/json",
-            body=json.dumps({"ok": True, "filters": filters}),
-        )
-        if route.request.method == "GET"
-        else route.continue_(),
+        lambda route: (
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({"ok": True, "filters": filters}),
+            )
+            if route.request.method == "GET"
+            else route.continue_()
+        ),
     )
 
 
@@ -244,11 +246,14 @@ def test_remove_filter_updates_list(page: Page, live_server_url: str):
 
     with allure.step("Navigate with default + user filter, intercept DELETE"):
         page.route("**/api/filters", _handle_filters_route)
-        page.route("**/api/filters/**", lambda route: route.fulfill(
-            status=200,
-            content_type="application/json",
-            body=json.dumps({"ok": True}),
-        ))
+        page.route(
+            "**/api/filters/**",
+            lambda route: route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({"ok": True}),
+            ),
+        )
         _goto(page, live_server_url)
         _open_filter_tab(page)
 

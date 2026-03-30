@@ -67,7 +67,7 @@ SOURCE_PATHS: list[Path] = [
 # CC grade thresholds
 # ---------------------------------------------------------------------------
 
-CC_WATCH_THRESHOLD = 6   # grade B — worth watching
+CC_WATCH_THRESHOLD = 6  # grade B — worth watching
 CC_REFACTOR_THRESHOLD = 11  # grade C and above — refactor signal
 MI_REFACTOR_THRESHOLD = 65  # below this → refactor signal
 
@@ -264,9 +264,7 @@ def extract_test_count() -> int | None:
 # ---------------------------------------------------------------------------
 
 
-def build_refactor_signals(
-    func_rows: list[dict], mi_rows: list[dict], loc_rows: list[dict]
-) -> list[str]:
+def build_refactor_signals(func_rows: list[dict], mi_rows: list[dict], loc_rows: list[dict]) -> list[str]:
     """Return a list of human-readable signal strings for the report."""
     signals: list[str] = []
 
@@ -279,15 +277,11 @@ def build_refactor_signals(
 
     for row in mi_rows:
         if row["mi"] < MI_REFACTOR_THRESHOLD:
-            signals.append(
-                f"**MI {row['rank']}** `{row['file']}` → MI={row['mi']}"
-            )
+            signals.append(f"**MI {row['rank']}** `{row['file']}` → MI={row['mi']}")
 
     for row in loc_rows:
         if row["sloc"] > 600:
-            signals.append(
-                f"**SLOC>600** `{row['file']}` → {row['sloc']} source lines"
-            )
+            signals.append(f"**SLOC>600** `{row['file']}` → {row['sloc']} source lines")
 
     return signals
 
@@ -331,8 +325,8 @@ def render_report(
     total_files = len(loc_rows)
     lines.append("## Summary")
     lines.append("")
-    lines.append(f"| Metric | Value |")
-    lines.append(f"|--------|-------|")
+    lines.append("| Metric | Value |")
+    lines.append("|--------|-------|")
     lines.append(f"| Source files analysed | {total_files} |")
     lines.append(f"| Total SLOC | {total_sloc} |")
     lines.append(f"| Direct runtime dependencies | {dep_data['direct_count']} |")
@@ -382,9 +376,7 @@ def render_report(
     lines.append("|------|-------:|-------|-------:|----------:|")
     for r in module_cc_rows:
         flag = " ⚠️" if r["grade"] in ("C", "D", "E", "F") else (" 👀" if r["grade"] == "B" else "")
-        lines.append(
-            f"| `{r['file']}`{flag} | {r['avg_cc']} | {r['grade']} | {r['max_cc']} | {r['functions']} |"
-        )
+        lines.append(f"| `{r['file']}`{flag} | {r['avg_cc']} | {r['grade']} | {r['max_cc']} | {r['functions']} |")
     lines.append("")
 
     # ── CC per function (top 20 worst) ───────────────────────────────────────
@@ -451,8 +443,14 @@ def main(dry_run: bool = False) -> None:
 
     generated_at = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     report_text = render_report(
-        loc_rows, func_rows, module_cc_rows, mi_rows,
-        dep_data, test_count, signals, generated_at,
+        loc_rows,
+        func_rows,
+        module_cc_rows,
+        mi_rows,
+        dep_data,
+        test_count,
+        signals,
+        generated_at,
     )
 
     # ── Console summary ───────────────────────────────────────────────────────

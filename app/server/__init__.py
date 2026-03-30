@@ -8,42 +8,41 @@ Usage:
 """
 
 import logging
+import ssl  # noqa: F401
+import subprocess  # noqa: F401
+import urllib  # noqa: F401
+import urllib.request  # noqa: F401
 import webbrowser
 
+from dotenv import dotenv_values as dotenv_values
 from dotenv import load_dotenv
 
 # load_dotenv() MUST be called before importing ._base so that HOST/PORT
 # in _base.py read the .env-populated os.environ values.
 load_dotenv()
 
-from ._base import (  # noqa: E402
-    ROOT,
-    HOST,
-    PORT,
-    MIME,
-    _CLIENT_DISCONNECT,
-    guess_mime,
-    HandlerBase,
-    Server,
-)
-from .connection_handlers import ConnectionHandlerMixin
-from .config_handlers import ConfigHandlerMixin
-from .cert_handlers import CertHandlerMixin
-from .schema_handlers import SchemaHandlerMixin
-from .filter_handlers import FilterHandlerMixin
-from .generate_handlers import GenerateHandlerMixin
-
 # Re-exported for backward-compatible test patching (mirrors old flat-module namespace).
 # Tests patch e.g. srv.subprocess.Popen, srv.urllib.request.urlopen, srv.ssl.create_default_context,
 # srv.config.JIRA_SSL_CERT, and srv.dotenv_values.  Importing the module objects here makes those
 # attribute paths valid; patching them affects the real objects seen by all submodules.
-import ssl  # noqa: E402
-import subprocess  # noqa: E402
-import urllib  # noqa: E402
-import urllib.request  # noqa: E402
+from app.core import config as config  # noqa: E402, I001
 
-from app.core import config  # noqa: E402
-from dotenv import dotenv_values  # noqa: E402
+from ._base import (  # noqa: E402
+    _CLIENT_DISCONNECT as _CLIENT_DISCONNECT,
+    guess_mime as guess_mime,
+    HandlerBase,
+    HOST,
+    MIME as MIME,
+    PORT,
+    ROOT as ROOT,
+    Server,
+)
+from .cert_handlers import CertHandlerMixin  # noqa: E402
+from .config_handlers import ConfigHandlerMixin  # noqa: E402
+from .connection_handlers import ConnectionHandlerMixin  # noqa: E402
+from .filter_handlers import FilterHandlerMixin  # noqa: E402
+from .generate_handlers import GenerateHandlerMixin  # noqa: E402
+from .schema_handlers import SchemaHandlerMixin  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -63,11 +62,7 @@ class Handler(
 def run(port: int = PORT, host: str = HOST) -> None:
     """Start the HTTP server on the given port."""
     server = Server((host, port), Handler)
-    url = (
-        f"http://localhost:{port}"
-        if host in {"127.0.0.1", "localhost"}
-        else f"http://{host}:{port}"
-    )
+    url = f"http://localhost:{port}" if host in {"127.0.0.1", "localhost"} else f"http://{host}:{port}"
     logger.info("AI Adoption Metrics — dev server")
     logger.info("Listening on %s", url)
     logger.info("Press Ctrl+C to stop.")

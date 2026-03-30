@@ -251,5 +251,3 @@ def test_velocity_header_reflects_estimation_type_tickets(tmp_path, minimal_metr
     generate_html(minimal_metrics_dict, out)
     content = out.read_text(encoding="utf-8")
     assert "tickets" in content.lower() or "Tickets" in content
-
-

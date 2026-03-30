@@ -2121,87 +2121,226 @@ JIRA_SCHEMA_REQUIREMENTS: list[dict] = [
 
 JIRA_FILTER_MANAGEMENT_REQUIREMENTS: list[dict] = [
     # --- 1. Default Filter Template ---
-    {"id": "JFM-D-001", "description": "Default_Jira_Filter entry ships in config/jira_filters.json", "type": FUNCTIONAL, "section": "Default Filter Template", "tests": [
-        "tests/unit/test_filter_handlers.py::test_default_filter_entry_is_present_and_correct",
-        "tests/component/test_server_filters.py::test_get_filters_default_is_first",
-    ]},
-    {"id": "JFM-D-002", "description": "Default filter pre-sets sensible parameter defaults", "type": FUNCTIONAL, "section": "Default Filter Template", "tests": [
-        "tests/unit/test_filter_handlers.py::test_default_filter_entry_is_present_and_correct",
-    ]},
-    {"id": "JFM-D-003", "description": "Default filter is always returned by GET /api/filters", "type": FUNCTIONAL, "section": "Default Filter Template", "tests": [
-        "tests/unit/test_filter_handlers.py::test_load_filters_injects_default_when_absent_from_file",
-        "tests/component/test_server_filters.py::test_get_filters_always_includes_default_after_user_delete",
-    ]},
-    {"id": "JFM-D-004", "description": "Default filter cannot be deleted", "type": FUNCTIONAL, "section": "Default Filter Template", "tests": [
-        "tests/unit/test_filter_handlers.py::test_delete_default_filter_is_blocked",
-        "tests/component/test_server_filters.py::test_delete_default_filter_returns_error",
-    ]},
+    {
+        "id": "JFM-D-001",
+        "description": "Default_Jira_Filter entry ships in config/jira_filters.json",
+        "type": FUNCTIONAL,
+        "section": "Default Filter Template",
+        "tests": [
+            "tests/unit/test_filter_handlers.py::test_default_filter_entry_is_present_and_correct",
+            "tests/component/test_server_filters.py::test_get_filters_default_is_first",
+        ],
+    },
+    {
+        "id": "JFM-D-002",
+        "description": "Default filter pre-sets sensible parameter defaults",
+        "type": FUNCTIONAL,
+        "section": "Default Filter Template",
+        "tests": [
+            "tests/unit/test_filter_handlers.py::test_default_filter_entry_is_present_and_correct",
+        ],
+    },
+    {
+        "id": "JFM-D-003",
+        "description": "Default filter is always returned by GET /api/filters",
+        "type": FUNCTIONAL,
+        "section": "Default Filter Template",
+        "tests": [
+            "tests/unit/test_filter_handlers.py::test_load_filters_injects_default_when_absent_from_file",
+            "tests/component/test_server_filters.py::test_get_filters_always_includes_default_after_user_delete",
+        ],
+    },
+    {
+        "id": "JFM-D-004",
+        "description": "Default filter cannot be deleted",
+        "type": FUNCTIONAL,
+        "section": "Default Filter Template",
+        "tests": [
+            "tests/unit/test_filter_handlers.py::test_delete_default_filter_is_blocked",
+            "tests/component/test_server_filters.py::test_delete_default_filter_returns_error",
+        ],
+    },
     # --- 2. Filter Persistence — Server API ---
-    {"id": "JFM-P-001", "description": "GET /api/filters returns all saved filters ordered default-first", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
-        "tests/component/test_server_filters.py::test_get_filters_default_is_first",
-    ]},
-    {"id": "JFM-P-002", "description": "GET /api/filters initialises config file from default template if missing", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
-        "tests/unit/test_filter_handlers.py::test_load_filters_creates_file_when_missing",
-    ]},
-    {"id": "JFM-P-003", "description": "POST /api/filters creates a new filter entry when name is new", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
-        "tests/unit/test_filter_handlers.py::test_post_filter_creates_new_entry",
-        "tests/component/test_server_filters.py::test_post_filter_creates_new_and_get_returns_it",
-    ]},
-    {"id": "JFM-P-004", "description": "POST /api/filters updates existing entry when name matches (upsert)", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
-        "tests/unit/test_filter_handlers.py::test_post_filter_updates_existing_entry",
-        "tests/component/test_server_filters.py::test_post_filter_upserts_on_duplicate_name",
-    ]},
-    {"id": "JFM-P-005", "description": "POST /api/filters rejects missing JIRA_PROJECT", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
-        "tests/unit/test_filter_handlers.py::test_post_filter_rejects_blank_project",
-    ]},
-    {"id": "JFM-P-006", "description": "POST /api/filters builds correct JQL from params", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
-        "tests/unit/test_filter_handlers.py::test_build_jql_from_params[params0-project = PROJ-None]",
-        "tests/unit/test_filter_handlers.py::test_build_jql_from_params[params1-project IN (A, B)-None]",
-        "tests/unit/test_filter_handlers.py::test_build_jql_from_params[params2-\"Team[Team]\" = T1-None]",
-        "tests/unit/test_filter_handlers.py::test_build_jql_from_params[params3-status IN (Done, Closed)-None]",
-        "tests/unit/test_filter_handlers.py::test_build_jql_from_params[params4-project = PROJ-sprint in closedSprints()]",
-        "tests/unit/test_filter_handlers.py::test_build_jql_from_params[params5-type IN (Story, Bug)-None]",
-    ]},
-    {"id": "JFM-P-007", "description": "POST /api/filters uses schema team JQL field name when schema_name provided", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
-        "tests/unit/test_filter_handlers.py::test_post_filter_uses_schema_team_jql_field",
-    ]},
-    {"id": "JFM-P-008", "description": "DELETE /api/filters/<slug> removes the matching entry", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
-        "tests/component/test_server_filters.py::test_delete_filter_removes_entry",
-    ]},
-    {"id": "JFM-P-009", "description": "DELETE /api/filters/<slug> returns 404-style error for unknown slug", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
-        "tests/unit/test_filter_handlers.py::test_delete_unknown_slug_returns_not_found",
-        "tests/component/test_server_filters.py::test_delete_unknown_slug_returns_not_found",
-    ]},
-    {"id": "JFM-P-010", "description": "Filter data persists across application restarts", "type": FUNCTIONAL, "section": "Filter Persistence — Server API", "tests": [
-        "tests/unit/test_filter_handlers.py::test_filter_data_persists_across_loads",
-        "tests/component/test_server_filters.py::test_filter_persists_across_server_restart",
-    ]},
+    {
+        "id": "JFM-P-001",
+        "description": "GET /api/filters returns all saved filters ordered default-first",
+        "type": FUNCTIONAL,
+        "section": "Filter Persistence — Server API",
+        "tests": [
+            "tests/component/test_server_filters.py::test_get_filters_default_is_first",
+        ],
+    },
+    {
+        "id": "JFM-P-002",
+        "description": "GET /api/filters initialises config file from default template if missing",
+        "type": FUNCTIONAL,
+        "section": "Filter Persistence — Server API",
+        "tests": [
+            "tests/unit/test_filter_handlers.py::test_load_filters_creates_file_when_missing",
+        ],
+    },
+    {
+        "id": "JFM-P-003",
+        "description": "POST /api/filters creates a new filter entry when name is new",
+        "type": FUNCTIONAL,
+        "section": "Filter Persistence — Server API",
+        "tests": [
+            "tests/unit/test_filter_handlers.py::test_post_filter_creates_new_entry",
+            "tests/component/test_server_filters.py::test_post_filter_creates_new_and_get_returns_it",
+        ],
+    },
+    {
+        "id": "JFM-P-004",
+        "description": "POST /api/filters updates existing entry when name matches (upsert)",
+        "type": FUNCTIONAL,
+        "section": "Filter Persistence — Server API",
+        "tests": [
+            "tests/unit/test_filter_handlers.py::test_post_filter_updates_existing_entry",
+            "tests/component/test_server_filters.py::test_post_filter_upserts_on_duplicate_name",
+        ],
+    },
+    {
+        "id": "JFM-P-005",
+        "description": "POST /api/filters rejects missing JIRA_PROJECT",
+        "type": FUNCTIONAL,
+        "section": "Filter Persistence — Server API",
+        "tests": [
+            "tests/unit/test_filter_handlers.py::test_post_filter_rejects_blank_project",
+        ],
+    },
+    {
+        "id": "JFM-P-006",
+        "description": "POST /api/filters builds correct JQL from params",
+        "type": FUNCTIONAL,
+        "section": "Filter Persistence — Server API",
+        "tests": [
+            "tests/unit/test_filter_handlers.py::test_build_jql_from_params[params0-project = PROJ-None]",
+            "tests/unit/test_filter_handlers.py::test_build_jql_from_params[params1-project IN (A, B)-None]",
+            'tests/unit/test_filter_handlers.py::test_build_jql_from_params[params2-"Team[Team]" = T1-None]',
+            "tests/unit/test_filter_handlers.py::test_build_jql_from_params[params3-status IN (Done, Closed)-None]",
+            "tests/unit/test_filter_handlers.py"
+            "::test_build_jql_from_params[params4-project = PROJ-sprint in closedSprints()]",
+            "tests/unit/test_filter_handlers.py::test_build_jql_from_params[params5-type IN (Story, Bug)-None]",
+        ],
+    },
+    {
+        "id": "JFM-P-007",
+        "description": "POST /api/filters uses schema team JQL field name when schema_name provided",
+        "type": FUNCTIONAL,
+        "section": "Filter Persistence — Server API",
+        "tests": [
+            "tests/unit/test_filter_handlers.py::test_post_filter_uses_schema_team_jql_field",
+        ],
+    },
+    {
+        "id": "JFM-P-008",
+        "description": "DELETE /api/filters/<slug> removes the matching entry",
+        "type": FUNCTIONAL,
+        "section": "Filter Persistence — Server API",
+        "tests": [
+            "tests/component/test_server_filters.py::test_delete_filter_removes_entry",
+        ],
+    },
+    {
+        "id": "JFM-P-009",
+        "description": "DELETE /api/filters/<slug> returns 404-style error for unknown slug",
+        "type": FUNCTIONAL,
+        "section": "Filter Persistence — Server API",
+        "tests": [
+            "tests/unit/test_filter_handlers.py::test_delete_unknown_slug_returns_not_found",
+            "tests/component/test_server_filters.py::test_delete_unknown_slug_returns_not_found",
+        ],
+    },
+    {
+        "id": "JFM-P-010",
+        "description": "Filter data persists across application restarts",
+        "type": FUNCTIONAL,
+        "section": "Filter Persistence — Server API",
+        "tests": [
+            "tests/unit/test_filter_handlers.py::test_filter_data_persists_across_loads",
+            "tests/component/test_server_filters.py::test_filter_persists_across_server_restart",
+        ],
+    },
     # --- 3. UI — Filter Name Pre-population ---
-    {"id": "JFM-UI-001", "description": "Filter Name field is pre-populated on page load when empty", "type": FUNCTIONAL, "section": "UI — Filter Name Pre-population", "tests": [
-        "tests/e2e/test_e2e_filters.py::test_filter_name_prepopulated_on_empty_load",
-    ]},
-    {"id": "JFM-UI-002", "description": "Pre-population does not overwrite a previously entered or saved value", "type": FUNCTIONAL, "section": "UI — Filter Name Pre-population", "tests": [
-        "tests/e2e/test_e2e_filters.py::test_filter_name_not_overwritten_after_user_edit",
-    ]},
+    {
+        "id": "JFM-UI-001",
+        "description": "Filter Name field is pre-populated on page load when empty",
+        "type": FUNCTIONAL,
+        "section": "UI — Filter Name Pre-population",
+        "tests": [
+            "tests/e2e/test_e2e_filters.py::test_filter_name_prepopulated_on_empty_load",
+        ],
+    },
+    {
+        "id": "JFM-UI-002",
+        "description": "Pre-population does not overwrite a previously entered or saved value",
+        "type": FUNCTIONAL,
+        "section": "UI — Filter Name Pre-population",
+        "tests": [
+            "tests/e2e/test_e2e_filters.py::test_filter_name_not_overwritten_after_user_edit",
+        ],
+    },
     # --- 4. UI — Filter List Behaviour ---
-    {"id": "JFM-UI-003", "description": "Saved filters loaded and displayed on page load", "type": FUNCTIONAL, "section": "UI — Filter List Behaviour", "tests": [
-        "tests/e2e/test_e2e_filters.py::test_filter_list_displayed_on_load",
-    ]},
-    {"id": "JFM-UI-004", "description": "Default filter does not show a Remove button", "type": FUNCTIONAL, "section": "UI — Filter List Behaviour", "tests": [
-        "tests/e2e/test_e2e_filters.py::test_default_filter_has_no_remove_button",
-    ]},
-    {"id": "JFM-UI-005", "description": "Non-default user filters show a Remove button", "type": FUNCTIONAL, "section": "UI — Filter List Behaviour", "tests": [
-        "tests/e2e/test_e2e_filters.py::test_user_filter_has_remove_button",
-    ]},
-    {"id": "JFM-UI-006", "description": "Removing a filter via the Remove button updates the list immediately", "type": FUNCTIONAL, "section": "UI — Filter List Behaviour", "tests": [
-        "tests/e2e/test_e2e_filters.py::test_remove_filter_updates_list",
-    ]},
+    {
+        "id": "JFM-UI-003",
+        "description": "Saved filters loaded and displayed on page load",
+        "type": FUNCTIONAL,
+        "section": "UI — Filter List Behaviour",
+        "tests": [
+            "tests/e2e/test_e2e_filters.py::test_filter_list_displayed_on_load",
+        ],
+    },
+    {
+        "id": "JFM-UI-004",
+        "description": "Default filter does not show a Remove button",
+        "type": FUNCTIONAL,
+        "section": "UI — Filter List Behaviour",
+        "tests": [
+            "tests/e2e/test_e2e_filters.py::test_default_filter_has_no_remove_button",
+        ],
+    },
+    {
+        "id": "JFM-UI-005",
+        "description": "Non-default user filters show a Remove button",
+        "type": FUNCTIONAL,
+        "section": "UI — Filter List Behaviour",
+        "tests": [
+            "tests/e2e/test_e2e_filters.py::test_user_filter_has_remove_button",
+        ],
+    },
+    {
+        "id": "JFM-UI-006",
+        "description": "Removing a filter via the Remove button updates the list immediately",
+        "type": FUNCTIONAL,
+        "section": "UI — Filter List Behaviour",
+        "tests": [
+            "tests/e2e/test_e2e_filters.py::test_remove_filter_updates_list",
+        ],
+    },
     # --- 5. Future Enhancements ---
-    {"id": "JFM-FUT-001", "description": "Apply selected filter params to .env before running main.py", "type": FUNCTIONAL, "section": "Future Enhancements", "tests": [
-        "tests/unit/test_filter_handlers.py::test_generate_applies_filter_params_to_subprocess_env",
-    ]},
-    {"id": "JFM-FUT-002", "description": "Allow reordering of saved filters in the UI", "type": OPERATIONAL, "section": "Future Enhancements", "tests": []},
-    {"id": "JFM-FUT-003", "description": "Export / import filter config as a downloadable JSON file", "type": OPERATIONAL, "section": "Future Enhancements", "tests": []},
+    {
+        "id": "JFM-FUT-001",
+        "description": "Apply selected filter params to .env before running main.py",
+        "type": FUNCTIONAL,
+        "section": "Future Enhancements",
+        "tests": [
+            "tests/unit/test_filter_handlers.py::test_generate_applies_filter_params_to_subprocess_env",
+        ],
+    },
+    {
+        "id": "JFM-FUT-002",
+        "description": "Allow reordering of saved filters in the UI",
+        "type": OPERATIONAL,
+        "section": "Future Enhancements",
+        "tests": [],
+    },
+    {
+        "id": "JFM-FUT-003",
+        "description": "Export / import filter config as a downloadable JSON file",
+        "type": OPERATIONAL,
+        "section": "Future Enhancements",
+        "tests": [],
+    },
 ]
 
 # ── Logging requirements ───────────────────────────────────────────────────

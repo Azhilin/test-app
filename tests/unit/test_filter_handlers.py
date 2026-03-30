@@ -134,9 +134,7 @@ def test_load_filters_injects_default_when_absent_from_file(monkeypatch, tmp_pat
     srv, handler = _make_handler(monkeypatch, tmp_path)
     config_dir = _ensure_config_dir(tmp_path)
     filters_path = config_dir / "jira_filters.json"
-    user_filters = [
-        {"filter_name": "My Filter", "slug": "my_filter", "is_default": False, "jql": "project = X"}
-    ]
+    user_filters = [{"filter_name": "My Filter", "slug": "my_filter", "is_default": False, "jql": "project = X"}]
     filters_path.write_text(json.dumps(user_filters, indent=2), encoding="utf-8")
 
     filters = handler._load_filters()
@@ -377,9 +375,7 @@ def test_filter_data_persists_across_loads(monkeypatch, tmp_path):
 
 def test_generate_applies_filter_params_to_subprocess_env(monkeypatch, tmp_path):
     """_handle_generate() merges the selected filter's JIRA_PROJECT and JIRA_TEAM_ID into env."""
-    srv, handler = _make_handler(
-        monkeypatch, tmp_path, path="/api/generate?filter=sprint_filter"
-    )
+    srv, handler = _make_handler(monkeypatch, tmp_path, path="/api/generate?filter=sprint_filter")
     config_dir = _ensure_config_dir(tmp_path)
 
     # Write a filter entry that the handler will load

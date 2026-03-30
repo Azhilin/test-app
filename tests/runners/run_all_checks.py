@@ -5,6 +5,7 @@ Called by tests/runners/run_all_checks.bat; can also be invoked directly.
 Usage:
     python tests/runners/run_all_checks.py [--integration] [--e2e] [--all]
 """
+
 from __future__ import annotations
 
 import os
@@ -58,34 +59,26 @@ def _find_pip_audit(python: str) -> list[str] | None:
 
 def main() -> int:
     argv = set(sys.argv[1:])
-    run_integration = "--integration" in argv or "--all" in argv
-    run_e2e = "--e2e" in argv or "--all" in argv
+    run_integration = True
+    run_e2e = True
 
-    python = (
-        r".venv\Scripts\python.exe"
-        if os.path.exists(r".venv\Scripts\python.exe")
-        else "python"
-    )
+    python = r".venv\Scripts\python.exe" if os.path.exists(r".venv\Scripts\python.exe") else "python"
     pip_audit = _find_pip_audit(python)
 
     xdist = ["-n", "auto", "--dist=loadscope", "--tb=short"]
 
     stages = [
-        Stage("Lint",        ["cmd", "/c", "tests\\runners\\run_lint.bat"]),
-        Stage("Unit",        [python, "-m", "pytest", "tests/unit",
-                              "-m", "unit and not windows_only", *xdist]),
-        Stage("Component",   [python, "-m", "pytest", "tests/component",
-                              "-m", "component and not windows_only", *xdist]),
-        Stage("Windows",     [python, "-m", "pytest", "tests",
-                              "-m", "windows_only", *xdist]),
-        Stage("Security",    (pip_audit or ["pip-audit"]) + ["-r", "requirements.txt"],
-                             skip=pip_audit is None),
-        Stage("Integration", [python, "-m", "pytest", "tests/integration",
-                              "-m", "integration and not windows_only", *xdist],
-                             skip=not run_integration),
-        Stage("E2E",         [python, "-m", "pytest", "tests/e2e",
-                              "-m", "e2e and not windows_only", *xdist],
-                             skip=not run_e2e),
+        Stage("Lint", ["cmd", "/c", "tests\\runners\\run_lint.bat"]),
+        Stage("Unit", [python, "-m", "pytest", "tests/unit", "-m", "unit and not windows_only", *xdist]),
+        Stage("Component", [python, "-m", "pytest", "tests/component", "-m", "component and not windows_only", *xdist]),
+        Stage("Windows", [python, "-m", "pytest", "tests", "-m", "windows_only", *xdist]),
+        Stage("Security", (pip_audit or ["pip-audit"]) + ["-r", "requirements.txt"], skip=pip_audit is None),
+        Stage(
+            "Integration",
+            [python, "-m", "pytest", "tests/integration", "-m", "integration and not windows_only", *xdist],
+            skip=not run_integration,
+        ),
+        Stage("E2E", [python, "-m", "pytest", "tests/e2e", "-m", "e2e and not windows_only", *xdist], skip=not run_e2e),
     ]
 
     active = [s for s in stages if not s.skip]
