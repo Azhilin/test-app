@@ -39,6 +39,35 @@ def _get_windows_ca_certs() -> list[str]:
     return pem_parts
 
 
+def _fetch_cert_chain(host: str, port: int) -> str:
+    """Return TLS certificate chain + Windows CA store as concatenated PEM.
+
+    Uses the same strategy as app.server.cert_handlers._fetch_cert_chain.
+    Raises ssl.SSLError or OSError on connection failure.
+    """
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    ctx.check_hostname = False
+    ctx.verify_mode = ssl.CERT_NONE  # nosec B501 — intentional: fetching cert for trust bootstrap
+
+    pem_parts: list[str] = []
+    with socket.create_connection((host, port), timeout=10) as raw:
+        with ctx.wrap_socket(raw, server_hostname=host) as ssock:
+            try:
+                chain = ssock.get_unverified_chain()  # Python 3.13+
+                for cert in chain:
+                    pem_parts.append(cert.public_bytes(ssl.ENCODING_PEM).decode("ascii"))
+            except (AttributeError, TypeError):
+                pass
+            if not pem_parts:
+                der = ssock.getpeercert(binary_form=True)
+                if der:
+                    pem_parts.append(ssl.DER_cert_to_PEM_cert(der))
+    if not pem_parts:
+        pem_parts.append(ssl.get_server_certificate((host, port)))
+    pem_parts.extend(_get_windows_ca_certs())
+    return "\n".join(pem_parts)
+
+
 def fetch_and_save_cert(jira_url: str, root: Path | None = None) -> str:
     """Fetch the TLS certificate for *jira_url* and write it to ``<root>/certs/jira_ca_bundle.pem``.
 
@@ -69,26 +98,8 @@ def fetch_and_save_cert(jira_url: str, root: Path | None = None) -> str:
 
     print(f"Fetching TLS certificate chain from {host}:{port} ...")
 
-    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-    ctx.check_hostname = False
-    ctx.verify_mode = ssl.CERT_NONE  # nosec B501 — intentional: fetching cert for trust bootstrap
-
-    pem_parts: list[str] = []
     try:
-        with socket.create_connection((host, port), timeout=10) as raw:
-            with ctx.wrap_socket(raw, server_hostname=host) as ssock:
-                try:
-                    chain = ssock.get_unverified_chain()  # Python 3.13+
-                    for cert in chain:
-                        pem_parts.append(cert.public_bytes(ssl.ENCODING_PEM).decode("ascii"))
-                except (AttributeError, TypeError):
-                    pass
-                if not pem_parts:
-                    der = ssock.getpeercert(binary_form=True)
-                    if der:
-                        pem_parts.append(ssl.DER_cert_to_PEM_cert(der))
-        if not pem_parts:
-            pem_parts.append(ssl.get_server_certificate((host, port)))
+        pem = _fetch_cert_chain(host, port)
     except ssl.SSLError as exc:
         print(f"ERROR: SSL error while contacting {host}:{port}: {exc}", file=sys.stderr)
         sys.exit(1)
@@ -96,15 +107,12 @@ def fetch_and_save_cert(jira_url: str, root: Path | None = None) -> str:
         print(f"ERROR: Could not connect to {host}:{port}: {exc}", file=sys.stderr)
         sys.exit(1)
 
-    # Always include Windows CA certs (captures corporate root CAs from GPO)
-    pem_parts.extend(_get_windows_ca_certs())
-
     certs_dir = root / "certs"
     certs_dir.mkdir(exist_ok=True)
 
     cert_file = certs_dir / "jira_ca_bundle.pem"
     ca_bundle = Path(certifi.where()).read_text(encoding="ascii")
-    bundle = "\n".join(pem_parts) + "\n" + ca_bundle
+    bundle = pem + "\n" + ca_bundle
     cert_file.write_bytes(bundle.encode("ascii"))
 
     print(f"Certificate saved -> {cert_file}")
