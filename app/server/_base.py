@@ -125,7 +125,7 @@ class HandlerBase(BaseHTTPRequestHandler):
         if config.JIRA_SSL_CERT is True:
             return None
         ctx = ssl.create_default_context()
-        ctx.load_verify_locations(cafile=config.JIRA_SSL_CERT)
+        ctx.load_verify_locations(cafile=config.JIRA_SSL_CERT if isinstance(config.JIRA_SSL_CERT, str) else None)
         return ctx
 
     def _resolve_report_path(self, requested_path: str) -> Path | None:

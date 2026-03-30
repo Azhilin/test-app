@@ -37,7 +37,7 @@ class CertHandlerMixin:
     def _handle_fetch_cert(self) -> None:
         """Fetch the TLS certificate from the Jira host and save it locally."""
         body = self._read_json_body() or {}
-        url = (body.get("url") or os.getenv("JIRA_URL", "")).strip().rstrip("/")
+        url = str(body.get("url") or os.getenv("JIRA_URL") or "").strip().rstrip("/")
 
         if not url:
             self._send_json(400, {"ok": False, "error": "url is required"})

@@ -40,7 +40,7 @@ def _get_story_points(
                 raw = raw[key]
                 break
     try:
-        return float(raw)
+        return float(raw)  # type: ignore[arg-type]
     except (TypeError, ValueError):
         return 0.0
 

@@ -162,7 +162,7 @@ class FilterHandlerMixin:
             "params": params,
         }
 
-        if updated:
+        if updated and idx is not None:
             entry["created_at"] = filters[idx].get("created_at") or created_at
             filters[idx] = entry
         else:

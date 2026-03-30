@@ -83,8 +83,9 @@ class GenerateHandlerMixin:
                 cwd=str(root),
                 env=fresh_env,
             )
-            for line in proc.stdout:
-                emit(line.rstrip())
+            if proc.stdout:
+                for line in proc.stdout:
+                    emit(line.rstrip())
             proc.wait()
 
             if proc.returncode == 0:
