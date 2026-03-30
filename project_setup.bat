@@ -338,6 +338,45 @@ if not exist "%VENV_DIR%\Scripts\activate.bat" (
 
 call :LOG "[SUCCESS]" "Virtual environment created at '%VENV_DIR%'."
 
+:: ============================================================
+:: SECTION 5a - SSL CERTIFICATE BOOTSTRAP
+:: Exports Windows trusted root and intermediate CA certificates
+:: to a PEM file, then points pip at it via PIP_CERT.
+:: Resolves SSL failures on corporate laptops where pip.ini
+:: references a missing cert file, or where a corporate proxy
+:: performs SSL inspection with a CA not in pip's certifi bundle.
+:: ============================================================
+call :LOG "[INFO]" "Exporting Windows trusted certificates for pip SSL validation..."
+
+set "WIN_CERT_PEM=%PROJECT_ROOT%\certs\windows-trusted-roots.pem"
+
+if not exist "%PROJECT_ROOT%\certs" mkdir "%PROJECT_ROOT%\certs"
+
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+    "$stores = 'Root','CA'; " ^
+    "$pems = @(); " ^
+    "foreach ($store in $stores) { " ^
+    "  try { " ^
+    "    $s = New-Object System.Security.Cryptography.X509Certificates.X509Store($store, 'LocalMachine'); " ^
+    "    $s.Open(0); " ^
+    "    foreach ($cert in $s.Certificates) { " ^
+    "      $b64 = [Convert]::ToBase64String($cert.RawData, 1); " ^
+    "      $pems += '-----BEGIN CERTIFICATE-----' + [char]10 + $b64 + [char]10 + '-----END CERTIFICATE-----' " ^
+    "    }; " ^
+    "    $s.Close() " ^
+    "  } catch {} " ^
+    "}; " ^
+    "[IO.File]::WriteAllText('!WIN_CERT_PEM!', ($pems -join [char]10), [Text.Encoding]::ASCII); " ^
+    "Write-Host ('Exported ' + $pems.Count + ' certificates')"
+
+if %errorlevel% neq 0 (
+    call :LOG "[WARNING]" "Could not export Windows certificates. Pip may fail if SSL inspection is active."
+    call :LOG "[WARNING]" "If pip fails, ask IT to provide a CA bundle and set PIP_CERT to its path manually."
+) else (
+    set "PIP_CERT=!WIN_CERT_PEM!"
+    call :LOG "[SUCCESS]" "Certificates exported to 'certs\windows-trusted-roots.pem'. PIP_CERT set for this session."
+)
+
 :: Upgrade pip inside the isolated environment first
 call :LOG "[INFO]" "Upgrading pip inside the virtual environment..."
 "%VENV_DIR%\Scripts\python.exe" -m pip install --upgrade pip --quiet
