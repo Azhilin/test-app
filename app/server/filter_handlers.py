@@ -140,7 +140,7 @@ class FilterHandlerMixin:
                 if schema:
                     team_field = (schema.get("fields") or {}).get("team") or {}
                     team_jql_field = team_field.get("jql_name") or team_field.get("id") or team_jql_field
-            except Exception:  # noqa: BLE001
+            except Exception:  # noqa: BLE001  # nosec B110
                 pass
 
         jql = self._build_jql_from_params(params, team_jql_field)

@@ -30,6 +30,6 @@ if %ERRORS% equ 0 (
     echo All checks passed.
     exit /b 0
 ) else (
-    echo %ERRORS% check(s) failed.
+    echo %ERRORS% check^(s^) failed.
     exit /b 1
 )

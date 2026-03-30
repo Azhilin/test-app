@@ -3,7 +3,7 @@ Parallel CI stage runner — orchestrates all run_all_checks stages concurrently
 Called by tests/runners/run_all_checks.bat; can also be invoked directly.
 
 Usage:
-    python tests/runners/run_all_checks.py [--integration] [--e2e] [--all]
+    python tests/runners/run_all_checks.py
 """
 
 from __future__ import annotations
@@ -58,10 +58,6 @@ def _find_pip_audit(python: str) -> list[str] | None:
 
 
 def main() -> int:
-    argv = set(sys.argv[1:])
-    run_integration = "--integration" in argv or "--all" in argv
-    run_e2e = "--e2e" in argv or "--all" in argv
-
     python = r".venv\Scripts\python.exe" if os.path.exists(r".venv\Scripts\python.exe") else "python"
     pip_audit = _find_pip_audit(python)
 
@@ -76,9 +72,8 @@ def main() -> int:
         Stage(
             "Integration",
             [python, "-m", "pytest", "tests/integration", "-m", "integration and not windows_only", *xdist],
-            skip=not run_integration,
         ),
-        Stage("E2E", [python, "-m", "pytest", "tests/e2e", "-m", "e2e and not windows_only", *xdist], skip=not run_e2e),
+        Stage("E2E", [python, "-m", "pytest", "tests/e2e", "-m", "e2e and not windows_only", *xdist]),
     ]
 
     active = [s for s in stages if not s.skip]
@@ -123,7 +118,7 @@ def main() -> int:
     # ── Summary ───────────────────────────────────────────────────────────────
     print(f"\n{SEP}\n  SUMMARY\n{SEP}\n")
     print(f"  {'Stage':<25} Result")
-    print(f"  {'─' * 23} {'─' * 6}")
+    print(f"  {'-' * 23} {'-' * 6}")
     for s in stages:
         if s.skip:
             label = "SKIP"
