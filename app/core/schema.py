@@ -265,11 +265,13 @@ def build_schema_from_fields(
         custom_type = schema_info.get("custom", "")
 
         if is_custom and custom_type == _FLOAT_CUSTOM_TYPE:
-            _sp_candidates.append((
-                fid,
-                fname,
-                {"id": fid, "type": schema_info.get("type", "string"), "description": fname},
-            ))
+            _sp_candidates.append(
+                (
+                    fid,
+                    fname,
+                    {"id": fid, "type": schema_info.get("type", "string"), "description": fname},
+                )
+            )
             continue
 
         if is_custom and custom_type in KNOWN_FIELD_SCHEMAS:

@@ -327,9 +327,7 @@ def test_build_schema_from_fields_uses_populated_fields_for_disambiguation():
     # "Points" name score = 2 (contains "point"), not populated → total 2
     # "Estimate" name score = 0, but populated → total 1
     # So "Points" still wins due to higher name score
-    result = schema_mod.build_schema_from_fields(
-        jira_fields, "Populated Test", populated_fields=["customfield_10100"]
-    )
+    result = schema_mod.build_schema_from_fields(jira_fields, "Populated Test", populated_fields=["customfield_10100"])
     assert result["fields"]["story_points"]["id"] == "customfield_10200"
 
 
@@ -356,9 +354,7 @@ def test_build_schema_from_fields_populated_fields_breaks_equal_name_score():
         },
     ]
     # Both score 0 on name; only 10200 is populated → it wins
-    result = schema_mod.build_schema_from_fields(
-        jira_fields, "Tie Test", populated_fields=["customfield_10200"]
-    )
+    result = schema_mod.build_schema_from_fields(jira_fields, "Tie Test", populated_fields=["customfield_10200"])
     assert result["fields"]["story_points"]["id"] == "customfield_10200"
 
 
@@ -379,7 +375,8 @@ def test_build_schema_from_fields_partial_board_statuses_only_done():
     result = schema_mod.build_schema_from_fields([], "Partial Status Test", board_statuses=board_statuses)
     assert result["status_mapping"]["done_statuses"] == ["Closed"]
     # Empty in_progress_statuses in board_statuses → keeps default
-    assert result["status_mapping"]["in_progress_statuses"] == schema_mod._DEFAULT_SCHEMA["status_mapping"]["in_progress_statuses"]
+    expected_in_progress = schema_mod._DEFAULT_SCHEMA["status_mapping"]["in_progress_statuses"]
+    assert result["status_mapping"]["in_progress_statuses"] == expected_in_progress
 
 
 def test_build_schema_from_fields_none_board_statuses_uses_defaults():
