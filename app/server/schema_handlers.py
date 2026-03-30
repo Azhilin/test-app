@@ -205,6 +205,13 @@ class SchemaHandlerMixin:
             self._send_json(400, {"ok": False, "error": "jira_url, jira_email, and jira_token are required"})
             return
 
+        # Optional resolution hints from the caller
+        project_keys_raw = (body.get("project_keys") or "").strip()
+        project_keys = [k.strip() for k in project_keys_raw.split(",") if k.strip()]
+        board_id_raw = body.get("board_id")
+        board_id: int | None = int(board_id_raw) if board_id_raw else None
+        filter_id_hint = (body.get("filter_id") or "").strip() or None
+
         try:
             jira_fields = self._jira_api_get("/rest/api/2/field", url, email, token)
         except urllib.error.HTTPError as exc:
@@ -221,10 +228,123 @@ class SchemaHandlerMixin:
             self._send_json(200, {"ok": False, "error": "Unexpected response from Jira /rest/api/2/field"})
             return
 
+        # Derive project key from board when not provided directly
+        if not project_keys and board_id is not None:
+            try:
+                board_info = self._jira_api_get(f"/rest/agile/1.0/board/{board_id}", url, email, token)
+                pk = (board_info.get("location") or {}).get("projectKey", "").strip()
+                if pk:
+                    project_keys = [pk]
+            except (urllib.error.HTTPError, urllib.error.URLError, OSError) as exc:
+                logger.warning(
+                    "Could not fetch board info for board %s: %s",
+                    board_id,
+                    self._sanitise_exc(exc, url, email, token),
+                )
+
+        # Probe a sample issue to collect populated field IDs
+        populated_fields: list[str] = []
+        if project_keys:
+            proj_clause = project_keys[0] if len(project_keys) == 1 else f"({', '.join(project_keys)})"
+            jql = (
+                f"project {'= ' + proj_clause if len(project_keys) == 1 else 'IN ' + proj_clause}"
+                " ORDER BY created DESC"
+            )
+            try:
+                search_result = self._jira_api_get(
+                    f"/rest/api/2/search?jql={urlquote(jql)}&maxResults=1&fields=*all",
+                    url,
+                    email,
+                    token,
+                )
+                issues = search_result.get("issues") or []
+                if issues:
+                    issue_fields = issues[0].get("fields") or {}
+                    populated_fields = [k for k, v in issue_fields.items() if v is not None]
+            except (urllib.error.HTTPError, urllib.error.URLError, OSError) as exc:
+                logger.warning(
+                    "Could not fetch sample issue for schema inference: %s",
+                    self._sanitise_exc(exc, url, email, token),
+                )
+        elif filter_id_hint:
+            try:
+                filter_data = self._jira_api_get(f"/rest/api/2/filter/{filter_id_hint}", url, email, token)
+                filter_jql = filter_data.get("jql", "")
+                if filter_jql:
+                    search_result = self._jira_api_get(
+                        f"/rest/api/2/search?jql={urlquote(filter_jql)}&maxResults=1&fields=*all",
+                        url,
+                        email,
+                        token,
+                    )
+                    issues = search_result.get("issues") or []
+                    if issues:
+                        issue_fields = issues[0].get("fields") or {}
+                        populated_fields = [k for k, v in issue_fields.items() if v is not None]
+            except (urllib.error.HTTPError, urllib.error.URLError, OSError) as exc:
+                logger.warning(
+                    "Could not fetch sample issue via filter %s: %s",
+                    filter_id_hint,
+                    self._sanitise_exc(exc, url, email, token),
+                )
+
+        # Detect status categories from the Jira instance
+        board_statuses: dict[str, list[str]] | None = None
+        try:
+            all_statuses = self._jira_api_get("/rest/api/2/status", url, email, token)
+            if isinstance(all_statuses, list):
+                # Optionally narrow to statuses used by a specific project
+                project_status_names: set[str] | None = None
+                if project_keys:
+                    try:
+                        proj_statuses_raw = self._jira_api_get(
+                            f"/rest/api/2/project/{project_keys[0]}/statuses",
+                            url,
+                            email,
+                            token,
+                        )
+                        if isinstance(proj_statuses_raw, list):
+                            project_status_names = set()
+                            for issue_type_entry in proj_statuses_raw:
+                                for s in issue_type_entry.get("statuses") or []:
+                                    project_status_names.add(s.get("name", ""))
+                    except (urllib.error.HTTPError, urllib.error.URLError, OSError) as exc:
+                        logger.warning(
+                            "Could not fetch project statuses for %s: %s",
+                            project_keys[0],
+                            self._sanitise_exc(exc, url, email, token),
+                        )
+
+                done_statuses: list[str] = []
+                in_progress_statuses: list[str] = []
+                for status_obj in all_statuses:
+                    sname = status_obj.get("name", "")
+                    if not sname:
+                        continue
+                    if project_status_names is not None and sname not in project_status_names:
+                        continue
+                    category = (status_obj.get("statusCategory") or {}).get("key", "")
+                    if category == "done":
+                        done_statuses.append(sname)
+                    elif category == "indeterminate":
+                        in_progress_statuses.append(sname)
+                if done_statuses or in_progress_statuses:
+                    board_statuses = {
+                        "done_statuses": done_statuses,
+                        "in_progress_statuses": in_progress_statuses,
+                    }
+        except (urllib.error.HTTPError, urllib.error.URLError, OSError) as exc:
+            logger.warning(
+                "Could not fetch Jira statuses for schema inference: %s",
+                self._sanitise_exc(exc, url, email, token),
+            )
+
         new_schema = schema_mod.build_schema_from_fields(
             jira_fields,
             schema_name=schema_name,
             jira_url=url,
+            populated_fields=populated_fields or None,
+            board_statuses=board_statuses,
         )
         schema_mod.save_schema(new_schema)
         self._send_json(200, {"ok": True, "schema": new_schema})

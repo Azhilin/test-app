@@ -68,7 +68,7 @@ def main() -> int:
         Stage("Unit", [python, "-m", "pytest", "tests/unit", "-m", "unit and not windows_only", *xdist]),
         Stage("Component", [python, "-m", "pytest", "tests/component", "-m", "component and not windows_only", *xdist]),
         Stage("Windows", [python, "-m", "pytest", "tests", "-m", "windows_only", *xdist]),
-        Stage("Security", (pip_audit or ["pip-audit"]) + ["-r", "requirements.txt"], skip=pip_audit is None),
+        Stage("Security", (pip_audit or ["pip-audit"]) + ["-r", "requirements.txt"]),
         Stage(
             "Integration",
             [python, "-m", "pytest", "tests/integration", "-m", "integration and not windows_only", *xdist],
@@ -83,7 +83,7 @@ def main() -> int:
     print("  LOCAL CI CHECKS  (parallel)")
     print(SEP)
     if pip_audit is None:
-        print("\n  WARNING: pip-audit not found — Security stage skipped.")
+        print("\n  WARNING: pip-audit not found — Security stage will FAIL.")
         print("           Install with: pip install pip-audit")
     print(f"\n  Running {len(active)} stage(s) concurrently: {', '.join(s.name for s in active)}\n")
 
