@@ -28,7 +28,7 @@ def _get_windows_ca_certs() -> list[str]:
             for cert_bytes, encoding_type, _trust in ssl.enum_certificates(store_name):  # type: ignore[attr-defined]
                 if encoding_type == "x509_asn":
                     pem_parts.append(ssl.DER_cert_to_PEM_cert(cert_bytes))
-    except Exception:  # noqa: BLE001
+    except Exception:  # noqa: BLE001  # nosec B110
         pass
     return pem_parts
 
