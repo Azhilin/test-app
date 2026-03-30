@@ -522,5 +522,3 @@ def test_build_metrics_dict_story_points_velocity_unchanged(monkeypatch):
     row = result["velocity"][0]
     assert row["velocity"] == 8.0, "StoryPoints mode should sum story points"
     assert row["issue_count"] == 2
-
-

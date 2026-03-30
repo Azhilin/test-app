@@ -21,3 +21,11 @@ target-version = "py310"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]  # pycodestyle, pyflakes, isort, pyupgrade
+
+[tool.mypy]
+python_version = "3.12"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["app.server._base", "app.server.cert_handlers", "app.server.config_handlers", "app.server.connection_handlers", "app.server.filter_handlers", "app.server.generate_handlers", "app.server.schema_handlers"]
+disable_error_code = ["attr-defined"]

@@ -53,7 +53,7 @@ def test_import_app_cert_utils():
 
 
 def test_import_app_logging_setup():
-    from app.utils.logging_setup import setup_logging, SUCCESS_LEVEL
+    from app.utils.logging_setup import SUCCESS_LEVEL, setup_logging
 
     assert callable(setup_logging)
     assert SUCCESS_LEVEL == 25

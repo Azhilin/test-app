@@ -77,7 +77,7 @@ def pytest_runtest_makereport(item, call):
     Only fires during the ``call`` phase (the actual test body) and only for
     tests that have a ``page`` fixture.
     """
-    outcome = yield
+    yield
     if call.when != "call":
         return
     if "page" not in item.fixturenames:

@@ -10,13 +10,12 @@ import shutil
 from concurrent.futures import ThreadPoolExecutor, wait
 from pathlib import Path
 
-from app.utils.logging_setup import SUCCESS_LEVEL
-
-logger = logging.getLogger(__name__)
-
 from app.core import config, jira_client, metrics
 from app.core import schema as schema_mod
 from app.reporters import report_html, report_md
+from app.utils.logging_setup import SUCCESS_LEVEL
+
+logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 REPORTS_DIR = PROJECT_ROOT / "generated" / "reports"

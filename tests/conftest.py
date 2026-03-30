@@ -137,9 +137,7 @@ def attach_logs_to_allure(caplog):
     with caplog.at_level(logging.DEBUG):
         yield
     if caplog.records:
-        log_text = "\n".join(
-            f"{r.levelname:<8} {r.name}: {r.getMessage()}" for r in caplog.records
-        )
+        log_text = "\n".join(f"{r.levelname:<8} {r.name}: {r.getMessage()}" for r in caplog.records)
         allure.attach(log_text, name="captured logs", attachment_type=allure.attachment_type.TEXT)
 
 

@@ -804,4 +804,3 @@ def test_positive_e2e_fetch_cert_then_badge_shows_valid(page: Page, live_server_
 
     expect(badge).to_have_text("Valid", timeout=8000)
     expect(badge).to_have_class(re.compile(r"badge-success"))
-

@@ -13,7 +13,6 @@ import pytest
 import app.utils.logging_setup as logging_setup
 from app.utils.logging_setup import SUCCESS_LEVEL, setup_logging
 
-
 # ---------------------------------------------------------------------------
 # Fixture: reset root logger state around every test
 # ---------------------------------------------------------------------------
@@ -74,6 +73,7 @@ def test_setup_logging_returns_logger_and_path(tmp_path, monkeypatch):
     logger, log_file = result
     assert isinstance(logger, logging.Logger)
     from pathlib import Path
+
     assert isinstance(log_file, Path)
 
 
@@ -123,10 +123,7 @@ def test_setup_logging_attaches_file_handler(tmp_path, monkeypatch):
 def test_setup_logging_attaches_stream_handler(tmp_path, monkeypatch):
     monkeypatch.setattr(logging_setup, "_LOG_DIR", tmp_path)
     logger, _ = setup_logging()
-    stream_handlers = [
-        h for h in logger.handlers
-        if type(h) is logging.StreamHandler
-    ]
+    stream_handlers = [h for h in logger.handlers if type(h) is logging.StreamHandler]
     assert len(stream_handlers) >= 1
 
 
