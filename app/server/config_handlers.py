@@ -24,19 +24,33 @@ _CONFIG_KEYS = [
     "AI_ACTION_LABELS",
 ]
 
+# Keys that contain credentials — written to .env (gitignored).
+# All other keys are written to config/defaults.env (committed).
+_SECRET_KEYS = {"JIRA_URL", "JIRA_EMAIL", "JIRA_API_TOKEN"}
+
+
+def _read_env_file(path) -> dict[str, str]:
+    """Parse a key=value env file; skip blank lines and comments."""
+    result: dict[str, str] = {}
+    if path.exists():
+        for line in path.read_text(encoding="utf-8").splitlines():
+            stripped = line.strip()
+            if stripped.startswith("#") or "=" not in stripped:
+                continue
+            key, _, val = stripped.partition("=")
+            result[key.strip()] = val.strip()
+    return result
+
 
 class ConfigHandlerMixin:
     def _handle_get_config(self) -> None:
-        """Return current .env values; JIRA_API_TOKEN is masked as '***'."""
+        """Return current config values; JIRA_API_TOKEN is masked as '***'."""
+        defaults_path = _root() / "config" / "defaults.env"
         env_path = _root() / ".env"
-        raw_config: dict[str, str] = {}
-        if env_path.exists():
-            for line in env_path.read_text(encoding="utf-8").splitlines():
-                stripped = line.strip()
-                if stripped.startswith("#") or "=" not in stripped:
-                    continue
-                key, _, val = stripped.partition("=")
-                raw_config[key.strip()] = val.strip()
+
+        # Merge: defaults first, then .env wins on collision
+        raw_config = _read_env_file(defaults_path)
+        raw_config.update(_read_env_file(env_path))
 
         out: dict[str, str] = {}
         for k in _CONFIG_KEYS:
@@ -50,7 +64,7 @@ class ConfigHandlerMixin:
         self._send_json(200, {"config": out, "configured": configured})
 
     def _handle_post_config(self) -> None:
-        """Write whitelisted config keys to .env on disk."""
+        """Write whitelisted config keys to the appropriate env file on disk."""
         body = self._read_json_body()
         if body is None:
             self._send_json(400, {"ok": False, "error": "Invalid JSON body"})
@@ -65,20 +79,25 @@ class ConfigHandlerMixin:
                 updates[key] = val
 
         try:
-            self._write_env_fields(updates)
+            secret_updates = {k: v for k, v in updates.items() if k in _SECRET_KEYS}
+            defaults_updates = {k: v for k, v in updates.items() if k not in _SECRET_KEYS}
+            if secret_updates:
+                self._write_env_fields(secret_updates, _root() / ".env", _root() / ".env.example")
+            if defaults_updates:
+                self._write_env_fields(defaults_updates, _root() / "config" / "defaults.env", None)
             self._send_json(200, {"ok": True})
         except Exception as exc:  # noqa: BLE001
             self._send_json(500, {"ok": False, "error": str(exc)})
 
-    def _write_env_fields(self, updates: dict[str, str]) -> None:
-        """Update or add key=value pairs in .env, creating from .env.example if absent."""
-        env_path = _root() / ".env"
-        example_path = _root() / ".env.example"
+    def _write_env_fields(self, updates: dict[str, str], env_path, fallback_path) -> None:
+        """Update or add key=value pairs in the given env file.
 
+        Falls back to fallback_path as a template when env_path is absent.
+        """
         if env_path.exists():
             lines = env_path.read_text(encoding="utf-8").splitlines()
-        elif example_path.exists():
-            lines = example_path.read_text(encoding="utf-8").splitlines()
+        elif fallback_path is not None and fallback_path.exists():
+            lines = fallback_path.read_text(encoding="utf-8").splitlines()
         else:
             lines = []
 

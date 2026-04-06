@@ -27,7 +27,11 @@ def _restore_config():
 
 def _reload_config(env: dict):
     """Reload app.core.config with a patched environment, return the module."""
-    with patch.dict(os.environ, env, clear=True), patch("dotenv.load_dotenv", lambda *args, **kwargs: None):
+    with (
+        patch.dict(os.environ, env, clear=True),
+        patch("dotenv.load_dotenv", lambda *args, **kwargs: None),
+        patch("dotenv.dotenv_values", return_value={}),
+    ):
         import app.core.config as cfg
 
         importlib.reload(cfg)

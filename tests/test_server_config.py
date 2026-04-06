@@ -70,6 +70,7 @@ def temp_root(tmp_path, monkeypatch):
     """Redirect app.server.ROOT to a fresh tmp_path so real .env is never touched."""
     import app.server as srv
 
+    (tmp_path / "config").mkdir()
     monkeypatch.setattr(srv, "ROOT", tmp_path)
     return tmp_path
 
@@ -110,7 +111,7 @@ class TestWriteEnvFields:
         env = tmp_path / ".env"
         env.write_text("JIRA_URL=https://old.atlassian.net\nJIRA_EMAIL=old@example.com\n")
         h = self._make_handler(tmp_path, monkeypatch)
-        h._write_env_fields({"JIRA_URL": "https://new.atlassian.net"})
+        h._write_env_fields({"JIRA_URL": "https://new.atlassian.net"}, env, None)
         content = env.read_text()
         assert "JIRA_URL=https://new.atlassian.net" in content
         assert "JIRA_URL=https://old.atlassian.net" not in content
@@ -121,7 +122,7 @@ class TestWriteEnvFields:
         env = tmp_path / ".env"
         env.write_text("# JIRA_URL=https://placeholder.atlassian.net\nJIRA_EMAIL=a@b.com\n")
         h = self._make_handler(tmp_path, monkeypatch)
-        h._write_env_fields({"JIRA_URL": "https://real.atlassian.net"})
+        h._write_env_fields({"JIRA_URL": "https://real.atlassian.net"}, env, None)
         content = env.read_text()
         assert "JIRA_URL=https://real.atlassian.net" in content
         assert "# JIRA_URL=" not in content
@@ -130,7 +131,7 @@ class TestWriteEnvFields:
         env = tmp_path / ".env"
         env.write_text("JIRA_EMAIL=a@b.com\n")
         h = self._make_handler(tmp_path, monkeypatch)
-        h._write_env_fields({"JIRA_URL": "https://new.atlassian.net"})
+        h._write_env_fields({"JIRA_URL": "https://new.atlassian.net"}, env, None)
         content = env.read_text()
         assert "JIRA_URL=https://new.atlassian.net" in content
         assert "JIRA_EMAIL=a@b.com" in content
@@ -138,15 +139,17 @@ class TestWriteEnvFields:
     def test_creates_env_from_example_when_env_missing(self, tmp_path, monkeypatch):
         example = tmp_path / ".env.example"
         example.write_text("# JIRA_URL=\n# JIRA_EMAIL=\n# JIRA_API_TOKEN=\n")
+        env = tmp_path / ".env"
         h = self._make_handler(tmp_path, monkeypatch)
         h._write_env_fields(
             {
                 "JIRA_URL": "https://x.atlassian.net",
                 "JIRA_EMAIL": "u@x.com",
                 "JIRA_API_TOKEN": "tok123",
-            }
+            },
+            env,
+            example,
         )
-        env = tmp_path / ".env"
         assert env.exists(), ".env should be created"
         content = env.read_text()
         assert "JIRA_URL=https://x.atlassian.net" in content
@@ -157,14 +160,15 @@ class TestWriteEnvFields:
         example = tmp_path / ".env.example"
         original = "# JIRA_URL=\n# JIRA_EMAIL=\n"
         example.write_text(original)
+        env = tmp_path / ".env"
         h = self._make_handler(tmp_path, monkeypatch)
-        h._write_env_fields({"JIRA_URL": "https://x.atlassian.net"})
+        h._write_env_fields({"JIRA_URL": "https://x.atlassian.net"}, env, example)
         assert example.read_text() == original
 
     def test_creates_env_from_scratch_when_both_absent(self, tmp_path, monkeypatch):
-        h = self._make_handler(tmp_path, monkeypatch)
-        h._write_env_fields({"JIRA_URL": "https://x.atlassian.net", "JIRA_EMAIL": "u@x.com"})
         env = tmp_path / ".env"
+        h = self._make_handler(tmp_path, monkeypatch)
+        h._write_env_fields({"JIRA_URL": "https://x.atlassian.net", "JIRA_EMAIL": "u@x.com"}, env, None)
         assert env.exists()
         content = env.read_text()
         assert "JIRA_URL=https://x.atlassian.net" in content
@@ -174,7 +178,7 @@ class TestWriteEnvFields:
         env = tmp_path / ".env"
         env.write_text("JIRA_URL=https://first.atlassian.net\nJIRA_URL=https://second.atlassian.net\n")
         h = self._make_handler(tmp_path, monkeypatch)
-        h._write_env_fields({"JIRA_URL": "https://replaced.atlassian.net"})
+        h._write_env_fields({"JIRA_URL": "https://replaced.atlassian.net"}, env, None)
         content = env.read_text()
         lines = [line for line in content.splitlines() if line.startswith("JIRA_URL=")]
         # First occurrence replaced, second left as-is
@@ -187,7 +191,7 @@ class TestWriteEnvFields:
         env.write_text("JIRA_API_TOKEN=oldtoken\n")
         h = self._make_handler(tmp_path, monkeypatch)
         token_with_equals = "abc==def==ghi"
-        h._write_env_fields({"JIRA_API_TOKEN": token_with_equals})
+        h._write_env_fields({"JIRA_API_TOKEN": token_with_equals}, env, None)
         content = env.read_text()
         assert f"JIRA_API_TOKEN={token_with_equals}" in content
 
@@ -195,14 +199,15 @@ class TestWriteEnvFields:
         env = tmp_path / ".env"
         env.write_bytes(b"JIRA_URL=https://old.atlassian.net\r\nJIRA_EMAIL=a@b.com\r\n")
         h = self._make_handler(tmp_path, monkeypatch)
-        h._write_env_fields({"JIRA_URL": "https://new.atlassian.net"})
+        h._write_env_fields({"JIRA_URL": "https://new.atlassian.net"}, env, None)
         content = env.read_text(encoding="utf-8")
         assert "JIRA_URL=https://new.atlassian.net" in content
 
     def test_write_creates_newline_terminated_file(self, tmp_path, monkeypatch):
+        env = tmp_path / ".env"
         h = self._make_handler(tmp_path, monkeypatch)
-        h._write_env_fields({"JIRA_URL": "https://x.atlassian.net"})
-        raw = (tmp_path / ".env").read_bytes()
+        h._write_env_fields({"JIRA_URL": "https://x.atlassian.net"}, env, None)
+        raw = env.read_bytes()
         assert raw.endswith(b"\n"), "File should end with a newline"
 
     def test_multiple_keys_written_in_one_call(self, tmp_path, monkeypatch):
@@ -214,7 +219,9 @@ class TestWriteEnvFields:
                 "JIRA_URL": "https://new.atlassian.net",
                 "JIRA_EMAIL": "new@x.com",
                 "JIRA_API_TOKEN": "newtok",
-            }
+            },
+            env,
+            None,
         )
         content = env.read_text()
         assert "JIRA_URL=https://new.atlassian.net" in content
@@ -233,7 +240,7 @@ class TestWriteEnvFields:
             "JIRA_URL=https://old.atlassian.net\nJIRA_EMAIL=keep@example.com\nJIRA_API_TOKEN=keep_this_token\n"
         )
         h = self._make_handler(tmp_path, monkeypatch)
-        h._write_env_fields({"JIRA_URL": "https://new.atlassian.net"})
+        h._write_env_fields({"JIRA_URL": "https://new.atlassian.net"}, env, None)
         content = env.read_text()
         assert "JIRA_URL=https://new.atlassian.net" in content
         assert "JIRA_EMAIL=keep@example.com" in content
@@ -246,7 +253,7 @@ class TestWriteEnvFields:
             "JIRA_URL=https://example.atlassian.net\nJIRA_EMAIL=old@example.com\nJIRA_API_TOKEN=original_tok\n"
         )
         h = self._make_handler(tmp_path, monkeypatch)
-        h._write_env_fields({"JIRA_EMAIL": "new@example.com"})
+        h._write_env_fields({"JIRA_EMAIL": "new@example.com"}, env, None)
         content = env.read_text()
         assert "JIRA_EMAIL=new@example.com" in content
         assert "JIRA_URL=https://example.atlassian.net" in content
@@ -263,7 +270,7 @@ class TestWriteEnvFields:
             "JIRA_SPRINT_COUNT=5\n"
         )
         h = self._make_handler(tmp_path, monkeypatch)
-        h._write_env_fields({"JIRA_API_TOKEN": "new_tok"})
+        h._write_env_fields({"JIRA_API_TOKEN": "new_tok"}, env, None)
         content = env.read_text()
         assert "JIRA_BOARD_ID=42" in content
         assert "JIRA_SPRINT_COUNT=5" in content
@@ -280,7 +287,7 @@ class TestWriteEnvFields:
             "JIRA_API_TOKEN=tok\n"
         )
         h = self._make_handler(tmp_path, monkeypatch)
-        h._write_env_fields({"JIRA_URL": "https://new.atlassian.net"})
+        h._write_env_fields({"JIRA_URL": "https://new.atlassian.net"}, env, None)
         content = env.read_text()
         assert "# Jira credentials" in content
         assert "# Email for authentication" in content

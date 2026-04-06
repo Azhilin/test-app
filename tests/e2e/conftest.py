@@ -64,6 +64,25 @@ def live_server_url():
 
 
 # ---------------------------------------------------------------------------
+# Browser launch configuration — headless by default
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="session")
+def browser_type_launch_args(browser_type_launch_args, request):
+    """Ensure tests always run headless; pass --headed to debug visually."""
+    headed = request.config.getoption("--headed", default=False)
+    return {**browser_type_launch_args, "headless": not headed}
+
+
+@pytest.fixture
+def page(page):
+    """Yield the Playwright page and explicitly close it after each test."""
+    yield page
+    page.close()
+
+
+# ---------------------------------------------------------------------------
 # Allure screenshots — captured for every E2E test (pass and fail)
 # ---------------------------------------------------------------------------
 

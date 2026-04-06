@@ -3,11 +3,15 @@
 import os
 from pathlib import Path
 
-from dotenv import load_dotenv
+from dotenv import dotenv_values as _dotenv_values
 
-# Load .env from project root
+# Merge defaults (committed) and secrets (.env): .env wins over defaults.env,
+# but both yield to values already present in os.environ (e.g. set by tests or CI).
+_defaults_path = Path(__file__).resolve().parent.parent.parent / "config" / "defaults.env"
 _env_path = Path(__file__).resolve().parent.parent.parent / ".env"
-load_dotenv(_env_path)
+for _k, _v in {**_dotenv_values(_defaults_path), **_dotenv_values(_env_path)}.items():
+    if _k not in os.environ:
+        os.environ[_k] = _v
 
 # SSL certificate: use local cert bundle when present, else fall back to default CA store
 _cert_file = Path(__file__).resolve().parent.parent.parent / "certs" / "jira_ca_bundle.pem"

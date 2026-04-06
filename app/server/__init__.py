@@ -8,18 +8,27 @@ Usage:
 """
 
 import logging
+import os as _os
 import ssl  # noqa: F401
 import subprocess  # noqa: F401  # nosec B404
 import urllib  # noqa: F401
 import urllib.request  # noqa: F401
 import webbrowser
+from pathlib import Path
 
+from dotenv import dotenv_values as _dotenv_values
 from dotenv import dotenv_values as dotenv_values
-from dotenv import load_dotenv
 
-# load_dotenv() MUST be called before importing ._base so that HOST/PORT
-# in _base.py read the .env-populated os.environ values.
-load_dotenv()
+# Merge defaults (committed) and secrets (.env): .env wins over defaults.env,
+# but both yield to values already present in os.environ (tests / CI).
+# MUST run before importing ._base so HOST/PORT are populated when _base reads os.environ.
+_srv_root = Path(__file__).resolve().parent.parent.parent
+for _k, _v in {
+    **_dotenv_values(_srv_root / "config" / "defaults.env"),
+    **_dotenv_values(_srv_root / ".env"),
+}.items():
+    if _k not in _os.environ:
+        _os.environ[_k] = _v
 
 # Re-exported for backward-compatible test patching (mirrors old flat-module namespace).
 # Tests patch e.g. srv.subprocess.Popen, srv.urllib.request.urlopen, srv.ssl.create_default_context,

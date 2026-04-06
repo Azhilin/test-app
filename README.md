@@ -25,9 +25,7 @@ Open `.env` and fill in:
 - `JIRA_EMAIL` – your Atlassian account email
 - `JIRA_API_TOKEN` – create at [Atlassian API tokens](https://id.atlassian.com/manage-profile/security/api-tokens)
 
-Optional settings (see `.env.example` for details):
-`JIRA_BOARD_ID`, `JIRA_SPRINT_COUNT`, `JIRA_SCHEMA_NAME`, `JIRA_FILTER_ID`,
-`AI_ASSISTED_LABEL`, `AI_EXCLUDE_LABELS`, `AI_TOOL_LABELS`, `AI_ACTION_LABELS`
+That is all that `.env` needs. Non-sensitive settings (`JIRA_BOARD_ID`, `JIRA_SPRINT_COUNT`, `JIRA_SCHEMA_NAME`, AI labels, metric toggles, etc.) live in `config/defaults.env` — edit that file to change project-wide defaults.
 
 ## Run
 
@@ -47,7 +45,7 @@ If the server fails to start because port 8080 is occupied by a stale previous i
 
 **Quick fix — use a different port:**
 
-Open `.env` and change the `PORT` line:
+Open `config/defaults.env` (or add to `.env` to override) and change the `PORT` line:
 
 ```
 PORT=9000
