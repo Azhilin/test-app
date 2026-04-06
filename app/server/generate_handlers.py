@@ -35,7 +35,11 @@ class GenerateHandlerMixin:
 
         try:
             root = _root()
-            fresh_env = {**os.environ, **_dotenv_values(root / ".env")}
+            fresh_env = {
+                **os.environ,
+                **_dotenv_values(root / "config" / "defaults.env"),
+                **_dotenv_values(root / ".env"),  # .env secrets win over defaults
+            }
 
             qs = parse_qs(urlparse(self.path).query)
             filter_slug = urlunquote((qs.get("filter") or [""])[0]).strip()

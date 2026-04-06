@@ -319,7 +319,14 @@ browser → GET /generated/reports/... → serve static report files
 
 ## 6. Configuration Reference
 
-All configuration is read from a `.env` file in the project root (or from environment variables). Copy `.env.example` to `.env` to get started.
+Configuration is split across two files:
+
+| File | Tracked | Purpose |
+|------|---------|---------|
+| `config/defaults.env` | Yes (git) | Non-sensitive defaults — sprint counts, metric toggles, AI labels, port, etc. Shared across all developers who clone the repo. |
+| `.env` | No (gitignored) | Credentials only — `JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`, and optional Confluence credentials. |
+
+At startup, `config/defaults.env` is loaded first, then `.env` overrides it. Values already present in the process environment (e.g. set by CI or tests) always win. Copy `.env.example` to `.env` to set your credentials.
 
 ### Required
 
@@ -363,8 +370,8 @@ All routes are served by `app/server.py` (stdlib `HTTPServer`). CORS headers (`A
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/` or `/index.html` | Serve `ui/index.html` |
-| `GET` | `/api/config` | Return current `.env` values (token masked as `***`) for all 17 config keys |
-| `POST` | `/api/config` | Write any subset of the 17 supported config keys to `.env` |
+| `GET` | `/api/config` | Return merged config values (token masked as `***`) for all 17 config keys |
+| `POST` | `/api/config` | Write credential keys to `.env`; all other keys to `config/defaults.env` |
 | `POST` | `/api/test-connection` | Proxy credentials test to `JIRA_URL/rest/api/3/myself` |
 | `GET` | `/api/generate` | Run `main.py` as subprocess; stream stdout/stderr as SSE |
 | `GET` | `/api/cert-status` | Return cert existence and validity from `certs/jira_ca_bundle.pem` |
@@ -507,10 +514,11 @@ def _reload_config(env: dict):
 
 ### Adding a new config variable
 
-1. Add to `.env.example` with a descriptive comment.
-2. Add `os.getenv(...)` in `app/core/config.py` as a module-level constant.
-3. Add to `validate_config()` if the variable is required.
-4. Test in `tests/unit/test_config.py` using `monkeypatch` + `importlib.reload(config)` pattern.
+1. If it is a credential or secret: add to `.env.example` with a descriptive comment; add to `_SECRET_KEYS` in `app/server/config_handlers.py`.
+2. If it is non-sensitive (the common case): add to `config/defaults.env` with a descriptive comment and its default value.
+3. Add `os.getenv(...)` in `app/core/config.py` as a module-level constant.
+4. Add to `validate_config()` if the variable is required.
+5. Test in `tests/unit/test_config.py` using `_reload_config()` (mocks both `load_dotenv` and `dotenv_values`).
 
 ### Extending the dev server
 
@@ -542,6 +550,8 @@ python3.12 -m venv .venv
 ```bash
 cp .env.example .env
 # Edit .env and set JIRA_URL, JIRA_EMAIL, JIRA_API_TOKEN
+# Non-sensitive defaults (sprint count, metric toggles, AI labels, etc.)
+# are already set in config/defaults.env — edit that file to change them.
 ```
 
 ### Run the browser UI (recommended)
