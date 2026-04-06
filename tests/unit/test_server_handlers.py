@@ -85,7 +85,7 @@ def test_read_env_credentials_reads_values_from_env_file(monkeypatch, tmp_path):
 
 def test_get_schema_detail_returns_saved_schema_json(monkeypatch, tmp_path):
     (_, handler) = _make_handler(monkeypatch, tmp_path)
-    schemas_dir = tmp_path / "docs" / "product" / "schemas"
+    schemas_dir = tmp_path / "generated" / "schemas"
     schemas_dir.mkdir(parents=True)
     (schemas_dir / "team_schema.json").write_text(
         json.dumps({"name": "Team Schema", "projects": ["TEAM"]}),
@@ -191,7 +191,7 @@ def test_post_schema_fetches_and_saves_schema(monkeypatch, tmp_path):
     handler._handle_post_schema()
     status, data = _json_response(handler)
 
-    saved_path = tmp_path / "docs" / "product" / "schemas" / "team_schema.json"
+    saved_path = tmp_path / "generated" / "schemas" / "team_schema.json"
     saved_data = json.loads(saved_path.read_text(encoding="utf-8"))
 
     assert status == 200
@@ -237,7 +237,7 @@ def test_post_schema_returns_jira_error_when_fields_request_fails(monkeypatch, t
 
 def test_delete_schema_removes_existing_file(monkeypatch, tmp_path):
     (_, handler) = _make_handler(monkeypatch, tmp_path)
-    schemas_dir = tmp_path / "docs" / "product" / "schemas"
+    schemas_dir = tmp_path / "generated" / "schemas"
     schemas_dir.mkdir(parents=True)
     target = schemas_dir / "team_schema.json"
     target.write_text("{}", encoding="utf-8")
