@@ -368,6 +368,23 @@ set PYTHON_CMD=py
 :SETUP_VENV
 call :LOG "[INFO]" "Setting up Python virtual environment in '%VENV_DIR%'..."
 
+:: Check if venv already exists and is complete
+if exist "%VENV_DIR%\Scripts\activate.bat" (
+    call :LOG "[INFO]" "Virtual environment already exists at '%VENV_DIR%'. Skipping creation."
+    goto :AFTER_VENV_CREATE
+)
+
+:: If venv directory exists but is incomplete/corrupted, remove it and recreate
+if exist "%VENV_DIR%" (
+    call :LOG "[WARNING]" "Directory '%VENV_DIR%' exists but appears incomplete. Removing and recreating..."
+    rmdir /s /q "%VENV_DIR%" >nul 2>&1
+    if !errorlevel! neq 0 (
+        call :LOG "[ERROR]" "Failed to remove incomplete virtual environment at '%VENV_DIR%'."
+        call :COUNTDOWN
+        exit /b 1
+    )
+)
+
 :: Create venv using the detected Python command, preferring the launcher when available
 if /i "%PYTHON_CMD%"=="py" (
     py -%PYTHON_TARGET% -m venv "%VENV_DIR%"
@@ -381,6 +398,7 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+:AFTER_VENV_CREATE
 :: Verify activation script exists as confirmation the venv was built correctly
 if not exist "%VENV_DIR%\Scripts\activate.bat" (
     call :LOG "[ERROR]" "Virtual environment activation script not found at '%VENV_DIR%\Scripts\activate.bat'. Creation may have failed."
@@ -388,7 +406,7 @@ if not exist "%VENV_DIR%\Scripts\activate.bat" (
     exit /b 1
 )
 
-call :LOG "[SUCCESS]" "Virtual environment created at '%VENV_DIR%'."
+call :LOG "[SUCCESS]" "Virtual environment ready at '%VENV_DIR%'."
 
 :: ============================================================
 :: SECTION 5a - SSL CERTIFICATE BOOTSTRAP
