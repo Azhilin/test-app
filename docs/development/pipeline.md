@@ -3,11 +3,16 @@
 ## Overview
 
 The pipeline lives in [`.github/workflows/ci.yml`](../.github/workflows/ci.yml).  
-It runs on **every push and pull request** to every branch, but **all stages are
-disabled by default** — no tests run until you explicitly enable them.
+It runs on **every push and pull request** to every branch.
 
-Stages are enabled independently via **GitHub repository Variables** (no YAML
-edits required) or toggled per-run via **workflow_dispatch** inputs.
+**Most stages are disabled by default** — integration, e2e, windows, and security
+tests do not run until you explicitly enable them. However, **three jobs always
+run regardless of settings:**
+- `lint` (ruff check + format) — unconditional
+- `unit-tests` and `component-tests` — always run on pull requests (though gated by `ENABLE_*` variables on push events)
+
+Optional stages are enabled independently via **GitHub repository Variables** (no
+YAML edits required) or toggled per-run via **workflow_dispatch** inputs.
 
 ---
 
@@ -17,33 +22,48 @@ edits required) or toggled per-run via **workflow_dispatch** inputs.
 Push / PR / Manual trigger
          │
          ▼
-┌─────────────────────────────────────────────────────────┐
-│                      CI Workflow                        │
-│                                                         │
-│  ┌─────────────┐  ┌─────────────────┐                  │
-│  │ unit-tests  │  │ component-tests │  ubuntu-latest   │
-│  │  115 tests  │  │   76 tests      │                  │
-│  └─────────────┘  └─────────────────┘                  │
-│                                                         │
+┌──────────────────────────────────────────────────────────┐
+│                    CI Workflow                          │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐   │
+│  │         lint (ruff)  — always runs               │   │
+│  │      ubuntu-latest — no gatekeeping              │   │
+│  └──────────────────────────────────────────────────┘   │
+│                                                          │
+│  ┌─────────────────┐  ┌─────────────────┐               │
+│  │  unit-tests     │  │ component-tests │ ubuntu-latest│
+│  │   (always on PR)│  │  (always on PR) │               │
+│  │   115 tests     │  │    76 tests     │               │
+│  └─────────────────┘  └─────────────────┘               │
+│                                                          │
 │  ┌──────────────────┐  ┌──────────────────────────┐    │
-│  │ integration-tests│  │      e2e-tests            │   │
-│  │    6 tests       │  │  43 tests (Playwright)    │   │
-│  │  (Jira secrets)  │  │  (Jira secrets)           │   │
+│  │integration-tests │  │      e2e-tests           │    │
+│  │   6 tests        │  │  43 tests (Playwright)   │    │
+│  │ (Jira secrets)   │  │  (Jira secrets)          │    │
 │  └──────────────────┘  └──────────────────────────┘    │
-│                                                         │
+│                                                          │
 │  ┌─────────────────┐  ┌─────────────────┐              │
 │  │ windows-tests   │  │ security-scan   │              │
-│  │ (windows-latest)│  │  (pip-audit)    │              │
+│  │(windows-latest) │  │  (pip-audit)    │              │
 │  └─────────────────┘  └─────────────────┘              │
-│                                                         │
-│  ┌─────────────────────────────────────────────┐        │
-│  │           ci-summary  (always runs)          │        │
-│  └─────────────────────────────────────────────┘        │
-└─────────────────────────────────────────────────────────┘
+│                                                          │
+│  ┌────────────────────────────────────────────────┐    │
+│  │   allure-report (if ≥1 test didn't skip)       │    │
+│  │   Generate + deploy HTML to GitHub Pages       │    │
+│  └────────────────────────────────────────────────┘    │
+│                                                          │
+│  ┌────────────────────────────────────────────────┐    │
+│  │     ci-summary  (always runs, aggregates all)  │    │
+│  └────────────────────────────────────────────────┘    │
+└──────────────────────────────────────────────────────────┘
 ```
 
-All jobs run independently and in parallel (no `needs` dependencies between test
-jobs). Only `ci-summary` waits for all of them.
+**Dependency flow:**
+- `lint` runs independently (no gate).
+- `unit-tests` and `component-tests` always run on PRs (regardless of `ENABLE_*` variables); on push events they are gated by `ENABLE_UNIT` and `ENABLE_COMPONENT`.
+- Other test jobs and `security-scan` are independently gated by their `ENABLE_*` variables or manual `workflow_dispatch` inputs.
+- `allure-report` waits for at least one of the four test jobs (unit/component/integration/e2e) and only runs if ≥1 of them was not skipped.
+- `ci-summary` waits for all of them (including `lint` and `allure-report`).
 
 ---
 
@@ -54,17 +74,23 @@ jobs). Only `ci-summary` waits for all of them.
 Navigate to **GitHub → Settings → Variables → Actions** and create or update the
 corresponding repository variable.
 
-| Variable | Stage | Runner |
-|---|---|---|
-| `ENABLE_UNIT` | Unit Tests | ubuntu-latest |
-| `ENABLE_COMPONENT` | Component Tests | ubuntu-latest |
-| `ENABLE_INTEGRATION` | Integration Tests | ubuntu-latest |
-| `ENABLE_E2E` | E2E Tests (Playwright) | ubuntu-latest |
-| `ENABLE_WINDOWS_TESTS` | Windows-specific Tests | windows-latest |
-| `ENABLE_SECURITY_SCAN` | Security Scan (pip-audit) | ubuntu-latest |
+| Variable | Stage | Runner | Note |
+|---|---|---|---|
+| (none) | Lint (ruff) | ubuntu-latest | Always runs — no variable to gate |
+| `ENABLE_UNIT` | Unit Tests | ubuntu-latest | Always runs on PRs; gated by variable on push |
+| `ENABLE_COMPONENT` | Component Tests | ubuntu-latest | Always runs on PRs; gated by variable on push |
+| `ENABLE_INTEGRATION` | Integration Tests | ubuntu-latest | Requires Jira secrets |
+| `ENABLE_E2E` | E2E Tests (Playwright) | ubuntu-latest | Requires Jira secrets |
+| `ENABLE_WINDOWS_TESTS` | Windows-specific Tests | windows-latest | |
+| `ENABLE_SECURITY_SCAN` | Security Scan (pip-audit) | ubuntu-latest | |
 
 Set the value to the **string** `true` to enable, or remove/set to anything else
 to disable.
+
+> **Important:** On **pull requests**, `unit-tests` and `component-tests` always
+> run **regardless of `ENABLE_UNIT` and `ENABLE_COMPONENT` variables**. The
+> "disabled by default" statement applies to **push events only**. This ensures
+> PRs are always validated before merge.
 
 ### Recommended enablement order
 
@@ -187,7 +213,7 @@ RESTRICT_TO_MASTER   = true   # Integration, E2E, Windows only run on master
 - **What it covers:** Pure-function tests, no I/O — config loading, metrics
   computation, Jira client (mocked), module imports
 - **Jira secrets required:** No
-- **Artifact:** `unit-results/unit.xml`
+- **Artifacts:** `unit-results` (JUnit XML) + `allure-results-unit-<run_id>` (Allure results)
 
 ### Component Tests
 
@@ -196,7 +222,7 @@ RESTRICT_TO_MASTER   = true   # Integration, E2E, Windows only run on master
 - **What it covers:** Filesystem and HTTP — HTML template rendering, Markdown
   generation, HTTP routes/CORS/SSE, data contracts
 - **Jira secrets required:** No
-- **Artifact:** `component-results/component.xml`
+- **Artifacts:** `component-results` (JUnit XML) + `allure-results-component-<run_id>` (Allure results)
 
 ### Integration Tests
 
@@ -205,7 +231,7 @@ RESTRICT_TO_MASTER   = true   # Integration, E2E, Windows only run on master
 - **What it covers:** Full pipeline with mocked I/O, filter flow, server
   integration
 - **Jira secrets required:** Yes — see [Jira Secrets Setup](#jira-secrets-setup)
-- **Artifact:** `integration-results/integration.xml`
+- **Artifacts:** `integration-results` (JUnit XML) + `allure-results-integration-<run_id>` (Allure results)
 
 ### E2E Tests
 
@@ -216,7 +242,7 @@ RESTRICT_TO_MASTER   = true   # Integration, E2E, Windows only run on master
 - **Jira secrets required:** Yes — see [Jira Secrets Setup](#jira-secrets-setup)
 - **Browser caching:** Chromium binary is cached in `~/.cache/ms-playwright`,
   keyed to the hash of `requirements-dev.txt`
-- **Artifact:** `e2e-results/e2e.xml`
+- **Artifacts:** `e2e-results` (JUnit XML) + `allure-results-e2e-<run_id>` (Allure results)
 
 ### Windows-specific Tests
 
@@ -228,7 +254,7 @@ RESTRICT_TO_MASTER   = true   # Integration, E2E, Windows only run on master
   — specifically the `Server.handle_error` suppression of
   `ConnectionAbortedError` (WinSock error `WSAECONNABORTED`)
 - **Jira secrets required:** No
-- **Artifact:** `windows-results/windows.xml`
+- **Artifact:** `windows-results` (JUnit XML only; no Allure results for this job)
 
 ### Security Scan
 
@@ -238,6 +264,25 @@ RESTRICT_TO_MASTER   = true   # Integration, E2E, Windows only run on master
 - **Jira secrets required:** No
 - **Note:** Only production deps are scanned (`requirements.txt`). Dev-only
   packages (pytest, Playwright) are not included to reduce noise.
+
+### Lint
+
+- **What it does:** Runs `ruff check` and `ruff format --check` on `app/` and `tests/`
+- **Runner:** `ubuntu-latest`
+- **Always runs:** Yes — this job has **no `if:` condition**; it runs on every push, PR, and manual trigger unconditionally
+- **Jira secrets required:** No
+- **Note:** Lint is not gateable via `ENABLE_*` variables or `RESTRICT_TO_MASTER`. To enforce passing lint before merge, use the Branch Protection rules (see below).
+
+### Allure Report
+
+- **What it does:** Merges per-layer Allure test result artifacts, generates an HTML report with trend history, and deploys to GitHub Pages
+- **When it runs:** Only when **at least one of unit/component/integration/e2e jobs was not skipped** (if all test jobs are skipped, Allure Report is also skipped)
+- **Runner:** `ubuntu-latest`
+- **Deployment:** Merges reports into `allure-history` and deploys to the `gh-pages` branch
+- **Artifact retention:** Keeps the last 20 reports
+- **Permissions required:** `contents: write` (needed to push to `gh-pages`)
+- **Jira secrets required:** No
+- **Note:** Allure reports are only generated if tests actually ran. If you want to download raw test results, use the JUnit XML artifacts (see Test Results Artifacts below).
 
 ---
 
@@ -277,15 +322,17 @@ run for the first commit is cancelled automatically.
 
 ## Branch Protection (Recommended)
 
-To require Unit + Component tests to pass before merging a PR to master:
+To require Lint + Unit + Component tests to pass before merging a PR to master:
 
 1. **GitHub → Settings → Branches → Add rule → Branch name: `master`**
 2. Enable **"Require status checks to pass before merging"**
-3. Search for and add: `Unit Tests`, `Component Tests`
+3. Search for and add:
+   - `Lint (ruff)` — safe to require; always runs
+   - `Unit Tests` — runs on all PRs
+   - `Component Tests` — runs on all PRs
 4. Enable **"Require branches to be up to date before merging"**
 
-This only works once the stages are enabled (`ENABLE_UNIT = true`,
-`ENABLE_COMPONENT = true`) so GitHub can observe their pass/fail status.
+**Note:** `Lint (ruff)` is safe to require without enabling any variables because it runs unconditionally on every push/PR. Unit and Component tests always run on PRs (regardless of `ENABLE_UNIT`/`ENABLE_COMPONENT` variables), so they are also safe to require as branch protection rules.
 
 ---
 
@@ -348,19 +395,34 @@ jobs. They only run in the dedicated `windows-tests` job.
 
 ## Test Results Artifacts
 
-JUnit XML reports are uploaded as artifacts for every job that ran (including
-failures). Retention follows repository defaults (typically 90 days).
+Every test job uploads artifacts after completion, whether tests passed or failed.
+Retention follows repository defaults (typically 90 days).
 
 To download:
 **Actions → select a run → Artifacts section at the bottom of the page**
 
+### JUnit XML Reports
+
+| Artifact name | Internal path | Format |
+|---|---|---|
+| `unit-results` | `results/unit.xml` | JUnit XML |
+| `component-results` | `results/component.xml` | JUnit XML |
+| `integration-results` | `results/integration.xml` | JUnit XML |
+| `e2e-results` | `results/e2e.xml` | JUnit XML |
+| `windows-results` | `results/windows.xml` | JUnit XML |
+
+### Allure Test Reports
+
+In addition to JUnit XML, the four main test layers (unit, component, integration, e2e) also upload raw Allure result data, which the `allure-report` job merges into an HTML report.
+
 | Artifact name | Contents |
 |---|---|
-| `unit-results` | `unit.xml` |
-| `component-results` | `component.xml` |
-| `integration-results` | `integration.xml` |
-| `e2e-results` | `e2e.xml` |
-| `windows-results` | `windows.xml` |
+| `allure-results-unit-<run_id>` | Per-layer Allure results (unit) |
+| `allure-results-component-<run_id>` | Per-layer Allure results (component) |
+| `allure-results-integration-<run_id>` | Per-layer Allure results (integration) |
+| `allure-results-e2e-<run_id>` | Per-layer Allure results (e2e) |
+
+The merged HTML report is automatically deployed to the `gh-pages` branch and accessible via GitHub Pages (URL depends on your repository configuration).
 
 ---
 
