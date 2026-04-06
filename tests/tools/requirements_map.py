@@ -487,13 +487,6 @@ INSTALLATION_REQUIREMENTS: list[dict] = [
         "tests": [],
     },
     {
-        "id": "IR-04",
-        "description": "docs/product/schemas/ folder included (may be empty)",
-        "type": INFORMATIONAL,
-        "section": "Zip Contents",
-        "tests": [],
-    },
-    {
         "id": "IR-05",
         "description": "certs/ placeholder folder with README.txt included",
         "type": INFORMATIONAL,

@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class SchemaHandlerMixin:
     @staticmethod
     def _schemas_dir():
-        return _root() / "docs" / "product" / "schemas"
+        return _root() / "generated" / "schemas"
 
     @staticmethod
     def _slugify(name: str) -> str:

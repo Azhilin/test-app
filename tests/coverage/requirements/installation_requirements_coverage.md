@@ -13,7 +13,6 @@
 | IR-01 | app/ source code included in release zip | ⬜ | — |
 | IR-02 | templates/ Jinja2 HTML report template included | ⬜ | — |
 | IR-03 | ui/ browser UI files included | ⬜ | — |
-| IR-04 | docs/product/schemas/ folder included (may be empty) | ⬜ | — |
 | IR-05 | certs/ placeholder folder with README.txt included | ⬜ | — |
 | IR-06 | main.py CLI entry point included | ⬜ | — |
 | IR-07 | server.py browser UI server entry point included | ⬜ | — |

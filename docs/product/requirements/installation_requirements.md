@@ -25,7 +25,6 @@ The release package is named `ai_adoption_manager_<YYYY-MM-DD_HH-mm-ss>.zip`. Be
 | `app/` | Application source code |
 | `templates/` | Jinja2 HTML report template |
 | `ui/` | Browser UI files |
-| `docs/product/schemas/` | Schema storage folder (may be empty) |
 | `certs/` | Placeholder folder for optional SSL certificate; contains `README.txt` |
 | `main.py` | CLI entry point |
 | `server.py` | Browser UI server entry point |
