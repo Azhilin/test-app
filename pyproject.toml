@@ -1,6 +1,7 @@
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-v --tb=short"
+cache_dir = "generated/.pytest_cache"
 markers = [
     "unit: pure-function tests with no I/O (deselect with -m 'not unit')",
     "component: tests that exercise filesystem or HTTP but no inter-module orchestration (deselect with -m 'not component')",
@@ -18,6 +19,7 @@ requires-python = ">=3.12"
 [tool.ruff]
 line-length = 120
 target-version = "py310"
+cache-dir = "generated/.ruff_cache"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP"]  # pycodestyle, pyflakes, isort, pyupgrade
@@ -25,6 +27,7 @@ select = ["E", "F", "I", "UP"]  # pycodestyle, pyflakes, isort, pyupgrade
 [tool.mypy]
 python_version = "3.12"
 ignore_missing_imports = true
+cache_dir = "generated/.mypy_cache"
 
 [[tool.mypy.overrides]]
 module = ["app.server._base", "app.server.cert_handlers", "app.server.config_handlers", "app.server.connection_handlers", "app.server.filter_handlers", "app.server.generate_handlers", "app.server.schema_handlers"]

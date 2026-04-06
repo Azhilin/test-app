@@ -514,7 +514,7 @@ def _reload_config(env: dict):
 
 ### Extending the dev server
 
-Add a new method `_handle_<name>(self)` to the `Handler` class in `app/server.py`, then route to it from `do_GET` or `do_POST`. Cover it with a test in `tests/component/test_server.py` using the `server_url` fixture.
+Add a new method `_handle_<name>(self)` to the `Handler` class in `app/server/_base.py`, then route to it from `do_GET` or `do_POST`. Cover it with a test in `tests/component/test_server.py` using the `server_url` fixture.
 
 ---
 

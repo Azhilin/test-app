@@ -1,0 +1,36 @@
+{
+  "description": "Optional: MCP (Model Context Protocol) servers to extend Claude Code capabilities",
+  "note": "To enable custom MCP servers, add this to ~/.claude/settings.json under 'mcpServers'",
+  "mcpServers": {
+    "jira-mcp": {
+      "command": "npx",
+      "args": [
+        "@anthropic-ai/jira-mcp@latest",
+        "--host",
+        "jira.atlassian.net",
+        "--email",
+        "${JIRA_EMAIL}",
+        "--api-token",
+        "${JIRA_API_TOKEN}"
+      ],
+      "description": "Jira Cloud API access — query boards, sprints, issues directly"
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-filesystem"],
+      "description": "Enhanced filesystem operations — already available via Bash/Read/Write/Glob"
+    },
+    "git": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-git"],
+      "description": "Git operations — already available via Bash"
+    }
+  },
+  "setup_steps": [
+    "1. Install Node.js (required for npx)",
+    "2. Copy the 'jira-mcp' config block into ~/.claude/settings.json under mcpServers",
+    "3. Set JIRA_EMAIL and JIRA_API_TOKEN in environment or .env",
+    "4. Restart Claude Code",
+    "5. MCP tools will appear alongside built-in tools"
+  ]
+}
