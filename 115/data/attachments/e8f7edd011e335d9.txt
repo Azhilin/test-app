@@ -1,2 +1,0 @@
-DEBUG    app.core.schema:schema.py:125 Active schema: 'Default_Jira_Cloud' (default from file, 17 fields)
-SUCCESS  app.cli:cli.py:120 Reports written: /tmp/pytest-of-runner/pytest-0/test_main_keeps_running_when_f0/generated/reports/2026-03-26T10-00-00/report.html, /tmp/pytest-of-runner/pytest-0/test_main_keeps_running_when_f0/generated/reports/2026-03-26T10-00-00/report.md
