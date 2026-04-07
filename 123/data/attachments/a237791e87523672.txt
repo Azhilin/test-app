@@ -1,0 +1,1 @@
+DEBUG    app.core.schema:schema.py:125 Active schema: 'Default_Jira_Cloud' (default from file, 17 fields)

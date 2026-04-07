@@ -1,1 +1,0 @@
-INFO     app.cli:cli.py:44 generated/reports folder removed.

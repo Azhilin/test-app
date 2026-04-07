@@ -1,0 +1,1 @@
+INFO     app.core.dau_normalizer:dau_normalizer.py:100 DAU normalisation: 2 raw file(s) → 1 record(s) written to /tmp/pytest-of-runner/pytest-0/test_dedup_keeps_latest_per_us0/norm

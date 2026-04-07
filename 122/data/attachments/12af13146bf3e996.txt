@@ -1,3 +1,0 @@
-DEBUG    app.core.metrics:metrics.py:485 Computing metrics: 1 sprint(s), 1 changelog issue(s)
-DEBUG    app.core.metrics:metrics.py:495 Velocity computed for 1 sprint(s); totals: ['S1=5.0sp']
-DEBUG    app.core.metrics:metrics.py:502 Cycle time: sample_size=1, mean=2.0 days, median=2.0 days

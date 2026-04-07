@@ -1,3 +1,0 @@
-DEBUG    app.core.jira_client:jira_client.py:104 Fetching changelog for 3 issue(s)
-WARNING  app.core.jira_client:jira_client.py:111 Failed to fetch changelog for T-2: not found
-DEBUG    app.core.jira_client:jira_client.py:114 Changelog fetch complete: 2 succeeded, 1 failed

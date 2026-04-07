@@ -1,0 +1,2 @@
+DEBUG    app.core.metrics:metrics.py:396 Computing metrics: 1 sprint(s)
+DEBUG    app.core.metrics:metrics.py:414 Velocity computed for 1 sprint(s); totals: ['Sprint 1=2'] (estimation_type=JiraTickets)

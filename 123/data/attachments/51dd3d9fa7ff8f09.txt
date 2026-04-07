@@ -1,0 +1,1 @@
+INFO     app.core.dau_normalizer:dau_normalizer.py:100 DAU normalisation: 2 raw file(s) → 2 record(s) written to /tmp/pytest-of-runner/pytest-0/test_dedup_different_weeks_bot0/norm

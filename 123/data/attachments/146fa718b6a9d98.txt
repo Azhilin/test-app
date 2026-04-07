@@ -1,0 +1,2 @@
+DEBUG    app.core.metrics:metrics.py:396 Computing metrics: 10 sprint(s)
+DEBUG    app.core.metrics:metrics.py:414 Velocity computed for 10 sprint(s); totals: ['Sprint 1=250.0', 'Sprint 2=250.0', 'Sprint 3=250.0', 'Sprint 4=250.0', 'Sprint 5=250.0', 'Sprint 6=250.0', 'Sprint 7=250.0', 'Sprint 8=250.0', 'Sprint 9=250.0', 'Sprint 10=250.0'] (estimation_type=StoryPoints)

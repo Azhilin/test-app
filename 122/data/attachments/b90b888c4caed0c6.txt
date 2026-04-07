@@ -1,3 +1,0 @@
-DEBUG    app.core.metrics:metrics.py:485 Computing metrics: 10 sprint(s), 0 changelog issue(s)
-DEBUG    app.core.metrics:metrics.py:495 Velocity computed for 10 sprint(s); totals: ['Sprint 1=250.0sp', 'Sprint 2=250.0sp', 'Sprint 3=250.0sp', 'Sprint 4=250.0sp', 'Sprint 5=250.0sp', 'Sprint 6=250.0sp', 'Sprint 7=250.0sp', 'Sprint 8=250.0sp', 'Sprint 9=250.0sp', 'Sprint 10=250.0sp']
-DEBUG    app.core.metrics:metrics.py:502 Cycle time: sample_size=0, mean=None days, median=None days

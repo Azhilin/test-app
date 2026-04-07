@@ -1,0 +1,4 @@
+DEBUG    app.core.jira_client:jira_client.py:143 Fetching KANBAN data for board 1 (as time periods)
+DEBUG    app.core.jira_client:jira_client.py:175 Fetching issues for period 2026-W14 (jql='resolutiondate >= "2026-04-01" AND resolutiondate <= "2026-04-07"')
+DEBUG    app.core.jira_client:jira_client.py:201 Period 2026-W14: fetched 0 issue(s)
+DEBUG    app.core.jira_client:jira_client.py:204 KANBAN data ready: 1 period(s), 0 total issue(s)

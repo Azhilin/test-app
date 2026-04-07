@@ -1,2 +1,0 @@
-DEBUG    app.core.jira_client:jira_client.py:39 No JIRA_BOARD_ID configured; fetching first available board
-DEBUG    app.core.jira_client:jira_client.py:47 Resolved board ID: 99
