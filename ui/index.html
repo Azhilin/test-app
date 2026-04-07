@@ -607,12 +607,28 @@
       >Jira Connection</button>
       <button
         role="tab"
+        id="tab-schema"
+        aria-controls="panel-schema"
+        aria-selected="false"
+        tabindex="-1"
+        class="tab-btn"
+      >Schema Setup</button>
+      <button
+        role="tab"
         id="tab-filter"
         aria-controls="panel-filter"
         aria-selected="false"
         tabindex="-1"
         class="tab-btn"
-      >Jira Filter</button>
+      >Filter Builder</button>
+      <button
+        role="tab"
+        id="tab-data"
+        aria-controls="panel-data"
+        aria-selected="false"
+        tabindex="-1"
+        class="tab-btn"
+      >Data Retrieval</button>
       <button
         role="tab"
         id="tab-generate"
@@ -667,7 +683,7 @@
             Generate Report
           </button>
         </div>
-        <p class="form-error" id="err-generate-filter" style="margin-bottom:12px;">Please select a saved filter before generating the report. <a href="#" id="goto-filter-tab" style="color:var(--accent);font-weight:500;">Go to Jira Filter tab →</a></p>
+        <p class="form-error" id="err-generate-filter" style="margin-bottom:12px;">Please select a saved filter before generating the report. <a href="#" id="goto-filter-tab" style="color:var(--accent);font-weight:500;">Go to Filter Builder tab →</a></p>
         <p class="form-error" id="err-no-metrics" style="margin-bottom:12px;">Select at least one metric section to generate a report.</p>
         <p class="form-helper" style="margin-bottom:16px;">The selected filter's JQL will be used to scope sprint issues for the report.</p>
 
@@ -675,28 +691,6 @@
         <details class="report-options" id="report-options">
           <summary>Report Options</summary>
           <div class="report-options-body">
-
-            <!-- Project type -->
-            <div class="option-group">
-              <div class="option-group-label">Project Type</div>
-              <label class="radio-row">
-                <input type="radio" name="rpt-project-type" value="SCRUM" checked> SCRUM
-              </label>
-              <label class="radio-row">
-                <input type="radio" name="rpt-project-type" value="KANBAN"> KANBAN
-              </label>
-            </div>
-
-            <!-- Estimation type -->
-            <div class="option-group">
-              <div class="option-group-label">Estimation Type</div>
-              <label class="radio-row">
-                <input type="radio" name="rpt-estimation-type" value="StoryPoints" checked> Story Points
-              </label>
-              <label class="radio-row">
-                <input type="radio" name="rpt-estimation-type" value="JiraTickets"> Jira Tickets
-              </label>
-            </div>
 
             <!-- Metric toggles -->
             <div class="option-group" style="min-width:200px;">
@@ -764,79 +758,11 @@
         </p>
       </div>
 
-      <!-- Schema Management -->
       <div class="card">
-        <div class="card-title">Jira Field Schema</div>
+        <div class="card-title">Filter & Project Settings</div>
         <div class="card-subtitle">
-          Select a field mapping schema for your Jira instance, or fetch one automatically
-          from the connected Jira server.
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="schema-select">Active Schema</label>
-          <select class="form-input" id="schema-select">
-            <option value="">Loading…</option>
-          </select>
-          <p class="form-helper">Field mapping used for metrics calculations and JQL building. Change this if your Jira instance uses different custom field IDs.</p>
-        </div>
-
-        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
-          <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;">
-            <label class="form-label" for="schema-name-input">New Schema Name</label>
-            <input
-              class="form-input"
-              type="text"
-              id="schema-name-input"
-              placeholder="e.g. My Company Jira"
-              autocomplete="off"
-              spellcheck="false"
-              maxlength="100"
-            />
-          </div>
-          <button class="btn btn-primary" id="btn-fetch-schema" type="button" style="font-size:0.95rem;padding:11px 18px;white-space:nowrap;">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/>
-              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
-            </svg>
-            Fetch Schema from Jira
-          </button>
-        </div>
-
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
-          <div class="form-group" style="flex:1;min-width:180px;margin-bottom:0;">
-            <label class="form-label" for="schema-project-keys">Project Keys <span style="font-weight:400;opacity:0.7;">(optional)</span></label>
-            <input
-              class="form-input"
-              type="text"
-              id="schema-project-keys"
-              placeholder="e.g. MYPROJ, TEAM2"
-              autocomplete="off"
-              spellcheck="false"
-            />
-            <p class="form-helper">Comma-separated project keys — improves field detection and auto-detects statuses.</p>
-          </div>
-          <div class="form-group" style="flex:0 0 140px;margin-bottom:0;">
-            <label class="form-label" for="schema-board-id">Board ID <span style="font-weight:400;opacity:0.7;">(optional)</span></label>
-            <input
-              class="form-input"
-              type="number"
-              id="schema-board-id"
-              placeholder="e.g. 42"
-              min="1"
-            />
-            <p class="form-helper">Agile board ID — used to derive the project and detect board statuses.</p>
-          </div>
-        </div>
-
-        <div id="schema-status" style="margin-top:8px;font-size:0.92rem;" aria-live="polite"></div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Jira Filter &amp; Query Options</div>
-        <div class="card-subtitle">
-          Set <code>JIRA_PROJECT</code> to build the issue query from config.
-          <code>JIRA_FILTER_ID</code> is the fallback when <code>JIRA_PROJECT</code> is not set.
-          Values are saved to your machine and applied on the next run.
+          Define your filter's JQL parameters, project type (SCRUM/KANBAN), and estimation method.
+          These settings are saved with the filter and applied during report generation.
         </div>
 
         <div class="form-group">
@@ -939,82 +865,26 @@
           <p class="form-helper">When <strong>true</strong>, only issues from closed sprints are counted. Default: <strong>true</strong>.</p>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="jira-board-id">
-            Board ID <span class="optional">optional</span>
+        <div class="option-group" style="margin:20px 0;padding:14px;background:var(--accent-light);border-radius:var(--radius);">
+          <div class="option-group-label" style="margin-bottom:10px;">Project Type</div>
+          <label class="radio-row">
+            <input type="radio" name="filter-project-type" value="SCRUM" checked> SCRUM (sprint-based)
           </label>
-          <input
-            class="form-input"
-            type="number"
-            id="jira-board-id"
-            name="JIRA_BOARD_ID"
-            min="1"
-            placeholder="e.g. 42"
-            autocomplete="off"
-          />
-          <p class="form-helper">Agile board ID. Find it in the board URL: <code>.../boards/42</code>. Leave blank to use the first board your account can access.</p>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="sprint-count">Sprint Count</label>
-          <input
-            class="form-input"
-            type="number"
-            id="sprint-count"
-            name="JIRA_SPRINT_COUNT"
-            min="1"
-            max="50"
-            placeholder="10"
-            autocomplete="off"
-          />
-          <p class="form-helper">Number of past sprints to include in the report. Default: <strong>10</strong>.</p>
-        </div>
-
-        <div class="btn-row">
-          <button class="btn btn-primary" id="btn-save-board" type="button">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-              <polyline points="17 21 17 13 7 13 7 21"/>
-              <polyline points="7 3 7 8 15 8"/>
-            </svg>
-            Save Board Settings
-          </button>
-          <span class="save-confirm" id="save-confirm-board" aria-live="polite">Settings saved</span>
-        </div>
-
-        <hr class="section-divider" />
-
-        <div class="form-group">
-          <label class="form-label" for="filter-id">
-            Filter ID <span class="optional">optional — fallback</span>
+          <label class="radio-row">
+            <input type="radio" name="filter-project-type" value="KANBAN"> KANBAN (time-period-based)
           </label>
-          <input
-            class="form-input"
-            type="number"
-            id="filter-id"
-            name="JIRA_FILTER_ID"
-            min="1"
-            placeholder="e.g. 10042"
-            autocomplete="off"
-          />
-          <p class="form-helper">ID of a saved Jira filter. Used as fallback when <code>JIRA_PROJECT</code> is not set.</p>
+          <p class="form-helper" style="margin-top:8px;font-size:0.78rem;color:var(--text-muted);">Select SCRUM for sprint-based teams or KANBAN for continuous-flow teams with no sprints.</p>
         </div>
 
-        <div class="form-group">
-          <label class="form-label" for="jira-filter-page-size">
-            Filter Page Size <span class="optional">optional</span>
+        <div class="option-group" style="margin:20px 0;padding:14px;background:var(--accent-light);border-radius:var(--radius);">
+          <div class="option-group-label" style="margin-bottom:10px;">Estimation Type</div>
+          <label class="radio-row">
+            <input type="radio" name="filter-estimation-type" value="StoryPoints" checked> Story Points
           </label>
-          <input
-            class="form-input"
-            type="number"
-            id="jira-filter-page-size"
-            name="JIRA_FILTER_PAGE_SIZE"
-            min="1"
-            max="100"
-            placeholder="100"
-            autocomplete="off"
-          />
-          <p class="form-helper">Issues fetched per page from Jira when using Filter ID fallback. Valid range: 1–100. Default: <strong>100</strong>.</p>
+          <label class="radio-row">
+            <input type="radio" name="filter-estimation-type" value="JiraTickets"> Jira Tickets (count)
+          </label>
+          <p class="form-helper" style="margin-top:8px;font-size:0.78rem;color:var(--text-muted);">Use Story Points if your team estimates. Use Jira Tickets if no story point values are available.</p>
         </div>
 
       </div>
@@ -1340,6 +1210,229 @@
 
     </div><!-- /panel-connection -->
 
+    <!-- ── Tab: Schema Setup ── -->
+    <div role="tabpanel" id="panel-schema" aria-labelledby="tab-schema" class="tab-panel" hidden>
+
+      <div class="report-desc" role="note">
+        <span class="report-desc-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0747A6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </span>
+        <p>
+          A <strong>schema</strong> maps your Jira instance's custom field IDs to the metrics engine.
+          Fetch it once after connecting — it auto-detects Story Points, Sprint, Team, and status fields.
+          Re-fetch whenever your Jira configuration changes.
+        </p>
+      </div>
+
+      <!-- Schema selection & fetch -->
+      <div class="card">
+        <div class="card-title">Jira Field Schema</div>
+        <div class="card-subtitle">
+          Select a saved schema or fetch a new one from your connected Jira instance.
+          The active schema is used for JQL building and metrics field resolution.
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="schema-select">Active Schema</label>
+          <select class="form-input" id="schema-select">
+            <option value="">Loading…</option>
+          </select>
+          <p class="form-helper">Field mapping used for metrics calculations and JQL building. Change this if your Jira instance uses different custom field IDs.</p>
+        </div>
+
+        <!-- Story Points detection badge — populated by JS when schema loads -->
+        <div id="schema-sp-badge" style="margin-bottom:14px;" aria-live="polite"></div>
+
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;">
+          <div class="form-group" style="flex:1;min-width:200px;margin-bottom:0;">
+            <label class="form-label" for="schema-name-input">New Schema Name</label>
+            <input
+              class="form-input"
+              type="text"
+              id="schema-name-input"
+              placeholder="e.g. My Company Jira"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="100"
+            />
+          </div>
+          <button class="btn btn-primary" id="btn-fetch-schema" type="button" style="font-size:0.95rem;padding:11px 18px;white-space:nowrap;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="1 4 1 10 7 10"/><polyline points="23 20 23 14 17 14"/>
+              <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15"/>
+            </svg>
+            Fetch Schema from Jira
+          </button>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px;">
+          <div class="form-group" style="flex:1;min-width:180px;margin-bottom:0;">
+            <label class="form-label" for="schema-project-keys">Project Keys <span style="font-weight:400;opacity:0.7;">(optional)</span></label>
+            <input
+              class="form-input"
+              type="text"
+              id="schema-project-keys"
+              placeholder="e.g. MYPROJ, TEAM2"
+              autocomplete="off"
+              spellcheck="false"
+            />
+            <p class="form-helper">Comma-separated project keys — improves field detection and auto-detects Done/In Progress statuses per project.</p>
+          </div>
+          <div class="form-group" style="flex:0 0 140px;margin-bottom:0;">
+            <label class="form-label" for="schema-board-id">Board ID <span style="font-weight:400;opacity:0.7;">(optional)</span></label>
+            <input
+              class="form-input"
+              type="number"
+              id="schema-board-id"
+              placeholder="e.g. 42"
+              min="1"
+            />
+            <p class="form-helper">Agile board ID — used to detect board-specific statuses.</p>
+          </div>
+        </div>
+
+        <div id="schema-status" style="margin-top:8px;font-size:0.92rem;" aria-live="polite"></div>
+      </div>
+
+    </div><!-- /panel-schema -->
+
+    <!-- ── Tab: Data Retrieval ── -->
+    <div role="tabpanel" id="panel-data" aria-labelledby="tab-data" class="tab-panel" hidden>
+
+      <div class="report-desc" role="note">
+        <span class="report-desc-icon" aria-hidden="true">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0747A6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2v20m0 0c4.97 0 9-2.686 9-6s-4.03-6-9-6-9 2.686-9 6 4.03 6 9 6z"/><path d="M3 8c1.5 1 4 1.5 9 1.5s7.5-.5 9-1.5"/>
+          </svg>
+        </span>
+        <p>
+          Configure which board to fetch data from and how far back to look in history.
+          Use <strong>Fetch Preview</strong> to see what sprints or time periods will be included before generating a report.
+        </p>
+      </div>
+
+      <!-- Board & Sprint Configuration -->
+      <div class="card">
+        <div class="card-title">Agile Board & Sprint Count</div>
+        <div class="card-subtitle">Specify which board and how many sprints (or time periods) to include in your report.</div>
+
+        <div class="form-group">
+          <label class="form-label" for="jira-board-id">
+            Board ID <span class="optional">optional</span>
+          </label>
+          <input
+            class="form-input"
+            type="number"
+            id="jira-board-id"
+            name="JIRA_BOARD_ID"
+            min="1"
+            placeholder="e.g. 42"
+            autocomplete="off"
+          />
+          <p class="form-helper">Agile board ID. Find it in the board URL: <code>.../boards/42</code>. Leave blank to use the first board your account can access.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="sprint-count">Sprint Count / Period Count</label>
+          <input
+            class="form-input"
+            type="number"
+            id="sprint-count"
+            name="JIRA_SPRINT_COUNT"
+            min="1"
+            max="50"
+            placeholder="10"
+            autocomplete="off"
+          />
+          <p class="form-helper">For SCRUM: number of past sprints to include. For KANBAN: number of weeks to look back. Default: <strong>10</strong>.</p>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-save-data" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            Save Data Settings
+          </button>
+          <span class="save-confirm" id="save-confirm-data" aria-live="polite">Settings saved</span>
+        </div>
+      </div>
+
+      <!-- Jira Native Filter (Fallback) -->
+      <div class="card">
+        <div class="card-title">Jira Native Filter (Fallback)</div>
+        <div class="card-subtitle">
+          Optional: provide a saved Jira filter ID to gate issue retrieval.
+          This is a fallback when the project-based filter is not sufficient.
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="filter-id">
+            Filter ID <span class="optional">optional — fallback</span>
+          </label>
+          <input
+            class="form-input"
+            type="number"
+            id="filter-id"
+            name="JIRA_FILTER_ID"
+            min="1"
+            placeholder="e.g. 10042"
+            autocomplete="off"
+          />
+          <p class="form-helper">ID of a saved Jira filter. Used as fallback when project-based filters are not suitable.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="jira-filter-page-size">
+            Filter Page Size <span class="optional">optional</span>
+          </label>
+          <input
+            class="form-input"
+            type="number"
+            id="jira-filter-page-size"
+            name="JIRA_FILTER_PAGE_SIZE"
+            min="1"
+            max="100"
+            placeholder="100"
+            autocomplete="off"
+          />
+          <p class="form-helper">Issues fetched per page. Valid range: 1–100. Default: <strong>100</strong>.</p>
+        </div>
+      </div>
+
+      <!-- Data Preview -->
+      <div class="card">
+        <div class="card-title">Data Preview</div>
+        <div class="card-subtitle">Preview what sprints or time periods will be fetched before generating the report.</div>
+
+        <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+          <div class="form-group" style="flex:1;min-width:240px;margin-bottom:0;">
+            <label class="form-label" for="data-preview-filter">Select Filter</label>
+            <select class="form-input" id="data-preview-filter">
+              <option value="">Loading filters…</option>
+            </select>
+            <p class="form-helper">Choose a saved filter to preview its data scope.</p>
+          </div>
+          <button class="btn btn-secondary" id="btn-fetch-preview" type="button" style="font-size:0.95rem;padding:9px 16px;white-space:nowrap;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+            Fetch Preview
+          </button>
+        </div>
+
+        <!-- Preview results area (populated by JS) -->
+        <div id="preview-results" style="min-height:120px;font-size:0.85rem;color:var(--text-muted);">
+          <p style="padding:20px;text-align:center;opacity:0.6;">Preview will appear here after clicking "Fetch Preview"</p>
+        </div>
+      </div>
+
+    </div><!-- /panel-data -->
+
   </div><!-- /app-body -->
 
   <script>
@@ -1368,6 +1461,20 @@
         } catch {
           // Server not reachable — settings already saved to localStorage
         }
+      }
+
+      /* ═══════════════════════════════════════════════
+         Utility functions
+      ═══════════════════════════════════════════════ */
+      function escapeHtml(text) {
+        const map = {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#039;'
+        };
+        return (text || '').replace(/[&<>"']/g, (c) => map[c]);
       }
 
       /* ═══════════════════════════════════════════════
@@ -1661,6 +1768,22 @@
           });
           if (prevVal) genSel.value = prevVal;
         }
+
+        // Also rebuild the data-preview-filter dropdown
+        const dataPrevSel = document.getElementById('data-preview-filter');
+        if (dataPrevSel) {
+          const prevVal = dataPrevSel.value;
+          dataPrevSel.innerHTML = '<option value="">— Select a saved filter —</option>';
+          entries.slice(0, 20).forEach((entry) => {
+            const name = entry.filter_name || entry.name || '(unnamed)';
+            const slug = entry.slug || entry.filename || '';
+            const opt  = document.createElement('option');
+            opt.value       = slug;
+            opt.textContent = name;
+            dataPrevSel.appendChild(opt);
+          });
+          if (prevVal) dataPrevSel.value = prevVal;
+        }
       }
 
       async function loadFilters() {
@@ -1679,6 +1802,93 @@
         }
         renderFilters(store.getJSON(STORE_KEYS.FILTERS) || []);
       }
+
+      /* ═══════════════════════════════════════════════
+         Fetch Preview button (Data Retrieval tab)
+      ═══════════════════════════════════════════════ */
+      const btnFetchPreview   = document.getElementById('btn-fetch-preview');
+      const previewResultsDiv = document.getElementById('preview-results');
+      const dataPreviewFilter = document.getElementById('data-preview-filter');
+
+      btnFetchPreview.addEventListener('click', async () => {
+        const filterSlug = (dataPreviewFilter?.value || '').trim();
+
+        if (!filterSlug) {
+          previewResultsDiv.innerHTML = '<p style="padding:20px;text-align:center;color:var(--text-error);">Please select a filter first.</p>';
+          return;
+        }
+
+        // Show loading state
+        btnFetchPreview.disabled = true;
+        const originalText = btnFetchPreview.innerHTML;
+        btnFetchPreview.innerHTML = '<span class="spinner" aria-hidden="true"></span> Loading preview…';
+        previewResultsDiv.innerHTML = '<p style="padding:20px;text-align:center;opacity:0.6;">Fetching preview data…</p>';
+
+        try {
+          const params = new URLSearchParams();
+          params.set('filter', filterSlug);
+
+          // Get board_id and sprint_count from Data Retrieval tab if provided
+          const boardIdEl = document.getElementById('jira-board-id');
+          const sprintCountEl = document.getElementById('sprint-count');
+
+          if (boardIdEl?.value?.trim()) {
+            params.set('board_id', boardIdEl.value.trim());
+          }
+          if (sprintCountEl?.value?.trim()) {
+            params.set('sprint_count', sprintCountEl.value.trim());
+          }
+
+          const response = await fetch(`/api/data-preview?${params.toString()}`);
+          if (!response.ok) {
+            const errorData = await response.json();
+            previewResultsDiv.innerHTML = `<p style="padding:20px;color:var(--text-error);">Error: ${errorData.error || 'Failed to fetch preview'}</p>`;
+            return;
+          }
+
+          const data = await response.json();
+          if (!data.ok) {
+            previewResultsDiv.innerHTML = `<p style="padding:20px;color:var(--text-error);">Error: ${data.error || 'Unknown error'}</p>`;
+            return;
+          }
+
+          // Render preview based on project type
+          let html = `<div style="padding:16px;"><div style="font-weight:600;margin-bottom:12px;">Board: <strong>${escapeHtml(data.board_name)}</strong> (ID: ${data.board_id})</div>`;
+
+          if (data.project_type === 'KANBAN') {
+            html += `<div style="margin-bottom:12px;color:var(--text-muted);">Time Periods (${data.total_periods})</div>`;
+            if (data.periods && data.periods.length > 0) {
+              html += '<ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;">';
+              data.periods.forEach((period) => {
+                html += `<li style="padding:8px;background:var(--bg-input);border-radius:4px;border-left:3px solid var(--accent-light);"><strong>${escapeHtml(period.name)}</strong> <span style="color:var(--text-muted);font-size:0.85rem;">${period.startDate} to ${period.endDate}</span></li>`;
+              });
+              html += '</ul>';
+            } else {
+              html += '<p style="color:var(--text-muted);">No periods found.</p>';
+            }
+          } else {
+            html += `<div style="margin-bottom:12px;color:var(--text-muted);">Sprints (${data.total_sprints})</div>`;
+            if (data.sprints && data.sprints.length > 0) {
+              html += '<ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;">';
+              data.sprints.forEach((sprint) => {
+                html += `<li style="padding:8px;background:var(--bg-input);border-radius:4px;border-left:3px solid var(--accent-light);"><strong>${escapeHtml(sprint.name)}</strong> <span style="color:var(--text-muted);font-size:0.85rem;">${sprint.startDate || 'N/A'} to ${sprint.endDate || 'N/A'}</span></li>`;
+              });
+              html += '</ul>';
+            } else {
+              html += '<p style="color:var(--text-muted);">No sprints found.</p>';
+            }
+          }
+          html += '</div>';
+
+          previewResultsDiv.innerHTML = html;
+        } catch (err) {
+          console.error('Fetch preview error:', err);
+          previewResultsDiv.innerHTML = `<p style="padding:20px;color:var(--text-error);">Failed to fetch preview: ${escapeHtml(err.message)}</p>`;
+        } finally {
+          btnFetchPreview.disabled = false;
+          btnFetchPreview.innerHTML = originalText;
+        }
+      });
 
       /* ═══════════════════════════════════════════════
          Save Jira Filter button
@@ -1749,6 +1959,8 @@
         const issueTypes    = document.getElementById('jira-issue-types').value.trim();
         const filterStatus  = document.getElementById('jira-filter-status').value.trim();
         const closedSprints = document.getElementById('jira-closed-sprints-only').value;
+        const projectType   = document.querySelector('input[name="filter-project-type"]:checked')?.value || 'SCRUM';
+        const estimationType = document.querySelector('input[name="filter-estimation-type"]:checked')?.value || 'StoryPoints';
 
         filterLogClear();
 
@@ -1772,6 +1984,8 @@
           JIRA_ISSUE_TYPES:         issueTypes,
           JIRA_FILTER_STATUS:       filterStatus || 'Done',
           JIRA_CLOSED_SPRINTS_ONLY: closedSprints,
+          PROJECT_TYPE:             projectType,
+          ESTIMATION_TYPE:          estimationType,
           schema_name:              store.get(STORE_KEYS.JIRA_SCHEMA) || '',
         };
 
@@ -1989,14 +2203,12 @@
       };
 
       function getReportOptions() {
-        const projectType   = document.querySelector('input[name="rpt-project-type"]:checked')?.value || 'SCRUM';
-        const estimationType = document.querySelector('input[name="rpt-estimation-type"]:checked')?.value || 'StoryPoints';
         const metrics = {};
         for (const [key, elId] of Object.entries(_rptMetricIds)) {
           const cb = document.getElementById(elId);
           metrics[key] = cb ? cb.checked : true;
         }
-        return { PROJECT_TYPE: projectType, ESTIMATION_TYPE: estimationType, ...metrics };
+        return metrics;
       }
 
       function buildReportQueryString(filterFilename) {
@@ -2018,14 +2230,6 @@
           const raw = localStorage.getItem(REPORT_OPTS_STORAGE_KEY);
           if (!raw) return;
           const opts = JSON.parse(raw);
-          if (opts.PROJECT_TYPE) {
-            const radio = document.querySelector(`input[name="rpt-project-type"][value="${opts.PROJECT_TYPE}"]`);
-            if (radio) radio.checked = true;
-          }
-          if (opts.ESTIMATION_TYPE) {
-            const radio = document.querySelector(`input[name="rpt-estimation-type"][value="${opts.ESTIMATION_TYPE}"]`);
-            if (radio) radio.checked = true;
-          }
           for (const [key, elId] of Object.entries(_rptMetricIds)) {
             if (key in opts) {
               const cb = document.getElementById(elId);
