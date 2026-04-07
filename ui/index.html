@@ -1438,6 +1438,10 @@
   <script>
     (() => {
       'use strict';
+
+      /* Detect served vs file:// context — must be early to avoid initialization errors */
+      const IS_SERVED = location.protocol !== 'file:';
+
       try {
 
       /* ═══════════════════════════════════════════════
@@ -1662,11 +1666,6 @@
         }
         loadReports();
       }
-
-      /* ═══════════════════════════════════════════════
-         Detect served vs file:// context
-      ═══════════════════════════════════════════════ */
-      const IS_SERVED = location.protocol !== 'file:';
 
       /* ═══════════════════════════════════════════════
          Filters list
