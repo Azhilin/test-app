@@ -1438,6 +1438,7 @@
   <script>
     (() => {
       'use strict';
+      try {
 
       /* ═══════════════════════════════════════════════
          Server-side config helpers
@@ -1564,6 +1565,7 @@
       const logEl = document.getElementById('log-output');
 
       function logLine(text, cls = '') {
+        if (!logEl) return;
         const line = document.createElement('span');
         if (cls) line.className = cls;
         line.textContent = text;
@@ -1572,9 +1574,11 @@
         logEl.scrollTop = logEl.scrollHeight;
       }
 
-      function logClear() { logEl.innerHTML = ''; }
+      function logClear() { if (logEl) logEl.innerHTML = ''; }
 
-      document.getElementById('btn-clear-log').addEventListener('click', logClear);
+      if (document.getElementById('btn-clear-log')) {
+        document.getElementById('btn-clear-log').addEventListener('click', logClear);
+      }
 
       /* ═══════════════════════════════════════════════
          Filter log helpers
@@ -2057,7 +2061,9 @@
         }).catch(() => {});
       });
 
-      document.getElementById('btn-clear-filter-log').addEventListener('click', filterLogClear);
+      if (document.getElementById('btn-clear-filter-log')) {
+        document.getElementById('btn-clear-filter-log').addEventListener('click', filterLogClear);
+      }
 
       /* ═══════════════════════════════════════════════
          Schema Management
@@ -2407,7 +2413,8 @@
       const jiraEmailInput = document.getElementById('jira-email');
       const jiraTokenInput = document.getElementById('jira-token');
 
-      document.getElementById('btn-save-conn').addEventListener('click', () => {
+      const btnSaveConn = document.getElementById('btn-save-conn');
+      if (btnSaveConn) btnSaveConn.addEventListener('click', () => {
         const valid = validateConnFields();
         if (!valid) return;
         const url   = jiraUrlInput.value.trim();
@@ -2429,6 +2436,7 @@
         }
       });
 
+      if (document.getElementById('btn-test-conn')) {
       document.getElementById('btn-test-conn').addEventListener('click', async () => {
         const url   = jiraUrlInput.value.trim();
         const email = jiraEmailInput.value.trim();
@@ -2474,19 +2482,22 @@
           setStatus('error', `Request failed: ${err.message}`);
         }
       });
+      }
 
       /* ── Token show/hide ── */
       const btnToggleToken = document.getElementById('btn-toggle-token');
       const iconEye        = document.getElementById('icon-eye');
       const iconEyeOff     = document.getElementById('icon-eye-off');
 
-      btnToggleToken.addEventListener('click', () => {
-        const isPassword = jiraTokenInput.type === 'password';
-        jiraTokenInput.type = isPassword ? 'text' : 'password';
-        iconEye.style.display    = isPassword ? 'none'  : '';
-        iconEyeOff.style.display = isPassword ? ''      : 'none';
-        btnToggleToken.setAttribute('aria-label', isPassword ? 'Hide API token' : 'Show API token');
-      });
+      if (btnToggleToken) {
+        btnToggleToken.addEventListener('click', () => {
+          const isPassword = jiraTokenInput.type === 'password';
+          jiraTokenInput.type = isPassword ? 'text' : 'password';
+          iconEye.style.display    = isPassword ? 'none'  : '';
+          iconEyeOff.style.display = isPassword ? ''      : 'none';
+          btnToggleToken.setAttribute('aria-label', isPassword ? 'Hide API token' : 'Show API token');
+        });
+      }
 
       /* ═══════════════════════════════════════════════
          SSL Certificate card
@@ -2506,7 +2517,9 @@
 
       function certLogClear() { certLogEl.innerHTML = ''; }
 
-      document.getElementById('btn-clear-cert-log').addEventListener('click', certLogClear);
+      if (document.getElementById('btn-clear-cert-log')) {
+        document.getElementById('btn-clear-cert-log').addEventListener('click', certLogClear);
+      }
 
       async function loadCertStatus() {
         if (!IS_SERVED) {
@@ -2887,7 +2900,13 @@
       });
 
       /* ── Boot ── */
-      restoreValues();
+      window.restoreValuesReady = false;
+      restoreValues()
+        .then(() => { window.restoreValuesReady = true; })
+        .catch((err) => { console.error('restoreValues error:', err); window.restoreValuesReady = true; });
+      } catch (err) {
+        console.error('Script initialization error:', err);
+      }
     })();
   </script>
 </body>
