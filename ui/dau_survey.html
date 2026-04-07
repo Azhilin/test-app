@@ -502,10 +502,6 @@
               <td>Submitted at</td>
               <td id="conf-timestamp"></td>
             </tr>
-            <tr>
-              <td>Week</td>
-              <td id="conf-week"></td>
-            </tr>
           </tbody>
         </table>
 
@@ -792,17 +788,6 @@
         submitTooltip.style.display = allDone ? 'none' : '';
       }
 
-      // ── ISO week helper ──
-      function isoWeek(d) {
-        const jan4 = new Date(Date.UTC(d.getUTCFullYear(), 0, 4));
-        const startOfWeek1 = new Date(jan4);
-        startOfWeek1.setUTCDate(jan4.getUTCDate() - ((jan4.getUTCDay() + 6) % 7));
-        const thursday = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-        thursday.setUTCDate(thursday.getUTCDate() + (4 - ((thursday.getUTCDay() + 6) % 7)));
-        const weekNum = Math.round((thursday - startOfWeek1) / 604800000) + 1;
-        return thursday.getUTCFullYear() + '-W' + String(weekNum).padStart(2, '0');
-      }
-
       // ── Build JSON payload ──
       function buildPayload() {
         const score = SCORE_MAP[state.usage] !== undefined ? SCORE_MAP[state.usage] : null;
@@ -813,8 +798,7 @@
           role:      state.role,
           usage:     state.usage,
           score:     score,
-          timestamp: ts,
-          week:      isoWeek(now)
+          timestamp: ts
         };
       }
 
@@ -828,7 +812,6 @@
           new Date(payload.timestamp).toLocaleString(undefined, {
             dateStyle: 'medium', timeStyle: 'short'
           });
-        document.getElementById('conf-week').textContent = payload.week;
         document.getElementById('conf-file-note').innerHTML =
           '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" stroke="#6B778C" stroke-width="1.5" stroke-linejoin="round"/><polyline points="14 2 14 8 20 8" stroke="#6B778C" stroke-width="1.5" stroke-linejoin="round"/></svg><span>' + fileNote + '</span>';
 

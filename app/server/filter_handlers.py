@@ -23,8 +23,13 @@ class FilterHandlerMixin:
             "JIRA_PROJECT": "",
             "JIRA_TEAM_ID": "",
             "JIRA_ISSUE_TYPES": "",
-            "JIRA_FILTER_STATUS": "Done",
             "JIRA_CLOSED_SPRINTS_ONLY": "true",
+            "JIRA_BOARD_ID": "",
+            "JIRA_SPRINT_COUNT": "10",
+            "JIRA_FILTER_ID": "",
+            "JIRA_FILTER_PAGE_SIZE": "50",
+            "PROJECT_TYPE": "SCRUM",
+            "ESTIMATION_TYPE": "StoryPoints",
             "schema_name": "Default_Jira_Cloud",
         },
     }
@@ -86,13 +91,7 @@ class FilterHandlerMixin:
             else:
                 clauses.append(f"{tf} IN ({', '.join(quoted)})")
 
-        raw_status = (params.get("JIRA_FILTER_STATUS") or "Done").strip()
-        statuses = [s.strip() for s in raw_status.split(",") if s.strip()] or ["Done"]
-        quoted_st = [jql_quote(s) for s in statuses]
-        if len(quoted_st) == 1:
-            clauses.append(f"status = {quoted_st[0]}")
-        else:
-            clauses.append(f"status IN ({', '.join(quoted_st)})")
+        clauses.append("status = Done")
 
         raw_types = (params.get("JIRA_ISSUE_TYPES") or "").strip()
         types = [t.strip() for t in raw_types.split(",") if t.strip()]
@@ -126,8 +125,13 @@ class FilterHandlerMixin:
         if not name:
             self._send_json(400, {"ok": False, "error": "Filter name is required"})
             return
-        if not (params.get("JIRA_PROJECT") or "").strip():
-            self._send_json(200, {"ok": False, "error": "JIRA_PROJECT is required to build a JQL filter"})
+        has_project = bool((params.get("JIRA_PROJECT") or "").strip())
+        has_filter_id = bool((params.get("JIRA_FILTER_ID") or "").strip())
+        if not has_project and not has_filter_id:
+            self._send_json(
+                200,
+                {"ok": False, "error": "Either JIRA_PROJECT or JIRA_FILTER_ID is required to save a filter"},
+            )
             return
 
         team_jql_field = "Team[Team]"
@@ -143,7 +147,12 @@ class FilterHandlerMixin:
             except Exception:  # noqa: BLE001  # nosec B110
                 pass
 
-        jql = self._build_jql_from_params(params, team_jql_field)
+        if has_filter_id:
+            for _k in ("JIRA_PROJECT", "JIRA_TEAM_ID", "JIRA_ISSUE_TYPES", "JIRA_CLOSED_SPRINTS_ONLY"):
+                params[_k] = ""
+            jql = ""
+        else:
+            jql = self._build_jql_from_params(params, team_jql_field)
 
         slug = self._slugify(name) or "filter"
         created_at = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S")

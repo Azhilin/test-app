@@ -49,12 +49,20 @@ def _is_done(
     issue: dict[str, Any],
     done_statuses: frozenset[str] | None = None,
 ) -> bool:
-    """True if issue is in a Done/Resolved-like status."""
+    """True if issue is in a Done/Resolved-like status or has a resolutiondate.
+
+    The resolutiondate fallback handles KANBAN boards that use custom terminal
+    status names (e.g. "Released", "Deployed") not present in done_statuses.
+    fetch_kanban_data() pre-filters issues by resolutiondate, so every returned
+    issue is resolved by definition regardless of its status name.
+    """
     statuses = done_statuses or _DEFAULT_DONE
     fields = issue.get("fields") or {}
     status = fields.get("status") or {}
     name = (status.get("name") or "").lower()
-    return name in statuses
+    if name in statuses:
+        return True
+    return bool(fields.get("resolutiondate"))
 
 
 def compute_velocity(
@@ -90,106 +98,6 @@ def compute_velocity(
             }
         )
     return rows
-
-
-def _cycle_time_from_changelog(
-    issue: dict[str, Any],
-    done_statuses: frozenset[str] | None = None,
-    in_progress_statuses: frozenset[str] | None = None,
-) -> float | None:
-    """
-    Cycle time in days: from first transition into "In Progress" (or similar) to "Done".
-    Uses changelog; returns None if not computable.
-    """
-    histories = (issue.get("changelog") or {}).get("histories") or []
-    in_progress_at: datetime | None = None
-    done_at: datetime | None = None
-    done_set = done_statuses or _DEFAULT_DONE
-    ip_set = in_progress_statuses or _DEFAULT_IN_PROGRESS
-
-    for h in sorted(histories, key=lambda item: _parse_iso(item.get("created")) or datetime.max.replace(tzinfo=UTC)):
-        created = _parse_iso(h.get("created"))
-        if not created:
-            continue
-        for item in h.get("items") or []:
-            if item.get("field") != "status":
-                continue
-            to_val = (item.get("toString") or "").lower()
-            if in_progress_at is None and to_val in ip_set:
-                in_progress_at = created
-            if to_val in done_set:
-                done_at = created
-                break
-        if in_progress_at is not None and done_at is not None:
-            break
-
-    if in_progress_at is not None and done_at is not None and done_at >= in_progress_at:
-        delta = done_at - in_progress_at
-        return round(delta.total_seconds() / (24 * 3600), 1)
-    return None
-
-
-def compute_cycle_time(
-    issues_with_changelog: list[dict[str, Any]],
-    done_statuses: frozenset[str] | None = None,
-    in_progress_statuses: frozenset[str] | None = None,
-) -> dict[str, Any]:
-    """
-    Cycle time stats across issues. issues_with_changelog: list from get_issue(expand="changelog").
-    Returns {mean_days, median_days, min_days, max_days, sample_size, values (list of days)}.
-    """
-    values: list[float] = []
-    for issue in issues_with_changelog:
-        if not issue.get("key"):
-            continue
-        days = _cycle_time_from_changelog(issue, done_statuses, in_progress_statuses)
-        if days is not None:
-            values.append(days)
-    if not values:
-        return {
-            "mean_days": None,
-            "median_days": None,
-            "min_days": None,
-            "max_days": None,
-            "sample_size": 0,
-            "values": [],
-        }
-    n = len(values)
-    sorted_vals = sorted(values)
-    mean_days = round(sum(values) / n, 1)
-    median_days = round(sorted_vals[n // 2] if n % 2 else (sorted_vals[n // 2 - 1] + sorted_vals[n // 2]) / 2, 1)
-    return {
-        "mean_days": mean_days,
-        "median_days": median_days,
-        "min_days": round(min(values), 1),
-        "max_days": round(max(values), 1),
-        "sample_size": n,
-        "values": sorted_vals,
-    }
-
-
-def get_done_issue_keys_for_changelog(
-    sprints: list[dict[str, Any]],
-    sprint_issues: dict[int | str, list[dict[str, Any]]],
-    max_count: int = 100,
-    done_statuses: frozenset[str] | None = None,
-) -> list[str]:
-    """Return issue keys of done issues (for changelog fetch), up to max_count, recent first."""
-    seen: set[str] = set()
-    keys: list[str] = []
-    for sprint in reversed(sprints):
-        sid = sprint.get("id")
-        if sid is None:
-            continue
-        for iss in sprint_issues.get(sid) or []:
-            if _is_done(iss, done_statuses) and len(keys) < max_count:
-                key = (iss.get("key") or "").strip()
-                if key and key not in seen:
-                    seen.add(key)
-                    keys.append(key)
-        if len(keys) >= max_count:
-            break
-    return keys
 
 
 def _get_labels(issue: dict[str, Any]) -> list[str]:
@@ -314,17 +222,6 @@ def compute_ai_usage_details(
     }
 
 
-def compute_custom_trends(
-    _sprints: list[dict[str, Any]],
-    _sprint_issues: dict[int | str, list[dict[str, Any]]],
-) -> list[dict[str, Any]]:
-    """
-    Placeholder for custom metric trends. Extend with your custom field and aggregation.
-    Returns list of {sprint_id, sprint_name, <custom_metric_key>: value}.
-    """
-    return []
-
-
 _DAU_SCORE_MAP: dict[str, float] = {
     "Every day (5 days)": 5.0,
     "Most days (3–4 days)": 3.5,
@@ -336,8 +233,18 @@ _DAU_MAX_SCORE = 5.0
 
 
 def _load_dau_records(responses_dir: str | Path) -> list[dict[str, Any]]:
-    """Load all dau_*.json files from *responses_dir* and return parsed dicts."""
+    """Load all dau_*.json files from *responses_dir* and return parsed dicts.
+
+    Defensively derives the ``week`` field from ``timestamp`` for any record
+    that is missing it (e.g. raw survey files not yet normalised).
+    """
     import json
+    from datetime import datetime, timezone
+
+    def _derive_week(iso_ts: str) -> str:
+        dt = datetime.fromisoformat(iso_ts).astimezone(timezone.utc)
+        iso_year, iso_week, _ = dt.isocalendar()
+        return f"{iso_year}-W{iso_week:02d}"
 
     path = Path(responses_dir)
     records: list[dict[str, Any]] = []
@@ -346,6 +253,11 @@ def _load_dau_records(responses_dir: str | Path) -> list[dict[str, Any]]:
             try:
                 data = json.loads(fpath.read_text(encoding="utf-8"))
                 if isinstance(data, dict):
+                    if not data.get("week") and data.get("timestamp"):
+                        try:
+                            data["week"] = _derive_week(data["timestamp"])
+                        except Exception:  # nosec B110
+                            pass
                     records.append(data)
             except Exception:  # nosec B112
                 continue
@@ -367,7 +279,7 @@ def compute_dau_metrics(responses_dir: str | Path) -> dict[str, Any]:
     """Load DAU survey responses from disk and compute aggregate metrics."""
     from collections import Counter
 
-    records = _load_dau_records(responses_dir)
+    records = _dedup_by_user_week(_load_dau_records(responses_dir))
 
     if not records:
         return {
@@ -477,35 +389,35 @@ def _resolve_schema_params(
 def build_metrics_dict(
     sprints: list[dict[str, Any]],
     sprint_issues: dict[int | str, list[dict[str, Any]]],
-    issues_with_changelog: list[dict[str, Any]],
     schema: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build the single metrics dict used by both HTML and MD reporters."""
     sp_field, done_fs, ip_fs = _resolve_schema_params(schema)
-    logger.debug(
-        "Computing metrics: %s sprint(s), %s changelog issue(s)",
-        len(sprints),
-        len(issues_with_changelog),
-    )
+    logger.debug("Computing metrics: %s sprint(s)", len(sprints))
 
     velocity = compute_velocity(sprints, sprint_issues, sp_field, done_fs)
-    if config.ESTIMATION_TYPE == "JiraTickets":
+
+    # Auto-fallback: if ESTIMATION_TYPE is StoryPoints but all SP values are 0, use JiraTickets
+    estimation_type = config.ESTIMATION_TYPE
+    if estimation_type == "StoryPoints":
+        total_sp = sum(row["velocity"] for row in velocity)
+        if total_sp == 0:
+            logger.warning(
+                "All story point values are 0; automatically falling back to JiraTickets estimation. "
+                "This may indicate that the story points custom field is not configured or has no values."
+            )
+            estimation_type = "JiraTickets"
+
+    if estimation_type == "JiraTickets":
         for row in velocity:
             row["velocity"] = row["issue_count"]
     logger.debug(
-        "Velocity computed for %s sprint(s); totals: %s",
+        "Velocity computed for %s sprint(s); totals: %s (estimation_type=%s)",
         len(velocity),
-        [f"{r['sprint_name']}={r['velocity']}sp" for r in velocity],
+        [f"{r['sprint_name']}={r['velocity']}" for r in velocity],
+        estimation_type,
     )
 
-    cycle_time = compute_cycle_time(issues_with_changelog, done_fs, ip_fs)
-    logger.debug(
-        "Cycle time: sample_size=%s, mean=%s days, median=%s days",
-        cycle_time.get("sample_size"),
-        cycle_time.get("mean_days"),
-        cycle_time.get("median_days"),
-    )
-    custom = compute_custom_trends(sprints, sprint_issues)
     ai_trend = compute_ai_assistance_trend(
         sprints,
         sprint_issues,
@@ -517,12 +429,10 @@ def build_metrics_dict(
         sprint_issues,
         done_statuses=done_fs,
     )
-    dau = compute_dau_metrics(config.DAU_RESPONSES_DIR)
-    dau_trend = compute_dau_trend(config.DAU_RESPONSES_DIR)
+    dau = compute_dau_metrics(config.DAU_NORMALIZED_DIR)
+    dau_trend = compute_dau_trend(config.DAU_NORMALIZED_DIR)
     return {
         "velocity": velocity,
-        "cycle_time": cycle_time,
-        "custom_trends": custom,
         "ai_assistance_trend": ai_trend,
         "ai_usage_details": ai_usage,
         "ai_assisted_label": config.AI_ASSISTED_LABEL,
@@ -531,7 +441,7 @@ def build_metrics_dict(
         "dau_trend": dau_trend,
         "schema_name": (schema or {}).get("schema_name"),
         "project_type": config.PROJECT_TYPE,
-        "estimation_type": config.ESTIMATION_TYPE,
+        "estimation_type": estimation_type,
         "filter_name": None,
         "filter_id": None,
         "filter_jql": None,

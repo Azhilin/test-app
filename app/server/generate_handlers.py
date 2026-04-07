@@ -48,9 +48,13 @@ class GenerateHandlerMixin:
                     "JIRA_PROJECT",
                     "JIRA_TEAM_ID",
                     "JIRA_ISSUE_TYPES",
-                    "JIRA_FILTER_STATUS",
                     "JIRA_CLOSED_SPRINTS_ONLY",
                     "JIRA_FILTER_PAGE_SIZE",
+                    "JIRA_BOARD_ID",
+                    "JIRA_SPRINT_COUNT",
+                    "JIRA_FILTER_ID",
+                    "PROJECT_TYPE",
+                    "ESTIMATION_TYPE",
                 ]
                 for _entry in self._load_filters():
                     if _entry.get("slug") == filter_slug:
@@ -64,19 +68,15 @@ class GenerateHandlerMixin:
                             fresh_env["JIRA_SCHEMA_NAME"] = _schema_name
                         break
 
-            # Report generation params from UI query string
-            _REPORT_PARAM_KEYS = [
-                "PROJECT_TYPE",
-                "ESTIMATION_TYPE",
+            # Report generation params from UI query string (metric toggles only)
+            _METRIC_PARAM_KEYS = [
                 "METRIC_VELOCITY",
-                "METRIC_CYCLE_TIME",
                 "METRIC_AI_ASSISTANCE_TREND",
                 "METRIC_AI_USAGE_DETAILS",
-                "METRIC_CUSTOM_TRENDS",
                 "METRIC_DAU",
                 "METRIC_DAU_TREND",
             ]
-            for _key in _REPORT_PARAM_KEYS:
+            for _key in _METRIC_PARAM_KEYS:
                 _vals = qs.get(_key) or qs.get(_key.lower()) or []
                 _val = urlunquote(_vals[0] if _vals else "").strip()
                 if _val:

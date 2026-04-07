@@ -60,7 +60,6 @@ This document defines the quality attributes the AI Adoption Metrics Report tool
 | NFR-R-001 | Missing required configuration is detected before any Jira call is made | `validate_config()` runs before `create_client()`; if any required variable (`JIRA_URL`, `JIRA_EMAIL`, `JIRA_API_TOKEN`) is absent, the CLI prints an actionable error message and exits with code 1 without making any network request | ✓ Met |
 | NFR-R-002 | A Jira connectivity failure does not crash the server process | A failed Jira API call during report generation is caught, reported to the browser as an SSE error event, and the server continues to handle subsequent requests normally | ✓ Met |
 | NFR-R-003 | A client disconnecting mid-stream does not produce unhandled exceptions | `BrokenPipeError`, `ConnectionAbortedError`, and `ConnectionResetError` during an active SSE stream or file download are caught and suppressed silently; no stack trace is written to the server output | ✗ Not met |
-| NFR-R-004 | A changelog fetch failure for one issue does not abort the full report | If fetching the changelog for an individual issue raises an exception, that issue is skipped with a warning; all other issues are processed and the complete report is still generated | ✓ Met |
 | NFR-R-005 | The SSE stream always closes cleanly | Whether generation succeeds or fails, the stream always sends a final `event: close` event and the response is flushed before the connection ends | ✓ Met |
 
 ---

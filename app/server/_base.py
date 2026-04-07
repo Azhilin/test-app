@@ -105,7 +105,9 @@ class HandlerBase(BaseHTTPRequestHandler):
             pass
 
     def _cors_headers(self) -> None:
-        self.send_header("Access-Control-Allow-Origin", "*")
+        origin = self.headers.get("Origin", "")
+        # file:// pages send Origin: null; Access-Control-Allow-Origin: * doesn't cover null
+        self.send_header("Access-Control-Allow-Origin", "null" if origin == "null" else "*")
 
     @staticmethod
     def _reports_dir() -> Path:
@@ -196,6 +198,8 @@ class HandlerBase(BaseHTTPRequestHandler):
             self._handle_get_reports()
         elif path == "/api/filters":
             self._handle_get_filters()
+        elif path == "/api/data-preview":
+            self._handle_data_preview()
         elif path.startswith("/api/schema-detail/"):
             filename = path[len("/api/schema-detail/") :]
             self._handle_get_schema_detail(filename)

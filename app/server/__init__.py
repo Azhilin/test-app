@@ -27,7 +27,7 @@ for _k, _v in {
     **_dotenv_values(_srv_root / "config" / "defaults.env"),
     **_dotenv_values(_srv_root / ".env"),
 }.items():
-    if _k not in _os.environ:
+    if _k not in _os.environ and _v is not None:
         _os.environ[_k] = _v
 
 # Re-exported for backward-compatible test patching (mirrors old flat-module namespace).
@@ -49,6 +49,7 @@ from ._base import (  # noqa: E402
 from .cert_handlers import CertHandlerMixin  # noqa: E402
 from .config_handlers import ConfigHandlerMixin  # noqa: E402
 from .connection_handlers import ConnectionHandlerMixin  # noqa: E402
+from .data_handlers import DataHandlerMixin  # noqa: E402
 from .filter_handlers import FilterHandlerMixin  # noqa: E402
 from .generate_handlers import GenerateHandlerMixin  # noqa: E402
 from .schema_handlers import SchemaHandlerMixin  # noqa: E402
@@ -62,6 +63,7 @@ class Handler(
     CertHandlerMixin,
     SchemaHandlerMixin,
     FilterHandlerMixin,
+    DataHandlerMixin,
     GenerateHandlerMixin,
     HandlerBase,
 ):

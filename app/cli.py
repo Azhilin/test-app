@@ -12,6 +12,7 @@ from pathlib import Path
 
 from app.core import config, jira_client, metrics
 from app.core import schema as schema_mod
+from app.core.dau_normalizer import normalize_dau_responses
 from app.reporters import report_html, report_md
 from app.utils.logging_setup import SUCCESS_LEVEL
 
@@ -62,7 +63,10 @@ def main() -> int:
 
     jira = jira_client.create_client()
     try:
-        sprints, sprint_issues = jira_client.fetch_sprint_data(jira)
+        if config.PROJECT_TYPE == "KANBAN":
+            sprints, sprint_issues = jira_client.fetch_kanban_data(jira)
+        else:
+            sprints, sprint_issues = jira_client.fetch_sprint_data(jira)
     except Exception as e:
         logger.error("Failed to fetch Jira data: %s", jira_client._sanitise_error(str(e)))
         if "certificate verify failed" in str(e).lower():
@@ -74,16 +78,11 @@ def main() -> int:
         return 1
 
     active_schema = schema_mod.get_active_schema(schema_name=config.JIRA_SCHEMA_NAME)
-    _, done_fs, _ = metrics._resolve_schema_params(active_schema)
 
-    issue_keys = metrics.get_done_issue_keys_for_changelog(
-        sprints,
-        sprint_issues,
-        max_count=100,
-        done_statuses=done_fs,
-    )
-    issues_with_changelog = jira_client.get_issues_with_changelog(jira, issue_keys) if issue_keys else []
-    metrics_dict = metrics.build_metrics_dict(sprints, sprint_issues, issues_with_changelog, schema=active_schema)
+    if config.METRIC_DAU or config.METRIC_DAU_TREND:
+        normalize_dau_responses(config.DAU_RESPONSES_DIR, config.DAU_NORMALIZED_DIR)
+
+    metrics_dict = metrics.build_metrics_dict(sprints, sprint_issues, schema=active_schema)
 
     # Enrich with filter metadata for display in the report header
     if config.JIRA_FILTER_ID is not None:
@@ -110,8 +109,6 @@ def main() -> int:
         "velocity_trend": config.METRIC_VELOCITY,
         "ai_assistance_trend": config.METRIC_AI_ASSISTANCE_TREND,
         "ai_usage_details": config.METRIC_AI_USAGE_DETAILS,
-        "cycle_time": config.METRIC_CYCLE_TIME,
-        "custom_trends": config.METRIC_CUSTOM_TRENDS,
         "dau": config.METRIC_DAU,
         "dau_trend": config.METRIC_DAU_TREND,
     }

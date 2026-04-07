@@ -7,6 +7,3 @@ docs/development/confluence/
 # All runtime-generated output (reports, logs, tmp files)
 # This directory is gitignored; contents change every run and are never source
 generated/
-
-# Single-file browser UI (116 KB) — rarely inspected during Python/backend work
-ui/index.html

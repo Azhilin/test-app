@@ -40,7 +40,7 @@
 
   {% if section_visibility.velocity_trend %}
   <section>
-    <h2>Velocity trend</h2>
+    <h2>{{ display_labels.velocity_section_title }}</h2>
     {% if metrics.velocity %}
     <div class="chart-container">
       <canvas id="velocityChart" aria-label="Velocity per sprint bar chart"></canvas>
@@ -48,10 +48,10 @@
     <table>
       <thead>
         <tr>
-          <th>Sprint</th>
+          <th>{{ display_labels.period_column }}</th>
           <th>Start</th>
           <th>End</th>
-          <th class="number">Velocity ({{ unit_label }})</th>
+          <th class="number">{{ display_labels.velocity_chart_label }}</th>
           <th class="number">Issues done</th>
         </tr>
       </thead>
@@ -86,7 +86,7 @@
   <section>
     <h2>AI Assistance trend</h2>
     <p style="color:#666;font-size:0.85rem;margin:0 0 0.75rem 0">
-      Percentage of {{ unit_abbr }} (done issues) attributed to tickets labelled <code>{{ metrics.ai_assisted_label or 'AI_assistance' }}</code> per sprint.
+      Percentage of {{ unit_abbr }} (done issues) attributed to tickets labelled <code>{{ metrics.ai_assisted_label or 'AI_assistance' }}</code> {{ display_labels.per_period_phrase }}.
       {% if metrics.ai_exclude_labels %}
       Tickets with any of these labels are excluded from the formula: <code>{{ metrics.ai_exclude_labels | join(', ') }}</code>.
       {% endif %}
@@ -176,52 +176,6 @@
   </section>
   {% endif %}
 
-  {% if section_visibility.cycle_time %}
-  <section>
-    <h2>Cycle time</h2>
-    {% if metrics.cycle_time and metrics.cycle_time.sample_size > 0 %}
-    <table>
-      <tr><th>Mean (days)</th><td class="number">{{ metrics.cycle_time.mean_days }}</td></tr>
-      <tr><th>Median (days)</th><td class="number">{{ metrics.cycle_time.median_days }}</td></tr>
-      <tr><th>Min (days)</th><td class="number">{{ metrics.cycle_time.min_days }}</td></tr>
-      <tr><th>Max (days)</th><td class="number">{{ metrics.cycle_time.max_days }}</td></tr>
-      <tr><th>Sample size</th><td class="number">{{ metrics.cycle_time.sample_size }}</td></tr>
-    </table>
-    {% else %}
-    <p class="empty">No cycle time data (need issues with changelog).</p>
-    {% endif %}
-  </section>
-  {% endif %}
-
-  {% if section_visibility.custom_trends and metrics.custom_trends %}
-  <section>
-    <h2>Custom trends</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Sprint</th>
-          {% for key in metrics.custom_trends[0] %}
-          {% if key != 'sprint_id' and key != 'sprint_name' %}
-          <th class="number">{{ key }}</th>
-          {% endif %}
-          {% endfor %}
-        </tr>
-      </thead>
-      <tbody>
-        {% for row in metrics.custom_trends %}
-        <tr>
-          <td>{{ row.sprint_name }}</td>
-          {% for key, val in row.items() %}
-          {% if key != 'sprint_id' and key != 'sprint_name' %}
-          <td class="number">{{ val }}</td>
-          {% endif %}
-          {% endfor %}
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </section>
-  {% endif %}
   {% if section_visibility.ai_assistance_trend and metrics.ai_assistance_trend %}
   <script>
     (function() {
@@ -468,7 +422,7 @@
           datasets: [
             {
               type: 'bar',
-              label: 'Velocity ({{ unit_label }})',
+              label: '{{ display_labels.velocity_chart_label }}',
               data: values,
               backgroundColor: 'rgba(0, 255, 127, 0.85)',
               borderColor: 'rgb(0, 255, 127)',
@@ -479,7 +433,7 @@
             },
             {
               type: 'line',
-              label: 'Average Velocity',
+              label: '{{ display_labels.avg_velocity_chart_label }}',
               data: runningAvg,
               borderColor: 'rgb(0, 82, 204)',
               backgroundColor: 'transparent',

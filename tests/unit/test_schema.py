@@ -383,3 +383,30 @@ def test_build_schema_from_fields_none_board_statuses_uses_defaults():
     """When board_statuses is None the default status_mapping is preserved."""
     result = schema_mod.build_schema_from_fields([], "Default Status Test")
     assert result["status_mapping"] == schema_mod._DEFAULT_SCHEMA["status_mapping"]
+
+
+def test_build_schema_from_fields_tolerates_null_and_incomplete_entries():
+    """JSR-AD-005: Null or structurally incomplete entries in the Jira fields response are tolerated."""
+    jira_fields = [
+        None,
+        {},
+        {"id": "customfield_10016", "name": "Story Points", "custom": True},  # no schema key
+        {
+            "id": "customfield_10001",
+            "name": "Team",
+            "custom": True,
+            "schema": {"type": "string", "custom": "someunknown"},
+        },
+    ]
+    result = schema_mod.build_schema_from_fields(jira_fields, "Tolerant Test")
+    assert result["schema_name"] == "Tolerant Test"
+    assert "fields" in result
+    assert len(result["fields"]) > 0  # Should have defaults + any detected
+
+
+def test_get_active_schema_named_fallback_uses_default():
+    """JSR-R-004: A non-existent named schema falls back to the default silently."""
+    # When a named schema is requested but doesn't exist, get_active_schema returns the default
+    result = schema_mod.get_active_schema("NonExistentSchema")
+    assert result["schema_name"] == schema_mod.DEFAULT_SCHEMA_NAME
+    assert "fields" in result
