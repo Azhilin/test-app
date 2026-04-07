@@ -13,12 +13,6 @@ Built by `build_metrics_dict` in `app/core/metrics.py`; consumed by both reporte
     "velocity": [
         {sprint_id, sprint_name, start_date, end_date, velocity: float, issue_count: int}
     ],
-    "cycle_time": {
-        mean_days, median_days, min_days, max_days: float|None,
-        sample_size: int,
-        values: list[float]
-    },
-    "custom_trends": list[dict],   # see Extension Patterns below
     "ai_assistance_trend": [
         {sprint_id, sprint_name, start_date, end_date, total_sp, ai_sp, ai_pct: float}
     ],                             # per-sprint AI-assisted story-point percentage
@@ -45,7 +39,7 @@ Full Sprint and Issue dict shapes: `docs/development/architecture.md`.
 
 1. Add `compute_<name>(sprints, sprint_issues) -> list[dict]` to `app/core/metrics.py`; each dict must include `sprint_id` and `sprint_name`. Accept optional schema-driven parameters if the metric depends on configurable field IDs or status names.
 2. Call it in `build_metrics_dict()` and add result to the returned dict.
-3. Add rendering in `app/reporters/report_md.py` (new section after `custom_trends`).
+3. Add rendering in `app/reporters/report_md.py` (new section after `cycle_time`).
 4. Add rendering in `templates/report.html.j2`.
 5. Add `tests/unit/test_<name>.py` using `make_sprint()` and `make_issue()` or `make_issue_with_labels()` factories.
 

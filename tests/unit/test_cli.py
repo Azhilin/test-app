@@ -56,7 +56,6 @@ def test_main_keeps_running_when_filter_name_lookup_fails(monkeypatch, tmp_path)
     monkeypatch.setattr(cli.config, "JIRA_FILTER_ID", 42)
     monkeypatch.setattr(cli.jira_client, "create_client", lambda: mock_jira)
     monkeypatch.setattr(cli.jira_client, "fetch_sprint_data", lambda jira: ([], {}))
-    monkeypatch.setattr(cli.metrics, "get_done_issue_keys_for_changelog", lambda *args, **kwargs: [])
     monkeypatch.setattr(
         cli.metrics,
         "build_metrics_dict",
@@ -91,7 +90,6 @@ def test_main_generates_reports_in_parallel(monkeypatch, tmp_path):
     monkeypatch.setattr(cli.config, "JIRA_FILTER_ID", None)
     monkeypatch.setattr(cli.jira_client, "create_client", lambda: MagicMock())
     monkeypatch.setattr(cli.jira_client, "fetch_sprint_data", lambda jira: ([], {}))
-    monkeypatch.setattr(cli.metrics, "get_done_issue_keys_for_changelog", lambda *a, **kw: [])
     monkeypatch.setattr(
         cli.metrics,
         "build_metrics_dict",

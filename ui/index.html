@@ -566,6 +566,45 @@
       cursor: pointer;
     }
 
+    /* ── Filter Builder collapsible sections ── */
+    .filter-details {
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      margin-bottom: 16px;
+      background: var(--surface);
+    }
+    .filter-details > summary {
+      cursor: pointer;
+      list-style: none;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 13px 18px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+    .filter-details > summary::-webkit-details-marker { display: none; }
+    .filter-details > summary::before {
+      content: '▸';
+      display: inline-block;
+      transition: transform 0.15s;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+    .filter-details[open] > summary::before { transform: rotate(90deg); }
+    .filter-details-body { padding: 4px 18px 18px; }
+    .option-subgroup-label {
+      font-size: 0.73rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-top: 4px;
+      margin-bottom: 4px;
+    }
+
     /* ── Responsive ── */
     @media (max-width: 600px) {
       .app-header { padding: 20px 0 16px; }
@@ -605,6 +644,7 @@
         tabindex="-1"
         class="tab-btn"
       >Jira Connection</button>
+      <!-- SCHEMA TAB TEMPORARILY DISABLED — remove comment tags to re-enable
       <button
         role="tab"
         id="tab-schema"
@@ -613,6 +653,7 @@
         tabindex="-1"
         class="tab-btn"
       >Schema Setup</button>
+      -->
       <button
         role="tab"
         id="tab-filter"
@@ -621,14 +662,6 @@
         tabindex="-1"
         class="tab-btn"
       >Filter Builder</button>
-      <button
-        role="tab"
-        id="tab-data"
-        aria-controls="panel-data"
-        aria-selected="false"
-        tabindex="-1"
-        class="tab-btn"
-      >Data Retrieval</button>
       <button
         role="tab"
         id="tab-generate"
@@ -695,6 +728,7 @@
             <!-- Metric toggles -->
             <div class="option-group" style="min-width:200px;">
               <div class="option-group-label">Metric Sections</div>
+              <div class="option-subgroup-label">Jira</div>
               <label class="checkbox-row">
                 <input type="checkbox" id="rpt-metric-velocity" checked> Velocity Trend
               </label>
@@ -704,6 +738,7 @@
               <label class="checkbox-row">
                 <input type="checkbox" id="rpt-metric-ai-usage" checked> AI Usage Details
               </label>
+              <div class="option-subgroup-label" style="margin-top:8px;border-top:1px solid var(--border);padding-top:6px;">DAU Survey</div>
               <label class="checkbox-row">
                 <input type="checkbox" id="rpt-metric-dau" checked> DAU Survey
               </label>
@@ -714,6 +749,93 @@
 
           </div>
         </details>
+
+        <!-- AI Adoption Labels -->
+        <div class="card">
+          <div class="card-title">AI Adoption Labels</div>
+          <div class="card-subtitle">
+            Labels added in Jira to track AI-assisted work. Labels are case-sensitive and must match exactly.
+            Click <strong>Save AI Labels</strong> to persist these to <code>.env</code>.
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="ai-assisted-label">AI Assisted Label</label>
+            <input
+              class="form-input"
+              type="text"
+              id="ai-assisted-label"
+              name="AI_ASSISTED_LABEL"
+              placeholder="AI_assistance"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="200"
+            />
+            <p class="form-helper">Label that marks an issue as AI-assisted. Default: <strong>AI_assistance</strong>.</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="ai-exclude-labels">
+              Exclude Labels <span class="optional">optional — comma-separated</span>
+            </label>
+            <input
+              class="form-input"
+              type="text"
+              id="ai-exclude-labels"
+              name="AI_EXCLUDE_LABELS"
+              placeholder="e.g. spike,admin,tech-debt"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="1000"
+            />
+            <p class="form-helper">Issues carrying these labels are excluded from the AI % denominator. Use for non-delivery work such as spikes or admin tickets.</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="ai-tool-labels">
+              Tool Labels <span class="optional">optional — comma-separated</span>
+            </label>
+            <input
+              class="form-input"
+              type="text"
+              id="ai-tool-labels"
+              name="AI_TOOL_LABELS"
+              placeholder="AI_Tool_Copilot,AI_Tool_ChatGPT,AI_Tool_Gemini"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="1000"
+            />
+            <p class="form-helper">Labels identifying AI tools used. One label per tool; an issue can carry multiple tool labels. Default: <strong>AI_Tool_Copilot,AI_Tool_ChatGPT,AI_Tool_Gemini</strong>.</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="ai-action-labels">
+              Action Labels <span class="optional">optional — comma-separated</span>
+            </label>
+            <input
+              class="form-input"
+              type="text"
+              id="ai-action-labels"
+              name="AI_ACTION_LABELS"
+              placeholder="AI_Case_CodeGen,AI_Case_Review,AI_Case_Testing"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="1000"
+            />
+            <p class="form-helper">Labels identifying AI use-cases. Default: <strong>AI_Case_CodeGen,AI_Case_Review,AI_Case_Testing</strong>.</p>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-save-ai-labels" type="button">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21"/>
+                <polyline points="7 3 7 8 15 8"/>
+              </svg>
+              Save AI Labels
+            </button>
+            <span class="save-confirm" id="save-confirm-ai" aria-live="polite">Settings saved</span>
+          </div>
+        </div>
 
         <div class="log-wrap" aria-live="polite" aria-label="Report generation output">
           <div class="log-toolbar">
@@ -752,17 +874,18 @@
           </svg>
         </span>
         <p>
-          Configure your Jira query parameters below and save them to <code>.env</code> for report generation.
-          Use <strong>Save Filter</strong> to build a named JQL query and save it to
-          <code>generated/filters/</code> — the resulting JQL can be copied directly into Jira.
+          Create a named filter by entering a <strong>Filter Name</strong> and either a
+          <strong>Jira Filter ID</strong> (uses your saved Jira filter as-is) or expand the
+          <strong>JQL Builder</strong> below to generate a JQL query from project settings.
         </p>
       </div>
 
+      <!-- Primary save card -->
       <div class="card">
-        <div class="card-title">Filter & Project Settings</div>
+        <div class="card-title">Save Jira Filter</div>
         <div class="card-subtitle">
-          Define your filter's JQL parameters, project type (SCRUM/KANBAN), and estimation method.
-          These settings are saved with the filter and applied during report generation.
+          Set a Filter Name and either a Jira Filter ID or use the JQL Builder below, then click
+          <strong>Save Filter</strong>. The filter is saved to <code>config/jira_filters.json</code>.
         </div>
 
         <div class="form-group">
@@ -779,210 +902,43 @@
             maxlength="100"
             aria-required="true"
           />
-          <p class="form-helper">A descriptive name for this saved filter. Required when clicking <strong>Save Filter</strong> below.</p>
+          <p class="form-helper">A descriptive name for this saved filter.</p>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="jira-project">
-            Project Key <span class="required-star" aria-hidden="true">*</span>
+          <label class="form-label" for="filter-id">
+            Jira Filter ID <span class="optional">optional — or use JQL Builder below</span>
           </label>
           <input
             class="form-input"
-            type="text"
-            id="jira-project"
-            name="JIRA_PROJECT"
-            placeholder="e.g. MYTEAM or MYTEAM, OTHERPROJ"
+            type="number"
+            id="filter-id"
+            name="JIRA_FILTER_ID"
+            min="1"
+            placeholder="e.g. 10042"
             autocomplete="off"
-            spellcheck="false"
-            maxlength="1000"
-            required
-            aria-required="true"
           />
-          <p class="form-helper">Jira project key(s) — required to build a JQL filter. Comma-separate multiple values.</p>
+          <p class="form-helper">
+            ID of a saved Jira filter. When set, the filter's own JQL is used during data retrieval — no Project Key needed.
+            Find the ID in the filter URL: <code>.../issues?filter=10042</code>.
+          </p>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="jira-team-id">
-            Team ID <span class="optional">optional — comma-separated</span>
+          <label class="form-label" for="jira-filter-page-size">
+            Filter Page Size <span class="optional">optional</span>
           </label>
           <input
             class="form-input"
-            type="text"
-            id="jira-team-id"
-            name="JIRA_TEAM_ID"
-            placeholder="e.g. 50953e1b-... or uuid1, uuid2"
+            type="number"
+            id="jira-filter-page-size"
+            name="JIRA_FILTER_PAGE_SIZE"
+            min="1"
+            max="100"
+            placeholder="100"
             autocomplete="off"
-            spellcheck="false"
-            maxlength="1000"
           />
-          <p class="form-helper">Team UUID(s) from the <code>Team[Team]</code> custom field. Takes precedence over Team Name. Comma-separate multiple values.</p>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="jira-issue-types">
-            Issue Types <span class="optional">optional</span>
-          </label>
-          <input
-            class="form-input"
-            type="text"
-            id="jira-issue-types"
-            name="JIRA_ISSUE_TYPES"
-            placeholder="Bug, Story, Task, Spike"
-            autocomplete="off"
-            spellcheck="false"
-            maxlength="100"
-          />
-          <p class="form-helper">Comma-separated issue types to include in the report. Leave blank to include all types.</p>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="jira-filter-status">
-            Jira Status <span class="optional">optional — comma-separated</span>
-          </label>
-          <input
-            class="form-input"
-            type="text"
-            id="jira-filter-status"
-            name="JIRA_FILTER_STATUS"
-            placeholder="Done or Done, In Progress, Closed"
-            autocomplete="off"
-            spellcheck="false"
-            maxlength="1000"
-          />
-          <p class="form-helper">Comma-separated Jira status values to filter by. Values with spaces are quoted automatically. Default: <strong>Done</strong>.</p>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="jira-closed-sprints-only">Closed Sprints Only</label>
-          <select
-            class="form-input"
-            id="jira-closed-sprints-only"
-            name="JIRA_CLOSED_SPRINTS_ONLY"
-          >
-            <option value="true">true &mdash; include issues from closed sprints only (default)</option>
-            <option value="false">false &mdash; include issues from all sprints</option>
-          </select>
-          <p class="form-helper">When <strong>true</strong>, only issues from closed sprints are counted. Default: <strong>true</strong>.</p>
-        </div>
-
-        <div class="option-group" style="margin:20px 0;padding:14px;background:var(--accent-light);border-radius:var(--radius);">
-          <div class="option-group-label" style="margin-bottom:10px;">Project Type</div>
-          <label class="radio-row">
-            <input type="radio" name="filter-project-type" value="SCRUM" checked> SCRUM (sprint-based)
-          </label>
-          <label class="radio-row">
-            <input type="radio" name="filter-project-type" value="KANBAN"> KANBAN (time-period-based)
-          </label>
-          <p class="form-helper" style="margin-top:8px;font-size:0.78rem;color:var(--text-muted);">Select SCRUM for sprint-based teams or KANBAN for continuous-flow teams with no sprints.</p>
-        </div>
-
-        <div class="option-group" style="margin:20px 0;padding:14px;background:var(--accent-light);border-radius:var(--radius);">
-          <div class="option-group-label" style="margin-bottom:10px;">Estimation Type</div>
-          <label class="radio-row">
-            <input type="radio" name="filter-estimation-type" value="StoryPoints" checked> Story Points
-          </label>
-          <label class="radio-row">
-            <input type="radio" name="filter-estimation-type" value="JiraTickets"> Jira Tickets (count)
-          </label>
-          <p class="form-helper" style="margin-top:8px;font-size:0.78rem;color:var(--text-muted);">Use Story Points if your team estimates. Use Jira Tickets if no story point values are available.</p>
-        </div>
-
-      </div>
-
-      <!-- AI Adoption Labels -->
-      <div class="card">
-        <div class="card-title">AI Adoption Labels</div>
-        <div class="card-subtitle">
-          Labels added in Jira to track AI-assisted work. Labels are case-sensitive and must match exactly.
-          Click <strong>Save AI Labels</strong> to persist these to <code>.env</code>.
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="ai-assisted-label">AI Assisted Label</label>
-          <input
-            class="form-input"
-            type="text"
-            id="ai-assisted-label"
-            name="AI_ASSISTED_LABEL"
-            placeholder="AI_assistance"
-            autocomplete="off"
-            spellcheck="false"
-            maxlength="200"
-          />
-          <p class="form-helper">Label that marks an issue as AI-assisted. Default: <strong>AI_assistance</strong>.</p>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="ai-exclude-labels">
-            Exclude Labels <span class="optional">optional — comma-separated</span>
-          </label>
-          <input
-            class="form-input"
-            type="text"
-            id="ai-exclude-labels"
-            name="AI_EXCLUDE_LABELS"
-            placeholder="e.g. spike,admin,tech-debt"
-            autocomplete="off"
-            spellcheck="false"
-            maxlength="1000"
-          />
-          <p class="form-helper">Issues carrying these labels are excluded from the AI % denominator. Use for non-delivery work such as spikes or admin tickets.</p>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="ai-tool-labels">
-            Tool Labels <span class="optional">optional — comma-separated</span>
-          </label>
-          <input
-            class="form-input"
-            type="text"
-            id="ai-tool-labels"
-            name="AI_TOOL_LABELS"
-            placeholder="AI_Tool_Copilot,AI_Tool_ChatGPT,AI_Tool_Gemini"
-            autocomplete="off"
-            spellcheck="false"
-            maxlength="1000"
-          />
-          <p class="form-helper">Labels identifying AI tools used. One label per tool; an issue can carry multiple tool labels. Default: <strong>AI_Tool_Copilot,AI_Tool_ChatGPT,AI_Tool_Gemini</strong>.</p>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="ai-action-labels">
-            Action Labels <span class="optional">optional — comma-separated</span>
-          </label>
-          <input
-            class="form-input"
-            type="text"
-            id="ai-action-labels"
-            name="AI_ACTION_LABELS"
-            placeholder="AI_Case_CodeGen,AI_Case_Review,AI_Case_Testing"
-            autocomplete="off"
-            spellcheck="false"
-            maxlength="1000"
-          />
-          <p class="form-helper">Labels identifying AI use-cases. Default: <strong>AI_Case_CodeGen,AI_Case_Review,AI_Case_Testing</strong>.</p>
-        </div>
-
-        <div class="btn-row">
-          <button class="btn btn-primary" id="btn-save-ai-labels" type="button">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-              <polyline points="17 21 17 13 7 13 7 21"/>
-              <polyline points="7 3 7 8 15 8"/>
-            </svg>
-            Save AI Labels
-          </button>
-          <span class="save-confirm" id="save-confirm-ai" aria-live="polite">Settings saved</span>
-        </div>
-      </div>
-
-      <!-- Save Filter action card -->
-      <div class="card">
-        <div class="card-title">Save Jira Filter</div>
-        <div class="card-subtitle">
-          Builds a JQL query from the parameters above and saves it as a named filter to
-          <code>generated/filters/</code>. Enter a <strong>Filter Name</strong> above, then click
-          <strong>Save Filter</strong>.
+          <p class="form-helper">Issues fetched per page when using a Jira Filter ID. Valid range: 1–100. Default: <strong>100</strong>.</p>
         </div>
 
         <button class="btn btn-primary" id="btn-save-jira-filter" type="button" style="font-size:0.95rem; padding:11px 24px;">
@@ -1006,10 +962,161 @@
         </div>
       </div>
 
+      <!-- JQL Builder (collapsible, optional) -->
+      <details class="filter-details" id="filter-jql-builder">
+        <summary>JQL Builder <span style="font-weight:400;color:var(--text-muted);font-size:0.82rem;">&mdash; optional, only needed when no Jira Filter ID is set</span></summary>
+        <div class="filter-details-body">
+          <p class="form-helper" style="margin-bottom:16px;">
+            Provide a <strong>Project Key</strong> to generate a JQL filter. Expand this section instead of
+            setting a Jira Filter ID above when your team does not have a saved native filter.
+          </p>
+
+          <div class="form-group">
+            <label class="form-label" for="jira-project">
+              Project Key <span class="optional">required if no Jira Filter ID is set</span>
+            </label>
+            <input
+              class="form-input"
+              type="text"
+              id="jira-project"
+              name="JIRA_PROJECT"
+              placeholder="e.g. MYTEAM or MYTEAM, OTHERPROJ"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="1000"
+            />
+            <p class="form-helper">Jira project key(s) used to build a JQL filter. Comma-separate multiple values.</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="jira-team-id">
+              Team ID <span class="optional">optional — comma-separated</span>
+            </label>
+            <input
+              class="form-input"
+              type="text"
+              id="jira-team-id"
+              name="JIRA_TEAM_ID"
+              placeholder="e.g. 50953e1b-... or uuid1, uuid2"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="1000"
+            />
+            <p class="form-helper">Team UUID(s) from the <code>Team[Team]</code> custom field. Comma-separate multiple values.</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="jira-issue-types">
+              Issue Types <span class="optional">optional</span>
+            </label>
+            <input
+              class="form-input"
+              type="text"
+              id="jira-issue-types"
+              name="JIRA_ISSUE_TYPES"
+              placeholder="Bug, Story, Task, Spike"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="100"
+            />
+            <p class="form-helper">Comma-separated issue types to include. Leave blank to include all types.</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="jira-closed-sprints-only">Closed Sprints Only</label>
+            <select
+              class="form-input"
+              id="jira-closed-sprints-only"
+              name="JIRA_CLOSED_SPRINTS_ONLY"
+            >
+              <option value="true">true &mdash; include issues from closed sprints only (default)</option>
+              <option value="false">false &mdash; include issues from all sprints</option>
+            </select>
+            <p class="form-helper">When <strong>true</strong>, only issues from closed sprints are counted. Default: <strong>true</strong>.</p>
+          </div>
+
+        </div>
+      </details>
+
+      <div class="option-group" style="margin:20px 0;padding:14px;background:var(--accent-light);border-radius:var(--radius);">
+        <div class="option-group-label" style="margin-bottom:10px;">Project Type</div>
+        <label class="radio-row">
+          <input type="radio" name="filter-project-type" value="SCRUM" checked> SCRUM (sprint-based)
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="filter-project-type" value="KANBAN"> KANBAN (time-period-based)
+        </label>
+        <p class="form-helper" style="margin-top:8px;font-size:0.78rem;color:var(--text-muted);">Select SCRUM for sprint-based teams or KANBAN for continuous-flow teams with no sprints.</p>
+      </div>
+
+      <div class="option-group" style="margin:20px 0;padding:14px;background:var(--accent-light);border-radius:var(--radius);">
+        <div class="option-group-label" style="margin-bottom:10px;">Estimation Type</div>
+        <label class="radio-row">
+          <input type="radio" name="filter-estimation-type" value="StoryPoints" checked> Story Points
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="filter-estimation-type" value="JiraTickets"> Jira Tickets (count)
+        </label>
+        <p class="form-helper" style="margin-top:8px;font-size:0.78rem;color:var(--text-muted);">Use Story Points if your team estimates. Use Jira Tickets if no story point values are available.</p>
+      </div>
+
+      <!-- Agile Board & Sprint Count (collapsible, optional) -->
+      <details class="filter-details" id="filter-board-settings">
+        <summary>Agile Board &amp; Sprint Count</summary>
+        <div class="filter-details-body">
+          <p class="form-helper" style="margin-bottom:16px;">Specify which board and how many sprints (or time periods) to include in your report.</p>
+
+          <div class="form-group">
+            <label class="form-label" for="jira-board-id">
+              Board ID <span class="required-star" aria-hidden="true">*</span>
+            </label>
+            <input
+              class="form-input"
+              type="number"
+              id="jira-board-id"
+              name="JIRA_BOARD_ID"
+              min="1"
+              placeholder="e.g. 42"
+              autocomplete="off"
+              aria-required="true"
+            />
+            <p class="form-helper">Agile board ID. Find it in the board URL: <code>.../boards/42</code>.</p>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="sprint-count">Sprint Count / Period Count <span class="required-star" aria-hidden="true">*</span></label>
+            <input
+              class="form-input"
+              type="number"
+              id="sprint-count"
+              name="JIRA_SPRINT_COUNT"
+              min="1"
+              max="50"
+              placeholder="10"
+              autocomplete="off"
+              aria-required="true"
+            />
+            <p class="form-helper">For SCRUM: number of past sprints to include. For KANBAN: number of weeks to look back. Default: <strong>10</strong>.</p>
+          </div>
+
+          <div class="btn-row">
+            <button class="btn btn-primary" id="btn-save-data" type="button">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21"/>
+                <polyline points="7 3 7 8 15 8"/>
+              </svg>
+              Save Data Settings
+            </button>
+            <span class="save-confirm" id="save-confirm-data" aria-live="polite">Settings saved</span>
+          </div>
+        </div>
+      </details>
+
       <!-- Last Created Filters -->
       <div class="card">
         <div class="card-title">Last Created Filters</div>
-        <div class="card-subtitle">Previously saved Jira filters in the <code>generated/filters/</code> folder. Showing last 20 by creation date.</div>
+        <div class="card-subtitle">Previously saved Jira filters. Showing last 20 by creation date.</div>
 
         <ul class="reports-list" id="filters-list" aria-label="Previously saved filters">
           <!-- Populated by JS -->
@@ -1207,6 +1314,7 @@
 
         <hr class="section-divider" />
 
+      </div><!-- /card -->
 
     </div><!-- /panel-connection -->
 
@@ -1298,140 +1406,7 @@
 
     </div><!-- /panel-schema -->
 
-    <!-- ── Tab: Data Retrieval ── -->
-    <div role="tabpanel" id="panel-data" aria-labelledby="tab-data" class="tab-panel" hidden>
 
-      <div class="report-desc" role="note">
-        <span class="report-desc-icon" aria-hidden="true">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#0747A6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 2v20m0 0c4.97 0 9-2.686 9-6s-4.03-6-9-6-9 2.686-9 6 4.03 6 9 6z"/><path d="M3 8c1.5 1 4 1.5 9 1.5s7.5-.5 9-1.5"/>
-          </svg>
-        </span>
-        <p>
-          Configure which board to fetch data from and how far back to look in history.
-          Use <strong>Fetch Preview</strong> to see what sprints or time periods will be included before generating a report.
-        </p>
-      </div>
-
-      <!-- Board & Sprint Configuration -->
-      <div class="card">
-        <div class="card-title">Agile Board & Sprint Count</div>
-        <div class="card-subtitle">Specify which board and how many sprints (or time periods) to include in your report.</div>
-
-        <div class="form-group">
-          <label class="form-label" for="jira-board-id">
-            Board ID <span class="optional">optional</span>
-          </label>
-          <input
-            class="form-input"
-            type="number"
-            id="jira-board-id"
-            name="JIRA_BOARD_ID"
-            min="1"
-            placeholder="e.g. 42"
-            autocomplete="off"
-          />
-          <p class="form-helper">Agile board ID. Find it in the board URL: <code>.../boards/42</code>. Leave blank to use the first board your account can access.</p>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="sprint-count">Sprint Count / Period Count</label>
-          <input
-            class="form-input"
-            type="number"
-            id="sprint-count"
-            name="JIRA_SPRINT_COUNT"
-            min="1"
-            max="50"
-            placeholder="10"
-            autocomplete="off"
-          />
-          <p class="form-helper">For SCRUM: number of past sprints to include. For KANBAN: number of weeks to look back. Default: <strong>10</strong>.</p>
-        </div>
-
-        <div class="btn-row">
-          <button class="btn btn-primary" id="btn-save-data" type="button">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-              <polyline points="17 21 17 13 7 13 7 21"/>
-              <polyline points="7 3 7 8 15 8"/>
-            </svg>
-            Save Data Settings
-          </button>
-          <span class="save-confirm" id="save-confirm-data" aria-live="polite">Settings saved</span>
-        </div>
-      </div>
-
-      <!-- Jira Native Filter (Fallback) -->
-      <div class="card">
-        <div class="card-title">Jira Native Filter (Fallback)</div>
-        <div class="card-subtitle">
-          Optional: provide a saved Jira filter ID to gate issue retrieval.
-          This is a fallback when the project-based filter is not sufficient.
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="filter-id">
-            Filter ID <span class="optional">optional — fallback</span>
-          </label>
-          <input
-            class="form-input"
-            type="number"
-            id="filter-id"
-            name="JIRA_FILTER_ID"
-            min="1"
-            placeholder="e.g. 10042"
-            autocomplete="off"
-          />
-          <p class="form-helper">ID of a saved Jira filter. Used as fallback when project-based filters are not suitable.</p>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="jira-filter-page-size">
-            Filter Page Size <span class="optional">optional</span>
-          </label>
-          <input
-            class="form-input"
-            type="number"
-            id="jira-filter-page-size"
-            name="JIRA_FILTER_PAGE_SIZE"
-            min="1"
-            max="100"
-            placeholder="100"
-            autocomplete="off"
-          />
-          <p class="form-helper">Issues fetched per page. Valid range: 1–100. Default: <strong>100</strong>.</p>
-        </div>
-      </div>
-
-      <!-- Data Preview -->
-      <div class="card">
-        <div class="card-title">Data Preview</div>
-        <div class="card-subtitle">Preview what sprints or time periods will be fetched before generating the report.</div>
-
-        <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
-          <div class="form-group" style="flex:1;min-width:240px;margin-bottom:0;">
-            <label class="form-label" for="data-preview-filter">Select Filter</label>
-            <select class="form-input" id="data-preview-filter">
-              <option value="">Loading filters…</option>
-            </select>
-            <p class="form-helper">Choose a saved filter to preview its data scope.</p>
-          </div>
-          <button class="btn btn-secondary" id="btn-fetch-preview" type="button" style="font-size:0.95rem;padding:9px 16px;white-space:nowrap;">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-            </svg>
-            Fetch Preview
-          </button>
-        </div>
-
-        <!-- Preview results area (populated by JS) -->
-        <div id="preview-results" style="min-height:120px;font-size:0.85rem;color:var(--text-muted);">
-          <p style="padding:20px;text-align:center;opacity:0.6;">Preview will appear here after clicking "Fetch Preview"</p>
-        </div>
-      </div>
-
-    </div><!-- /panel-data -->
 
   </div><!-- /app-body -->
 
@@ -1495,7 +1470,6 @@
         JIRA_PROJECT:              'jira_project',
         JIRA_TEAM_ID:              'jira_team_id',
         JIRA_ISSUE_TYPES:          'jira_issue_types',
-        JIRA_FILTER_STATUS:        'jira_filter_status',
         JIRA_CLOSED_SPRINTS_ONLY:  'jira_closed_sprints_only',
         JIRA_FILTER_PAGE_SIZE:     'jira_filter_page_size',
         AI_ASSISTED_LABEL:         'ai_assisted_label',
@@ -1511,7 +1485,6 @@
       // Mirrors the uncommented defaults in .env.example.
       const FIELD_DEFAULTS = {
         JIRA_SPRINT_COUNT:        '10',
-        JIRA_FILTER_STATUS:       'Done',
         JIRA_CLOSED_SPRINTS_ONLY: 'true',
         JIRA_FILTER_PAGE_SIZE:    '100',
         AI_ASSISTED_LABEL:        'AI_assistance',
@@ -1684,9 +1657,11 @@
           // Normalise field names: server uses filter_name/slug, localStorage legacy uses name/filename
           const name      = entry.filter_name || entry.name || '(unnamed)';
           const slug      = entry.slug || entry.filename || '';
-          const jql       = entry.jql || '';
-          const createdAt = entry.created_at || '';
-          const isDefault = !!entry.is_default;
+          const jql        = entry.jql || '';
+          const filterId   = entry.params?.JIRA_FILTER_ID || '';
+          const jqlOrId    = jql || (filterId ? `Jira native filter ID: ${filterId}` : '');
+          const createdAt  = entry.created_at || '';
+          const isDefault  = !!entry.is_default;
 
           const li = document.createElement('li');
 
@@ -1700,10 +1675,10 @@
 
           const jqlPreview = document.createElement('span');
           jqlPreview.style.cssText = 'color:var(--text-muted);font-size:0.78rem;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;';
-          jqlPreview.title = jql;
-          jqlPreview.textContent = jql
-            ? (jql.length > 80 ? jql.slice(0, 80) + '…' : jql)
-            : '(no JQL — set Project Key and save)';
+          jqlPreview.title = jqlOrId;
+          jqlPreview.textContent = jqlOrId
+            ? (jqlOrId.length > 80 ? jqlOrId.slice(0, 80) + '…' : jqlOrId)
+            : '(no JQL — set Project Key or Filter ID and save)';
 
           const copyBtn = document.createElement('button');
           copyBtn.className = 'btn btn-secondary';
@@ -1771,22 +1746,6 @@
           });
           if (prevVal) genSel.value = prevVal;
         }
-
-        // Also rebuild the data-preview-filter dropdown
-        const dataPrevSel = document.getElementById('data-preview-filter');
-        if (dataPrevSel) {
-          const prevVal = dataPrevSel.value;
-          dataPrevSel.innerHTML = '<option value="">— Select a saved filter —</option>';
-          entries.slice(0, 20).forEach((entry) => {
-            const name = entry.filter_name || entry.name || '(unnamed)';
-            const slug = entry.slug || entry.filename || '';
-            const opt  = document.createElement('option');
-            opt.value       = slug;
-            opt.textContent = name;
-            dataPrevSel.appendChild(opt);
-          });
-          if (prevVal) dataPrevSel.value = prevVal;
-        }
       }
 
       async function loadFilters() {
@@ -1805,93 +1764,6 @@
         }
         renderFilters(store.getJSON(STORE_KEYS.FILTERS) || []);
       }
-
-      /* ═══════════════════════════════════════════════
-         Fetch Preview button (Data Retrieval tab)
-      ═══════════════════════════════════════════════ */
-      const btnFetchPreview   = document.getElementById('btn-fetch-preview');
-      const previewResultsDiv = document.getElementById('preview-results');
-      const dataPreviewFilter = document.getElementById('data-preview-filter');
-
-      btnFetchPreview.addEventListener('click', async () => {
-        const filterSlug = (dataPreviewFilter?.value || '').trim();
-
-        if (!filterSlug) {
-          previewResultsDiv.innerHTML = '<p style="padding:20px;text-align:center;color:var(--text-error);">Please select a filter first.</p>';
-          return;
-        }
-
-        // Show loading state
-        btnFetchPreview.disabled = true;
-        const originalText = btnFetchPreview.innerHTML;
-        btnFetchPreview.innerHTML = '<span class="spinner" aria-hidden="true"></span> Loading preview…';
-        previewResultsDiv.innerHTML = '<p style="padding:20px;text-align:center;opacity:0.6;">Fetching preview data…</p>';
-
-        try {
-          const params = new URLSearchParams();
-          params.set('filter', filterSlug);
-
-          // Get board_id and sprint_count from Data Retrieval tab if provided
-          const boardIdEl = document.getElementById('jira-board-id');
-          const sprintCountEl = document.getElementById('sprint-count');
-
-          if (boardIdEl?.value?.trim()) {
-            params.set('board_id', boardIdEl.value.trim());
-          }
-          if (sprintCountEl?.value?.trim()) {
-            params.set('sprint_count', sprintCountEl.value.trim());
-          }
-
-          const response = await fetch(`/api/data-preview?${params.toString()}`);
-          if (!response.ok) {
-            const errorData = await response.json();
-            previewResultsDiv.innerHTML = `<p style="padding:20px;color:var(--text-error);">Error: ${errorData.error || 'Failed to fetch preview'}</p>`;
-            return;
-          }
-
-          const data = await response.json();
-          if (!data.ok) {
-            previewResultsDiv.innerHTML = `<p style="padding:20px;color:var(--text-error);">Error: ${data.error || 'Unknown error'}</p>`;
-            return;
-          }
-
-          // Render preview based on project type
-          let html = `<div style="padding:16px;"><div style="font-weight:600;margin-bottom:12px;">Board: <strong>${escapeHtml(data.board_name)}</strong> (ID: ${data.board_id})</div>`;
-
-          if (data.project_type === 'KANBAN') {
-            html += `<div style="margin-bottom:12px;color:var(--text-muted);">Time Periods (${data.total_periods})</div>`;
-            if (data.periods && data.periods.length > 0) {
-              html += '<ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;">';
-              data.periods.forEach((period) => {
-                html += `<li style="padding:8px;background:var(--bg-input);border-radius:4px;border-left:3px solid var(--accent-light);"><strong>${escapeHtml(period.name)}</strong> <span style="color:var(--text-muted);font-size:0.85rem;">${period.startDate} to ${period.endDate}</span></li>`;
-              });
-              html += '</ul>';
-            } else {
-              html += '<p style="color:var(--text-muted);">No periods found.</p>';
-            }
-          } else {
-            html += `<div style="margin-bottom:12px;color:var(--text-muted);">Sprints (${data.total_sprints})</div>`;
-            if (data.sprints && data.sprints.length > 0) {
-              html += '<ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:8px;">';
-              data.sprints.forEach((sprint) => {
-                html += `<li style="padding:8px;background:var(--bg-input);border-radius:4px;border-left:3px solid var(--accent-light);"><strong>${escapeHtml(sprint.name)}</strong> <span style="color:var(--text-muted);font-size:0.85rem;">${sprint.startDate || 'N/A'} to ${sprint.endDate || 'N/A'}</span></li>`;
-              });
-              html += '</ul>';
-            } else {
-              html += '<p style="color:var(--text-muted);">No sprints found.</p>';
-            }
-          }
-          html += '</div>';
-
-          previewResultsDiv.innerHTML = html;
-        } catch (err) {
-          console.error('Fetch preview error:', err);
-          previewResultsDiv.innerHTML = `<p style="padding:20px;color:var(--text-error);">Failed to fetch preview: ${escapeHtml(err.message)}</p>`;
-        } finally {
-          btnFetchPreview.disabled = false;
-          btnFetchPreview.innerHTML = originalText;
-        }
-      });
 
       /* ═══════════════════════════════════════════════
          Save Jira Filter button
@@ -1937,13 +1809,7 @@
             : `${teamJql} IN (${quoted.join(', ')})`);
         }
 
-        const rawStatus   = (params.JIRA_FILTER_STATUS || 'Done').trim();
-        const statuses    = rawStatus.split(',').map((s) => s.trim()).filter(Boolean);
-        if (!statuses.length) statuses.push('Done');
-        const quotedSt    = statuses.map(jqlQuote);
-        clauses.push(quotedSt.length === 1
-          ? `status = ${quotedSt[0]}`
-          : `status IN (${quotedSt.join(', ')})`);
+        clauses.push('status = Done');
 
         const rawTypes = (params.JIRA_ISSUE_TYPES || '').trim();
         const types    = rawTypes.split(',').map((t) => t.trim()).filter(Boolean);
@@ -1955,26 +1821,52 @@
         return clauses.join(' AND ');
       }
 
+      /* ── JQL Builder visibility: hide when Filter ID is set ── */
+      const filterIdInput = document.getElementById('filter-id');
+      const jqlBuilderEl  = document.getElementById('filter-jql-builder');
+
+      function syncJqlBuilderVisibility() {
+        const hasFilterId = filterIdInput.value.trim() !== '';
+        jqlBuilderEl.hidden = hasFilterId;
+        if (hasFilterId) { jqlBuilderEl.open = false; }
+      }
+      filterIdInput.addEventListener('input', syncJqlBuilderVisibility);
+
       btnSaveJiraFilter.addEventListener('click', async () => {
         const filterName    = document.getElementById('filter-name').value.trim();
         const project       = document.getElementById('jira-project').value.trim();
         const teamId        = document.getElementById('jira-team-id').value.trim();
         const issueTypes    = document.getElementById('jira-issue-types').value.trim();
-        const filterStatus  = document.getElementById('jira-filter-status').value.trim();
         const closedSprints = document.getElementById('jira-closed-sprints-only').value;
         const projectType   = document.querySelector('input[name="filter-project-type"]:checked')?.value || 'SCRUM';
         const estimationType = document.querySelector('input[name="filter-estimation-type"]:checked')?.value || 'StoryPoints';
 
         filterLogClear();
 
+        const filterId = document.getElementById('filter-id').value.trim();
+
         if (!filterName) {
           filterLogLine('⚠ Filter Name is required. Enter a name in the field above before saving.', 'log-error');
           document.getElementById('filter-name').focus();
           return;
         }
-        if (!project) {
-          filterLogLine('⚠ Project Key (JIRA_PROJECT) is required to build a JQL filter.', 'log-error');
-          document.getElementById('jira-project').focus();
+        if (!project && !filterId) {
+          filterLogLine('⚠ Either a Jira Filter ID or a Project Key (in JQL Builder) is required.', 'log-error');
+          document.getElementById('filter-id').focus();
+          return;
+        }
+        const boardId = document.getElementById('jira-board-id').value.trim();
+        if (!boardId) {
+          filterLogLine('⚠ Board ID is required. Enter it in the Agile Board & Sprint Count section.', 'log-error');
+          document.getElementById('filter-board-settings').open = true;
+          document.getElementById('jira-board-id').focus();
+          return;
+        }
+        const sprintCount = document.getElementById('sprint-count').value.trim();
+        if (!sprintCount) {
+          filterLogLine('⚠ Sprint Count / Period Count is required. Enter it in the Agile Board & Sprint Count section.', 'log-error');
+          document.getElementById('filter-board-settings').open = true;
+          document.getElementById('sprint-count').focus();
           return;
         }
 
@@ -1985,11 +1877,14 @@
           JIRA_PROJECT:             project,
           JIRA_TEAM_ID:             teamId,
           JIRA_ISSUE_TYPES:         issueTypes,
-          JIRA_FILTER_STATUS:       filterStatus || 'Done',
           JIRA_CLOSED_SPRINTS_ONLY: closedSprints,
           PROJECT_TYPE:             projectType,
           ESTIMATION_TYPE:          estimationType,
           schema_name:              store.get(STORE_KEYS.JIRA_SCHEMA) || '',
+          JIRA_BOARD_ID:            document.getElementById('jira-board-id').value.trim(),
+          JIRA_SPRINT_COUNT:        document.getElementById('sprint-count').value.trim(),
+          JIRA_FILTER_ID:           filterId,
+          JIRA_FILTER_PAGE_SIZE:    document.getElementById('jira-filter-page-size').value.trim(),
         };
 
         if (IS_SERVED) {
@@ -2014,7 +1909,11 @@
             }
             if (data.ok) {
               const verb = data.updated ? 'Updated' : 'Saved';
-              filterLogLine(data.jql, 'log-ok');
+              if (data.jql) {
+                filterLogLine(data.jql, 'log-ok');
+              } else if (filterId) {
+                filterLogLine(`Jira native filter ID: ${filterId}`, 'log-ok');
+              }
               filterLogLine(`✓ ${verb} to config/jira_filters.json`, 'log-ok');
               loadFilters();   // reload from server — source of truth
             } else {
@@ -2027,11 +1926,12 @@
           // file:// mode — build locally, save to localStorage only
           filterLogLine('⚠ File:// mode — filter is saved to browser localStorage only (no disk persistence).', 'log-info');
           const localJql = buildJqlLocally(params);
-          if (!localJql) {
-            filterLogLine('✗ JIRA_PROJECT is required to build a JQL filter.', 'log-error');
+          if (!localJql && !filterId) {
+            filterLogLine('✗ Either a Jira Filter ID or a Project Key is required to save a filter.', 'log-error');
           } else {
             const createdAt = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
-            filterLogLine(localJql, 'log-ok');
+            if (localJql) { filterLogLine(localJql, 'log-ok'); }
+            if (filterId)  { filterLogLine(`Using Jira native filter ID: ${filterId}`, 'log-ok'); }
             const saved = store.getJSON(STORE_KEYS.FILTERS) || [];
             const idx = saved.findIndex((f) => (f.filter_name || f.name || '').toLowerCase() === filterName.toLowerCase());
             const entry = { filter_name: filterName, slug: filterName.toLowerCase().replace(/\W+/g, '_'), created_at: createdAt, jql: localJql, is_default: false };
@@ -2071,6 +1971,7 @@
       const schemaNameInput = document.getElementById('schema-name-input');
       const btnFetchSchema  = document.getElementById('btn-fetch-schema');
       const schemaStatusEl  = document.getElementById('schema-status');
+      const schemaSPBadge   = document.getElementById('schema-sp-badge');
 
       let _activeSchemaCache = null;
 
@@ -2119,6 +2020,13 @@
         store.set(STORE_KEYS.JIRA_SCHEMA, name);
         const schema = await fetchSchemaDetails(name);
         _activeSchemaCache = schema;
+
+        // Populate story-points detection badge
+        const spId = schema?.fields?.story_points?.id;
+        const BADGE_CLASSES = ['badge-neutral', 'badge-success'];
+        BADGE_CLASSES.forEach((c) => schemaSPBadge.classList.remove(c));
+        schemaSPBadge.textContent = spId ? `Story Points: ${spId}` : 'Story Points: not detected';
+        schemaSPBadge.classList.add(spId ? 'badge-success' : 'badge-neutral');
       }
 
       schemaSelect.addEventListener('change', async () => {
@@ -2416,7 +2324,7 @@
       if (btnSaveConn) btnSaveConn.addEventListener('click', () => {
         const valid = validateConnFields();
         if (!valid) return;
-        const url   = jiraUrlInput.value.trim();
+        const url   = jiraUrlInput.value.trim().replace(/\/+$/, '');
         const email = jiraEmailInput.value.trim();
         const token = jiraTokenInput.value;
         store.set(STORE_KEYS.JIRA_URL,       url);
@@ -2652,7 +2560,7 @@
         const url   = store.get(STORE_KEYS.JIRA_URL);
         const email = store.get(STORE_KEYS.JIRA_EMAIL);
         const token = store.get(STORE_KEYS.JIRA_API_TOKEN);
-        if (!url || !email || !token) {
+        if (!url || !email || (!token && !hasServerToken)) {
           setStatus('neutral', 'Enter your Jira URL, email, and API token to get started.');
         } else {
           setStatus('neutral', 'Credentials saved. Click "Test Connection" to verify.');
@@ -2763,7 +2671,6 @@
         document.getElementById('jira-project').value              = store.get(STORE_KEYS.JIRA_PROJECT);
         document.getElementById('jira-team-id').value              = store.get(STORE_KEYS.JIRA_TEAM_ID);
         document.getElementById('jira-issue-types').value          = store.get(STORE_KEYS.JIRA_ISSUE_TYPES);
-        document.getElementById('jira-filter-status').value        = store.get(STORE_KEYS.JIRA_FILTER_STATUS);
         document.getElementById('jira-closed-sprints-only').value  = store.get(STORE_KEYS.JIRA_CLOSED_SPRINTS_ONLY);
         document.getElementById('jira-filter-page-size').value     = store.get(STORE_KEYS.JIRA_FILTER_PAGE_SIZE);
         document.getElementById('ai-assisted-label').value         = store.get(STORE_KEYS.AI_ASSISTED_LABEL);
@@ -2773,14 +2680,16 @@
         updateBadgeFromSaved();
 
         // 2. Overlay with server-side config read from .env on disk
-        if (IS_SERVED) {
-          try {
-            const res  = await fetch('/api/config');
+        // Try even in file:// mode — uses absolute URL so it reaches the local server if running
+        const _apiBase = IS_SERVED ? '' : 'http://localhost:8080';
+        try {
+            const res  = await fetch(`${_apiBase}/api/config`);
+            if (!res.ok) throw new Error(`/api/config returned ${res.status}`);
             const data = await res.json();
             const cfg  = data.config || {};
 
             // Populate fields — disk values take precedence over browser cache
-            if (cfg.JIRA_URL)   { jiraUrlInput.value   = cfg.JIRA_URL;   store.set(STORE_KEYS.JIRA_URL,   cfg.JIRA_URL); }
+            if (cfg.JIRA_URL)   { const _url = cfg.JIRA_URL.trim().replace(/\/+$/, ''); jiraUrlInput.value = _url; store.set(STORE_KEYS.JIRA_URL, _url); }
             if (cfg.JIRA_EMAIL) { jiraEmailInput.value = cfg.JIRA_EMAIL; store.set(STORE_KEYS.JIRA_EMAIL, cfg.JIRA_EMAIL); }
 
             // Token: server returns '***' if set (never the raw value)
@@ -2799,7 +2708,6 @@
             if (cfg.JIRA_PROJECT)              { document.getElementById('jira-project').value              = cfg.JIRA_PROJECT;              store.set(STORE_KEYS.JIRA_PROJECT,              cfg.JIRA_PROJECT); }
             if (cfg.JIRA_TEAM_ID)              { document.getElementById('jira-team-id').value              = cfg.JIRA_TEAM_ID;              store.set(STORE_KEYS.JIRA_TEAM_ID,              cfg.JIRA_TEAM_ID); }
             if (cfg.JIRA_ISSUE_TYPES)          { document.getElementById('jira-issue-types').value          = cfg.JIRA_ISSUE_TYPES;          store.set(STORE_KEYS.JIRA_ISSUE_TYPES,          cfg.JIRA_ISSUE_TYPES); }
-            if (cfg.JIRA_FILTER_STATUS)        { document.getElementById('jira-filter-status').value        = cfg.JIRA_FILTER_STATUS;        store.set(STORE_KEYS.JIRA_FILTER_STATUS,        cfg.JIRA_FILTER_STATUS); }
             if (cfg.JIRA_CLOSED_SPRINTS_ONLY)  { document.getElementById('jira-closed-sprints-only').value  = cfg.JIRA_CLOSED_SPRINTS_ONLY;  store.set(STORE_KEYS.JIRA_CLOSED_SPRINTS_ONLY,  cfg.JIRA_CLOSED_SPRINTS_ONLY); }
             if (cfg.JIRA_FILTER_PAGE_SIZE)     { document.getElementById('jira-filter-page-size').value     = cfg.JIRA_FILTER_PAGE_SIZE;     store.set(STORE_KEYS.JIRA_FILTER_PAGE_SIZE,     cfg.JIRA_FILTER_PAGE_SIZE); }
 
@@ -2816,15 +2724,14 @@
               document.getElementById('first-run-banner').hidden = false;
               activateTab(document.getElementById('tab-connection'));
             }
-          } catch {
-            // Server not reachable — localStorage values already shown above
-          }
+        } catch (err) {
+            console.warn('restoreValues: could not fetch /api/config —', err);
+            // localStorage values already shown above
         }
 
         // 3. Apply defaults for fields that are still empty after all config sources
         const fieldIds = {
           JIRA_SPRINT_COUNT:        'sprint-count',
-          JIRA_FILTER_STATUS:       'jira-filter-status',
           JIRA_CLOSED_SPRINTS_ONLY: 'jira-closed-sprints-only',
           JIRA_FILTER_PAGE_SIZE:    'jira-filter-page-size',
           AI_ASSISTED_LABEL:        'ai-assisted-label',
@@ -2861,12 +2768,12 @@
       /* ═══════════════════════════════════════════════
          Save Board Settings button
       ═══════════════════════════════════════════════ */
-      document.getElementById('btn-save-board').addEventListener('click', () => {
+      document.getElementById('btn-save-data').addEventListener('click', () => {
         const boardId     = document.getElementById('jira-board-id').value.trim();
         const sprintCount = document.getElementById('sprint-count').value.trim();
         store.set(STORE_KEYS.JIRA_BOARD_ID,    boardId);
         store.set(STORE_KEYS.JIRA_SPRINT_COUNT, sprintCount);
-        flashConfirm('save-confirm-board');
+        flashConfirm('save-confirm-data');
         if (IS_SERVED) {
           const updates = {};
           if (boardId)     updates.JIRA_BOARD_ID    = boardId;
@@ -2901,7 +2808,7 @@
       /* ── Boot ── */
       window.restoreValuesReady = false;
       restoreValues()
-        .then(() => { window.restoreValuesReady = true; })
+        .then(() => { window.restoreValuesReady = true; syncJqlBuilderVisibility(); })
         .catch((err) => { console.error('restoreValues error:', err); window.restoreValuesReady = true; });
       } catch (err) {
         console.error('Script initialization error:', err);

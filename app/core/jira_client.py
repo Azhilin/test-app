@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timedelta
 from typing import Any
 
 from atlassian import Jira
@@ -32,33 +33,42 @@ def create_client() -> Jira:
 
 
 def get_board_id(jira: Jira) -> int:
-    """Return the board ID to use (config or first available board)."""
+    """Return the configured board ID. Raises if JIRA_BOARD_ID is not set."""
     if config.JIRA_BOARD_ID is not None:
         logger.debug("Using configured board ID: %s", config.JIRA_BOARD_ID)
         return config.JIRA_BOARD_ID
-    logger.debug("No JIRA_BOARD_ID configured; fetching first available board")
-    result = jira.get_all_agile_boards(start=0, limit=1)
-    if result is None:
-        raise ValueError("No boards found. Set JIRA_BOARD_ID or use an account with board access.")
-    values = result.get("values") or []
-    if not values:
-        raise ValueError("No boards found. Set JIRA_BOARD_ID or use an account with board access.")
-    board_id = int(values[0]["id"])
-    logger.debug("Resolved board ID: %s", board_id)
-    return board_id
+    raise ValueError(
+        "JIRA_BOARD_ID is not set. Add it to config/defaults.env or .env."
+    )
 
 
 def get_sprints(jira: Jira, board_id: int) -> list[dict[str, Any]]:
-    """Return recent sprints for the board (closed + active), limited by JIRA_SPRINT_COUNT."""
-    # Fetch closed first, then active
+    """Return recent sprints for the board, limited by JIRA_SPRINT_COUNT.
+    When JIRA_CLOSED_SPRINTS_ONLY is True (default), only closed sprints are returned.
+    """
     logger.debug("Fetching sprints for board %s (limit=%s)", board_id, config.JIRA_SPRINT_COUNT)
-    result_closed = jira.get_all_sprints_from_board(board_id, state="closed", start=0, limit=config.JIRA_SPRINT_COUNT)
+    # Paginate through ALL closed sprints so we can sort and take the NEWEST ones.
+    # A single limited fetch returns the oldest sprints first, not the most recent.
+    all_closed: list[dict[str, Any]] = []
+    start = 0
+    page_size = 50
+    while True:
+        result = jira.get_all_sprints_from_board(board_id, state="closed", start=start, limit=page_size)
+        if result is None:
+            break
+        values = result.get("values") or []
+        all_closed.extend(values)
+        if result.get("isLast", False) or len(values) < page_size:
+            break
+        start += page_size
     result_active = jira.get_all_sprints_from_board(board_id, state="active", start=0, limit=10)
-    closed = (result_closed.get("values") or []) if result_closed is not None else []
     active = (result_active.get("values") or []) if result_active is not None else []
-    ordered = sorted(closed, key=lambda s: s.get("startDate") or "", reverse=True)
-    ordered = (ordered + active)[: config.JIRA_SPRINT_COUNT]
-    logger.debug("Fetched %s sprint(s) (%s closed, %s active)", len(ordered), len(closed), len(active))
+    ordered = sorted(all_closed, key=lambda s: s.get("startDate") or "", reverse=True)
+    if not config.JIRA_CLOSED_SPRINTS_ONLY:
+        ordered = (active + ordered)[: config.JIRA_SPRINT_COUNT]
+    else:
+        ordered = ordered[: config.JIRA_SPRINT_COUNT]
+    logger.debug("Fetched %s sprint(s) (%s closed fetched, %s active)", len(ordered), len(all_closed), len(active))
     return ordered
 
 
@@ -94,31 +104,6 @@ def get_issues_for_sprint(jira: Jira, board_id: int, sprint_id: int, jql: str = 
     return all_issues
 
 
-def get_issue_with_changelog(jira: Jira, issue_key: str) -> dict[str, Any]:
-    """Fetch a single issue with changelog for cycle time calculation."""
-    return jira.get_issue(issue_key, expand="changelog")
-
-
-def get_issues_with_changelog(jira: Jira, issue_keys: list[str]) -> list[dict[str, Any]]:
-    """Fetch multiple issues with changelog. Returns list in same order as keys."""
-    logger.debug("Fetching changelog for %s issue(s)", len(issue_keys))
-    out = []
-    failures = 0
-    for key in issue_keys:
-        try:
-            out.append(get_issue_with_changelog(jira, key))
-        except Exception as exc:
-            logger.warning("Failed to fetch changelog for %s: %s", key, _sanitise_error(str(exc)))
-            failures += 1
-            out.append({})  # Skip failed issues; metrics can tolerate missing
-    logger.debug(
-        "Changelog fetch complete: %s succeeded, %s failed",
-        len(issue_keys) - failures,
-        failures,
-    )
-    return out
-
-
 def fetch_sprint_data(jira: Jira) -> tuple[list[dict[str, Any]], dict[int | str, list[dict[str, Any]]]]:
     """
     Fetch sprints and their issues for the configured board.
@@ -145,3 +130,80 @@ def fetch_sprint_data(jira: Jira) -> tuple[list[dict[str, Any]], dict[int | str,
         total_issues,
     )
     return sprints, sprint_issues
+
+
+def fetch_kanban_data(jira: Jira) -> tuple[list[dict[str, Any]], dict[int | str, list[dict[str, Any]]]]:
+    """
+    Fetch KANBAN board data grouped by time periods (weeks) instead of sprints.
+    Returns a tuple of (periods_list, period_id -> list of issues) with same shape as fetch_sprint_data.
+    Each period represents an ISO week going backward from today.
+    If JIRA_FILTER_ID is set, only issues matching that filter's JQL are included.
+    """
+    board_id = get_board_id(jira)
+    logger.debug("Fetching KANBAN data for board %s (as time periods)", board_id)
+
+    # Note: board_info could be fetched here for logging, but it's optional
+
+    # Create synthetic time periods (weeks going backward from today)
+    today = datetime.utcnow().date()
+    periods: list[dict[str, Any]] = []
+    period_issues: dict[int | str, list[dict[str, Any]]] = {}
+
+    filter_jql = get_filter_jql(jira)
+    if filter_jql:
+        logger.debug("Applying filter JQL: %s", filter_jql)
+
+    for week_offset in range(config.JIRA_SPRINT_COUNT):
+        # Calculate the week start and end dates
+        week_end = today - timedelta(days=week_offset * 7)
+        week_start = week_end - timedelta(days=6)
+        week_num = week_start.isocalendar()[1]
+        week_year = week_start.isocalendar()[0]
+        period_label = f"{week_year}-W{week_num:02d}"
+        period_id = f"week-{period_label}"
+
+        # Build JQL to fetch issues resolved/completed in this week
+        jql_date_range = f'resolutiondate >= "{week_start}" AND resolutiondate <= "{week_end}"'
+        combined_jql = jql_date_range
+        if filter_jql:
+            combined_jql = f"({jql_date_range}) AND ({filter_jql})"
+
+        # Fetch issues for this period
+        all_issues: list[dict[str, Any]] = []
+        start = 0
+        limit = 50
+        logger.debug("Fetching issues for period %s (jql=%r)", period_label, combined_jql)
+        while True:
+            try:
+                result = jira.jql(combined_jql, start=start, limit=limit)
+                if result is None:
+                    break
+                issues = result.get("issues") or []
+                all_issues.extend(issues)
+                total = result.get("total", 0)
+                if start + len(issues) >= total or len(issues) == 0:
+                    break
+                start += limit
+            except Exception as exc:
+                logger.warning("Error fetching issues for period %s: %s", period_label, _sanitise_error(str(exc)))
+                break
+
+        period_issues[period_id] = all_issues
+        periods.append(
+            {
+                "id": period_id,
+                "name": period_label,
+                "state": "closed",  # KANBAN periods are always "closed" (historical)
+                "startDate": str(week_start),
+                "endDate": str(week_end),
+            }
+        )
+        logger.debug("Period %s: fetched %s issue(s)", period_label, len(all_issues))
+
+    total_issues = sum(len(v) for v in period_issues.values())
+    logger.debug(
+        "KANBAN data ready: %s period(s), %s total issue(s)",
+        len(periods),
+        total_issues,
+    )
+    return periods, period_issues

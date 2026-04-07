@@ -257,8 +257,7 @@ def test_submit_writes_valid_json_to_mocked_fs(page: Page) -> None:
     assert re.match(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00$", data["timestamp"]), (
         f"timestamp format unexpected: {data['timestamp']}"
     )
-    assert "week" in data
-    assert re.match(r"^\d{4}-W\d{2}$", data["week"]), f"week format unexpected: {data['week']}"
+    assert "week" not in data, "'week' field must not be in survey payload (derived server-side)"
 
 
 def test_submit_timestamp_format(page: Page) -> None:
@@ -276,8 +275,8 @@ def test_submit_timestamp_format(page: Page) -> None:
     ), f"Bad timestamp format: {data['timestamp']}"
 
 
-def test_submit_week_field_format(page: Page) -> None:
-    """Saved JSON must contain 'week' field in YYYY-WNN format."""
+def test_survey_payload_has_no_week_field(page: Page) -> None:
+    """Saved JSON must NOT contain 'week' — it is derived server-side during normalization."""
     _goto(page)
     _fill_all(page)
     page.locator("#btn-submit").click()
@@ -285,8 +284,7 @@ def test_submit_week_field_format(page: Page) -> None:
     raw = page.evaluate("() => Object.values(window.__savedFiles)[0]")
     assert raw is not None
     data = json.loads(raw)
-    assert "week" in data, "'week' field missing from payload"
-    assert re.match(r"^\d{4}-W\d{2}$", data["week"]), f"Bad week format: {data['week']}"
+    assert "week" not in data, "'week' field must not be present in the survey payload"
 
 
 # ---------------------------------------------------------------------------

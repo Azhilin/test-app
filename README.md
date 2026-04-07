@@ -69,8 +69,17 @@ python server.py 9000
 
 2. Kill it:
    ```powershell
-   # PowerShell
+   # PowerShell - kill by PID
    Stop-Process -Id <PID> -Force
+   
+   # Kill all Python processes
+   taskkill /IM python.exe /F
+   
+   # Kill by window title
+   taskkill /FI "WINDOWTITLE eq *server.py*" /F
+   
+   # Or in PowerShell:
+   Stop-Process -Name python -Force
    ```
    ```cmd
    :: Command Prompt

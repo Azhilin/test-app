@@ -931,15 +931,6 @@ NON_FUNCTIONAL_REQUIREMENTS: list[dict] = [
         ],
     },
     {
-        "id": "NFR-R-004",
-        "description": "Changelog fetch failure for one issue skipped; full report still generated",
-        "type": FUNCTIONAL,
-        "section": "Reliability & Error Handling",
-        "tests": [
-            "unit/test_jira_client.py::test_get_issues_with_changelog_skips_failures",
-        ],
-    },
-    {
         "id": "NFR-R-005",
         "description": "SSE stream always sends final event: close before connection ends",
         "type": FUNCTIONAL,
@@ -1714,6 +1705,15 @@ JIRA_DATA_FETCHING_REQUIREMENTS: list[dict] = [
             "unit/test_jira_client.py::test_get_sprints_empty",
         ],
     },
+    {
+        "id": "JDF-SP-005",
+        "description": "All closed-sprint pages are fetched so the NEWEST sprints are returned",
+        "type": FUNCTIONAL,
+        "section": "Sprint Fetching",
+        "tests": [
+            "unit/test_jira_client.py::test_get_sprints_returns_newest_when_paginated",
+        ],
+    },
     # --- 3. Issue Fetching ---
     {
         "id": "JDF-I-001",
@@ -1758,42 +1758,7 @@ JIRA_DATA_FETCHING_REQUIREMENTS: list[dict] = [
         "section": "Issue Fetching",
         "tests": [],
     },
-    # --- 4. Changelog Fetching ---
-    {
-        "id": "JDF-CL-001",
-        "description": "Changelog with status transition history is returned per issue",
-        "type": FUNCTIONAL,
-        "section": "Changelog Fetching",
-        "tests": [
-            "unit/test_jira_client.py::test_get_issue_with_changelog_expand_param",
-        ],
-    },
-    {
-        "id": "JDF-CL-002",
-        "description": "Fetching changelogs for multiple issues returns a list in key order",
-        "type": FUNCTIONAL,
-        "section": "Changelog Fetching",
-        "tests": [
-            "unit/test_jira_client.py::test_get_issues_with_changelog_multiple_keys",
-        ],
-    },
-    {
-        "id": "JDF-CL-003",
-        "description": "A per-issue changelog failure logs a warning and appends {}",
-        "type": FUNCTIONAL,
-        "section": "Changelog Fetching",
-        "tests": [
-            "unit/test_jira_client.py::test_get_issues_with_changelog_skips_failures",
-        ],
-    },
-    {
-        "id": "JDF-CL-004",
-        "description": "Changelog timestamps must be timezone-aware ISO-8601 strings",
-        "type": FUNCTIONAL,
-        "section": "Changelog Fetching",
-        "tests": [],
-    },
-    # --- 5. Filter JQL Resolution ---
+    # --- 4. Filter JQL Resolution ---
     {
         "id": "JDF-F-001",
         "description": "A valid filter ID resolves to its JQL string",

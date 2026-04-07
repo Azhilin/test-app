@@ -3,7 +3,7 @@
 > Source document: [docs/product/requirements/installation_requirements.md](../../../docs/product/requirements/installation_requirements.md)  
 > Back to summary: [tests/coverage/test_coverage.md](../test_coverage.md)
 
-**Total:** 38 | **✅ Covered:** 5 | **🔶 Partial:** 0 | **❌ Gap:** 0 | **⬜ N/T:** 33 | **Functional:** 100%
+**Total:** 37 | **✅ Covered:** 5 | **🔶 Partial:** 0 | **❌ Gap:** 0 | **⬜ N/T:** 32 | **Functional:** 100%
 
 
 #### Zip Contents

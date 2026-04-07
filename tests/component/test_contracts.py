@@ -10,7 +10,6 @@ from app.core import metrics
 from app.reporters.report_html import TEMPLATES_DIR
 from tests.conftest import (
     make_issue,
-    make_issue_with_changelog,
     make_issue_with_labels,
     make_sprint,
 )
@@ -64,8 +63,7 @@ def test_issue_with_labels_factory_matches_get_labels():
 def test_build_metrics_dict_has_all_expected_keys():
     sprint = make_sprint(1)
     issue = make_issue("X-1", "Done", 5.0)
-    cl = make_issue_with_changelog("X-1", "2026-03-01T00:00:00+00:00", "2026-03-03T00:00:00+00:00")
-    result = metrics.build_metrics_dict([sprint], {1: [issue]}, [cl])
+    result = metrics.build_metrics_dict([sprint], {1: [issue]})
     expected_keys = {
         "velocity",
         "generated_at",
@@ -88,7 +86,7 @@ def test_build_metrics_dict_has_all_expected_keys():
 def test_velocity_row_has_required_keys():
     sprint = make_sprint(1)
     issue = make_issue("X-1", "Done", 5.0)
-    result = metrics.build_metrics_dict([sprint], {1: [issue]}, [])
+    result = metrics.build_metrics_dict([sprint], {1: [issue]})
     row = result["velocity"][0]
     required = {"sprint_id", "sprint_name", "start_date", "end_date", "velocity", "issue_count"}
     assert required.issubset(row.keys())
@@ -97,7 +95,7 @@ def test_velocity_row_has_required_keys():
 def test_ai_trend_row_has_required_keys():
     sprint = make_sprint(1)
     issue = make_issue("X-1", "Done", 5.0)
-    result = metrics.build_metrics_dict([sprint], {1: [issue]}, [])
+    result = metrics.build_metrics_dict([sprint], {1: [issue]})
     row = result["ai_assistance_trend"][0]
     required = {"sprint_id", "sprint_name", "start_date", "end_date", "total_sp", "ai_sp", "ai_pct"}
     assert required.issubset(row.keys())
@@ -143,8 +141,7 @@ def test_template_variables_exist_in_metrics_dict():
     # Build a real metrics dict
     sprint = make_sprint(1, "S1", "2026-01-01", "2026-01-14")
     issue = make_issue("X-1", "Done", 5.0)
-    cl = make_issue_with_changelog("X-1", "2026-03-01T00:00:00+00:00", "2026-03-03T00:00:00+00:00")
-    metrics_dict = metrics.build_metrics_dict([sprint], {1: [issue]}, [cl])
+    metrics_dict = metrics.build_metrics_dict([sprint], {1: [issue]})
 
     for key in referenced_keys:
         assert key in metrics_dict, f"Template references metrics.{key} but it's missing from build_metrics_dict()"

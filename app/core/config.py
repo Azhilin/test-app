@@ -10,7 +10,7 @@ from dotenv import dotenv_values as _dotenv_values
 _defaults_path = Path(__file__).resolve().parent.parent.parent / "config" / "defaults.env"
 _env_path = Path(__file__).resolve().parent.parent.parent / ".env"
 for _k, _v in {**_dotenv_values(_defaults_path), **_dotenv_values(_env_path)}.items():
-    if _k not in os.environ:
+    if _k not in os.environ and _v is not None:
         os.environ[_k] = _v
 
 # SSL certificate: use local cert bundle when present, else fall back to default CA store
@@ -46,6 +46,12 @@ DAU_RESPONSES_DIR: str = os.getenv(
     str(Path(__file__).resolve().parent.parent.parent / "config" / "dau"),
 )
 
+# Normalized DAU responses directory (populated automatically before metric computation)
+DAU_NORMALIZED_DIR: str = os.getenv(
+    "DAU_NORMALIZED_DIR",
+    str(Path(__file__).resolve().parent.parent.parent / "config" / "dau" / "normalized"),
+)
+
 # AI Adoption metrics labels
 # Label that marks an issue as AI-assisted (default: AI_assistance)
 AI_ASSISTED_LABEL = os.getenv("AI_ASSISTED_LABEL", "AI_assistance").strip() or "AI_assistance"
@@ -73,11 +79,13 @@ def _env_bool(key: str, default: bool = True) -> bool:
     return val in ("1", "true", "yes")
 
 
+# Sprint scope: when True (default), only closed sprints are included in reports.
+# Set to False to also include the active sprint.
+JIRA_CLOSED_SPRINTS_ONLY: bool = _env_bool("JIRA_CLOSED_SPRINTS_ONLY", default=True)
+
 METRIC_VELOCITY: bool = _env_bool("METRIC_VELOCITY")
-METRIC_CYCLE_TIME: bool = _env_bool("METRIC_CYCLE_TIME")
 METRIC_AI_ASSISTANCE_TREND: bool = _env_bool("METRIC_AI_ASSISTANCE_TREND")
 METRIC_AI_USAGE_DETAILS: bool = _env_bool("METRIC_AI_USAGE_DETAILS")
-METRIC_CUSTOM_TRENDS: bool = _env_bool("METRIC_CUSTOM_TRENDS")
 METRIC_DAU: bool = _env_bool("METRIC_DAU")
 METRIC_DAU_TREND: bool = _env_bool("METRIC_DAU_TREND")
 
@@ -91,6 +99,8 @@ def validate_config() -> list[str]:
         errors.append("JIRA_EMAIL is not set")
     if not JIRA_API_TOKEN:
         errors.append("JIRA_API_TOKEN is not set")
+    if JIRA_BOARD_ID is None:
+        errors.append("JIRA_BOARD_ID is not set")
     # Warn (not block) when raw JIRA_URL had trailing slash(es) — they were
     # silently stripped by the rstrip("/") above.
     raw_url = os.getenv("JIRA_URL", "")

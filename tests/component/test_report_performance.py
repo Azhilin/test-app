@@ -31,7 +31,7 @@ def test_report_generation_completes_within_time_limit(tmp_path):
     }
 
     start = time.monotonic()
-    metrics = build_metrics_dict(sprints, sprint_issues, [])
+    metrics = build_metrics_dict(sprints, sprint_issues)
     generate_html(metrics, tmp_path / "report.html")
     generate_md(metrics, tmp_path / "report.md")
     elapsed = time.monotonic() - start
