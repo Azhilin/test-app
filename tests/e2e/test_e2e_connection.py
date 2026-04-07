@@ -83,6 +83,8 @@ def _goto(page: Page, url: str, config: dict | None = None, cert_status: dict | 
     for attempt in range(3):
         try:
             page.goto(url, wait_until="domcontentloaded", timeout=15000)
+            # Wait for async config/cert loading to complete
+            page.wait_for_function("window.restoreValuesReady === true", timeout=15000)
             return
         except Exception:
             if attempt == 2:
