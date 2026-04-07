@@ -2775,10 +2775,10 @@
         store.set(STORE_KEYS.JIRA_SPRINT_COUNT, sprintCount);
         flashConfirm('save-confirm-data');
         if (IS_SERVED) {
-          const updates = {};
-          if (boardId)     updates.JIRA_BOARD_ID    = boardId;
-          if (sprintCount) updates.JIRA_SPRINT_COUNT = sprintCount;
-          if (Object.keys(updates).length) saveConfigToServer(updates);
+          saveConfigToServer({
+            JIRA_BOARD_ID:     boardId,
+            JIRA_SPRINT_COUNT: sprintCount,
+          });
         }
       });
 
@@ -2796,12 +2796,12 @@
         store.set(STORE_KEYS.AI_ACTION_LABELS,   aiActions);
         flashConfirm('save-confirm-ai');
         if (IS_SERVED) {
-          const updates = {};
-          if (aiAssisted) updates.AI_ASSISTED_LABEL = aiAssisted;
-          if (aiExclude)  updates.AI_EXCLUDE_LABELS  = aiExclude;
-          if (aiTools)    updates.AI_TOOL_LABELS     = aiTools;
-          if (aiActions)  updates.AI_ACTION_LABELS   = aiActions;
-          if (Object.keys(updates).length) saveConfigToServer(updates);
+          saveConfigToServer({
+            AI_ASSISTED_LABEL: aiAssisted,
+            AI_EXCLUDE_LABELS:  aiExclude,
+            AI_TOOL_LABELS:     aiTools,
+            AI_ACTION_LABELS:   aiActions,
+          });
         }
       });
 
