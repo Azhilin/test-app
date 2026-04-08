@@ -34,5 +34,47 @@
       "JIRA_FILTER_ID": "10033",
       "JIRA_FILTER_PAGE_SIZE": "100"
     }
+  },
+  {
+    "filter_name": "Default_Jira_Filter_2026-04-08",
+    "slug": "default_jira_filter_2026_04_08",
+    "description": "",
+    "is_default": false,
+    "created_at": "2026-04-08T07:33:42",
+    "jql": "",
+    "params": {
+      "JIRA_PROJECT": "",
+      "JIRA_TEAM_ID": "",
+      "JIRA_ISSUE_TYPES": "",
+      "JIRA_CLOSED_SPRINTS_ONLY": "",
+      "PROJECT_TYPE": "SCRUM",
+      "ESTIMATION_TYPE": "StoryPoints",
+      "schema_name": "Default_Jira_Cloud",
+      "JIRA_BOARD_ID": "1",
+      "JIRA_SPRINT_COUNT": "10",
+      "JIRA_FILTER_ID": "10033",
+      "JIRA_FILTER_PAGE_SIZE": "100"
+    }
+  },
+  {
+    "filter_name": "AlexTest",
+    "slug": "alextest",
+    "description": "",
+    "is_default": false,
+    "created_at": "2026-04-08T07:33:55",
+    "jql": "",
+    "params": {
+      "JIRA_PROJECT": "",
+      "JIRA_TEAM_ID": "",
+      "JIRA_ISSUE_TYPES": "",
+      "JIRA_CLOSED_SPRINTS_ONLY": "",
+      "PROJECT_TYPE": "SCRUM",
+      "ESTIMATION_TYPE": "StoryPoints",
+      "schema_name": "Default_Jira_Cloud",
+      "JIRA_BOARD_ID": "1",
+      "JIRA_SPRINT_COUNT": "10",
+      "JIRA_FILTER_ID": "10033",
+      "JIRA_FILTER_PAGE_SIZE": "100"
+    }
   }
 ]
