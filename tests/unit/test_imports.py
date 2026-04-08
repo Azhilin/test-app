@@ -22,7 +22,6 @@ def test_import_app_metrics():
 
     assert callable(metrics.compute_velocity)
     assert callable(metrics.build_metrics_dict)
-    assert callable(metrics.get_done_issue_keys_for_changelog)
 
 
 def test_import_app_report_md():

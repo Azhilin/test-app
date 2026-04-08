@@ -67,17 +67,11 @@ def test_get_board_id_from_config(monkeypatch, mock_jira):
     mock_jira.get_all_agile_boards.assert_not_called()
 
 
-def test_get_board_id_from_api(monkeypatch, mock_jira):
+def test_get_board_id_raises_when_not_configured(monkeypatch, mock_jira):
     monkeypatch.setattr("app.core.config.JIRA_BOARD_ID", None)
-    mock_jira.get_all_agile_boards.return_value = {"values": [{"id": 99, "name": "My Board"}]}
-    assert jira_client.get_board_id(mock_jira) == 99
-
-
-def test_get_board_id_no_boards_raises(monkeypatch, mock_jira):
-    monkeypatch.setattr("app.core.config.JIRA_BOARD_ID", None)
-    mock_jira.get_all_agile_boards.return_value = {"values": []}
-    with pytest.raises(ValueError, match="No boards found"):
+    with pytest.raises(ValueError, match="JIRA_BOARD_ID is not set"):
         jira_client.get_board_id(mock_jira)
+    mock_jira.get_all_agile_boards.assert_not_called()
 
 
 # ---------------------------------------------------------------------------
@@ -118,6 +112,75 @@ def test_get_sprints_empty(monkeypatch, mock_jira):
         {"values": []},
     ]
     assert jira_client.get_sprints(mock_jira, 1) == []
+
+
+def test_get_sprints_returns_newest_when_paginated(monkeypatch, mock_jira):
+    """When closed sprints span multiple pages, the NEWEST sprints are returned, not the oldest."""
+    monkeypatch.setattr("app.core.config.JIRA_SPRINT_COUNT", 2)
+    # First page is full (50 items, all old) → triggers a second page fetch
+    old_sprints = [{"id": i, "name": f"S{i}", "startDate": f"{1970 + i}-01-01"} for i in range(1, 51)]
+    # Second page has 3 newer sprints (fewer than 50 → pagination stops)
+    new_sprints = [
+        {"id": 51, "name": "S51", "startDate": "2025-01-01"},
+        {"id": 52, "name": "S52", "startDate": "2025-02-01"},
+        {"id": 53, "name": "S53", "startDate": "2025-03-01"},
+    ]
+    mock_jira.get_all_sprints_from_board.side_effect = [
+        {"values": old_sprints},  # page 1: closed (full page → fetch next)
+        {"values": new_sprints},  # page 2: closed (partial → stop)
+        {"values": []},  # active
+    ]
+    result = jira_client.get_sprints(mock_jira, 1)
+    assert len(result) == 2
+    assert result[0]["name"] == "S53"
+    assert result[1]["name"] == "S52"
+
+
+def test_get_sprints_excludes_active_when_closed_only(monkeypatch, mock_jira):
+    monkeypatch.setattr("app.core.config.JIRA_SPRINT_COUNT", 10)
+    monkeypatch.setattr("app.core.config.JIRA_CLOSED_SPRINTS_ONLY", True)
+    mock_jira.get_all_sprints_from_board.side_effect = [
+        {"values": [{"id": 1, "name": "ClosedS", "startDate": "2026-01-01"}]},
+        {"values": []},  # pagination end
+        {"values": [{"id": 99, "name": "ActiveS", "startDate": "2026-03-01"}]},  # active
+    ]
+    result = jira_client.get_sprints(mock_jira, 1)
+    names = [s["name"] for s in result]
+    assert "ActiveS" not in names
+    assert "ClosedS" in names
+
+
+def test_get_sprints_includes_active_when_closed_only_false(monkeypatch, mock_jira):
+    monkeypatch.setattr("app.core.config.JIRA_SPRINT_COUNT", 10)
+    monkeypatch.setattr("app.core.config.JIRA_CLOSED_SPRINTS_ONLY", False)
+    # One partial closed page (stops pagination), then active sprint
+    mock_jira.get_all_sprints_from_board.side_effect = [
+        {"values": [{"id": 1, "name": "ClosedS", "startDate": "2026-01-01"}]},  # closed (partial → stop)
+        {"values": [{"id": 99, "name": "ActiveS", "startDate": "2026-03-01"}]},  # active
+    ]
+    result = jira_client.get_sprints(mock_jira, 1)
+    names = [s["name"] for s in result]
+    assert "ActiveS" in names
+    assert "ClosedS" in names
+
+
+def test_get_sprints_active_sprint_comes_first(monkeypatch, mock_jira):
+    """Active sprint must be index 0 so the template's .reverse() places it rightmost in charts."""
+    monkeypatch.setattr("app.core.config.JIRA_SPRINT_COUNT", 10)
+    monkeypatch.setattr("app.core.config.JIRA_CLOSED_SPRINTS_ONLY", False)
+    mock_jira.get_all_sprints_from_board.side_effect = [
+        {
+            "values": [
+                {"id": 1, "name": "S1", "state": "closed", "startDate": "2026-01-01"},
+                {"id": 2, "name": "S2", "state": "closed", "startDate": "2026-02-01"},
+            ]
+        },
+        {"values": [{"id": 3, "name": "S3-active", "state": "active", "startDate": "2026-03-01"}]},
+    ]
+    result = jira_client.get_sprints(mock_jira, 1)
+    assert result[0]["name"] == "S3-active", "Active sprint must be first; template .reverse() puts it rightmost"
+    assert result[1]["name"] == "S2"
+    assert result[2]["name"] == "S1"
 
 
 # ---------------------------------------------------------------------------
@@ -171,41 +234,21 @@ def test_get_issues_for_sprint_empty(mock_jira):
 
 
 # ---------------------------------------------------------------------------
-# get_issue_with_changelog
+# fetch_kanban_data
 # ---------------------------------------------------------------------------
 
 
-def test_get_issue_with_changelog_expand_param(mock_jira):
-    jira_client.get_issue_with_changelog(mock_jira, "TEST-1")
-    mock_jira.get_issue.assert_called_once_with("TEST-1", expand="changelog")
+def test_fetch_kanban_data_jql_uses_resolutiondate(mock_jira, monkeypatch):
+    """fetch_kanban_data() must group issues by resolutiondate, not created."""
+    monkeypatch.setattr("app.core.config.JIRA_SPRINT_COUNT", 1)
+    monkeypatch.setattr(jira_client, "get_board_id", lambda jira: 1)
+    mock_jira.jql.return_value = {"issues": [], "total": 0}
 
+    jira_client.fetch_kanban_data(mock_jira)
 
-# ---------------------------------------------------------------------------
-# get_issues_with_changelog
-# ---------------------------------------------------------------------------
-
-
-def test_get_issues_with_changelog_multiple_keys(mock_jira):
-    mock_jira.get_issue.side_effect = [
-        {"key": "T-1", "changelog": {"histories": []}},
-        {"key": "T-2", "changelog": {"histories": []}},
-    ]
-    result = jira_client.get_issues_with_changelog(mock_jira, ["T-1", "T-2"])
-    assert len(result) == 2
-    assert result[0]["key"] == "T-1"
-
-
-def test_get_issues_with_changelog_skips_failures(mock_jira):
-    mock_jira.get_issue.side_effect = [
-        {"key": "T-1", "changelog": {"histories": []}},
-        Exception("not found"),
-        {"key": "T-3", "changelog": {"histories": []}},
-    ]
-    result = jira_client.get_issues_with_changelog(mock_jira, ["T-1", "T-2", "T-3"])
-    assert len(result) == 3
-    assert result[0]["key"] == "T-1"
-    assert result[1] == {}  # failed issue returns empty dict
-    assert result[2]["key"] == "T-3"
+    called_jql = mock_jira.jql.call_args[0][0]
+    assert "resolutiondate" in called_jql
+    assert "created" not in called_jql
 
 
 # ---------------------------------------------------------------------------

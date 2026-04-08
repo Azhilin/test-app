@@ -28,7 +28,7 @@ _DEFAULT_FILTER = {
     "is_default": True,
     "jql": "",
     "created_at": None,
-    "params": {"JIRA_PROJECT": "", "JIRA_FILTER_STATUS": "Done"},
+    "params": {"JIRA_PROJECT": ""},
 }
 
 _USER_FILTER = {

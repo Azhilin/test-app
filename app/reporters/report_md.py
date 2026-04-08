@@ -19,8 +19,6 @@ _SECTION_KEYS = [
     "velocity_trend",
     "ai_assistance_trend",
     "ai_usage_details",
-    "cycle_time",
-    "custom_trends",
     "dau",
     "dau_trend",
 ]
@@ -85,37 +83,6 @@ def generate_md(
             parts.append("")
             parts.append("*No velocity data.*")
             parts.append("")
-
-    if section_visibility.get("cycle_time", True):
-        ct = metrics.get("cycle_time") or {}
-        sample = ct.get("sample_size") or 0
-        parts.append("## Cycle time")
-        parts.append("")
-        if sample > 0:
-            parts.append(
-                _md_table(
-                    ["Metric", "Value"],
-                    [
-                        ["Mean (days)", ct.get("mean_days", "—")],
-                        ["Median (days)", ct.get("median_days", "—")],
-                        ["Min (days)", ct.get("min_days", "—")],
-                        ["Max (days)", ct.get("max_days", "—")],
-                        ["Sample size", str(sample)],
-                    ],
-                )
-            )
-        else:
-            parts.append("*No cycle time data (need issues with changelog).*")
-        parts.append("")
-
-    custom = metrics.get("custom_trends") or []
-    if section_visibility.get("custom_trends", True) and custom:
-        parts.append("## Custom trends")
-        parts.append("")
-        headers = ["Sprint"] + [k for k in custom[0] if k not in ("sprint_id", "sprint_name")]
-        rows = [[row.get("sprint_name", "")] + [row.get(k, "") for k in headers[1:]] for row in custom]
-        parts.append(_md_table(headers, rows))
-        parts.append("")
 
     dau = metrics.get("dau") or {}
     if section_visibility.get("dau", True) and dau.get("response_count"):

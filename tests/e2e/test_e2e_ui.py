@@ -18,112 +18,9 @@ import allure
 import pytest
 from playwright.sync_api import Page, expect
 
+from tests.e2e.conftest import _goto, _mock_filters_api, _mock_schemas_api
+
 pytestmark = pytest.mark.e2e
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-def _goto(page: Page, url: str) -> None:
-    """Navigate with domcontentloaded wait and retry for flaky server."""
-    # Mock API endpoints that don't exist on the dev server to avoid
-    # blocking the single-threaded HTTP server with 404 round-trips.
-    page.route(
-        "**/api/config",
-        lambda route: route.fulfill(
-            status=200,
-            content_type="application/json",
-            body=json.dumps({"ok": True, "configured": True, "config": {}}),
-        ),
-    )
-    page.route(
-        "**/api/reports",
-        lambda route: route.fulfill(
-            status=200,
-            content_type="application/json",
-            body=json.dumps({"reports": []}),
-        ),
-    )
-    for attempt in range(3):
-        try:
-            page.goto(url, wait_until="domcontentloaded", timeout=15000)
-            return
-        except Exception:
-            if attempt == 2:
-                raise
-
-
-def _mock_filters_api(page: Page) -> None:
-    """Intercept /api/filters with a stateful mock that tracks saved/deleted filters.
-
-    GET returns the current filter list (with ok=True so loadFilters() uses it).
-    POST appends/updates the list. DELETE removes from the list.
-    """
-    saved_filters: list[dict] = []
-
-    def _handle_post(route):
-        body = route.request.post_data_json
-        name = body.get("name", "filter") if body else "filter"
-        params = body.get("params", {}) if body else {}
-        project = params.get("JIRA_PROJECT", "TEST")
-        jql = f"project = {project} AND status = Done AND sprint in closedSprints()"
-        slug = name.lower().replace(" ", "_")
-        entry = {
-            "filter_name": name,
-            "slug": slug,
-            "is_default": False,
-            "jql": jql,
-            "created_at": "2026-03-25T12:00:00",
-            "params": params,
-        }
-        idx = next(
-            (i for i, f in enumerate(saved_filters) if f["filter_name"].lower() == name.lower()),
-            None,
-        )
-        updated = idx is not None
-        if updated:
-            saved_filters[idx] = entry
-        else:
-            saved_filters.append(entry)
-        route.fulfill(
-            status=200,
-            content_type="application/json",
-            body=json.dumps(
-                {
-                    "ok": True,
-                    "updated": updated,
-                    "jql": jql,
-                    "slug": slug,
-                    "created_at": "2026-03-25T12:00:00",
-                }
-            ),
-        )
-
-    def _handle_get(route):
-        route.fulfill(
-            status=200,
-            content_type="application/json",
-            body=json.dumps({"ok": True, "filters": list(saved_filters)}),
-        )
-
-    def _handle_delete(route):
-        url = route.request.url
-        slug = url.split("/api/filters/")[-1].split("?")[0]
-        to_remove = [f for f in saved_filters if f.get("slug") == slug]
-        for f in to_remove:
-            saved_filters.remove(f)
-        route.fulfill(
-            status=200,
-            content_type="application/json",
-            body=json.dumps({"ok": True}),
-        )
-
-    page.route(
-        "**/api/filters", lambda route: _handle_post(route) if route.request.method == "POST" else _handle_get(route)
-    )
-    page.route("**/api/filters/**", _handle_delete)
 
 
 # ---------------------------------------------------------------------------
@@ -839,3 +736,342 @@ def test_decorative_icons_have_aria_hidden(page: Page, live_server_url: str):
     for i in range(star_count):
         attr = stars.nth(i).get_attribute("aria-hidden")
         assert attr == "true", f".required-star[{i}] must have aria-hidden='true', got {attr!r}"
+
+
+# ---------------------------------------------------------------------------
+# Group 8: Schema Setup Tab — Tab Navigation & Story Points Badge
+# ---------------------------------------------------------------------------
+
+
+def test_schema_tab_navigation(page: Page, live_server_url: str):
+    """Clicking Schema Setup tab shows its panel and hides others."""
+    _mock_schemas_api(page)
+    _goto(page, live_server_url)
+
+    page.get_by_role("tab", name="Schema Setup").click()
+    expect(page.locator("#tab-schema")).to_have_attribute("aria-selected", "true")
+    expect(page.locator("#panel-schema")).to_be_visible()
+    expect(page.locator("#panel-connection")).to_be_hidden()
+    expect(page.locator("#panel-filter")).to_be_hidden()
+
+
+def test_schema_sp_badge_populated_on_load(page: Page, live_server_url: str):
+    """Story Points badge is populated with the detected field ID when schema loads."""
+    _mock_schemas_api(
+        page,
+        schemas=["Default_Jira_Cloud"],
+        details_by_name={
+            "Default_Jira_Cloud": {
+                "schema_name": "Default_Jira_Cloud",
+                "fields": {"story_points": {"id": "customfield_10016", "type": "number"}},
+            }
+        },
+    )
+    _goto(page, live_server_url)
+    page.get_by_role("tab", name="Schema Setup").click()
+
+    # Badge should show the field ID and have success class
+    expect(page.locator("#schema-sp-badge")).to_contain_text("customfield_10016", timeout=5000)
+    expect(page.locator("#schema-sp-badge")).to_have_class(re.compile(r"badge-success"))
+
+
+def test_schema_sp_badge_updates_on_schema_change(page: Page, live_server_url: str):
+    """Changing the schema dropdown updates the story points badge."""
+    _mock_schemas_api(
+        page,
+        schemas=["SchemaA", "SchemaB"],
+        details_by_name={
+            "SchemaA": {
+                "schema_name": "SchemaA",
+                "fields": {"story_points": {"id": "customfield_10016", "type": "number"}},
+            },
+            "SchemaB": {
+                "schema_name": "SchemaB",
+                "fields": {"story_points": {"id": "customfield_99999", "type": "number"}},
+            },
+        },
+    )
+    _goto(page, live_server_url)
+    page.get_by_role("tab", name="Schema Setup").click()
+
+    # Initial badge shows SchemaA's field
+    expect(page.locator("#schema-sp-badge")).to_contain_text("customfield_10016", timeout=5000)
+
+    # Change to SchemaB
+    page.locator("#schema-select").select_option("SchemaB")
+
+    # Badge updates to SchemaB's field
+    expect(page.locator("#schema-sp-badge")).to_contain_text("customfield_99999", timeout=5000)
+
+
+def test_schema_sp_badge_neutral_when_no_sp_field(page: Page, live_server_url: str):
+    """Badge shows 'not detected' and neutral class when schema has no story_points field."""
+    _mock_schemas_api(
+        page,
+        schemas=["NoSP"],
+        details_by_name={
+            "NoSP": {
+                "schema_name": "NoSP",
+                "fields": {},
+            }
+        },
+    )
+    _goto(page, live_server_url)
+    page.get_by_role("tab", name="Schema Setup").click()
+
+    expect(page.locator("#schema-sp-badge")).to_contain_text("not detected", timeout=5000)
+    expect(page.locator("#schema-sp-badge")).to_have_class(re.compile(r"badge-neutral"))
+
+
+def test_fetch_schema_requires_name_input(page: Page, live_server_url: str):
+    """Clicking Fetch with empty schema name shows error and focuses input."""
+    _mock_schemas_api(page)
+    _goto(page, live_server_url)
+    page.get_by_role("tab", name="Schema Setup").click()
+
+    # Leave schema name empty
+    page.locator("#schema-name-input").fill("")
+    page.locator("#btn-fetch-schema").click()
+
+    expect(page.locator("#schema-status")).to_contain_text("Schema name is required", timeout=3000)
+    expect(page.locator("#schema-name-input")).to_be_focused()
+
+
+def test_fetch_schema_requires_jira_credentials(page: Page, live_server_url: str):
+    """Clicking Fetch with missing credentials shows error."""
+    _mock_schemas_api(page)
+    _goto(page, live_server_url)
+
+    # Clear any saved credentials
+    page.evaluate(
+        """() => {
+      localStorage.removeItem('jira_url');
+      localStorage.removeItem('jira_email');
+      localStorage.removeItem('jira_api_token');
+    }"""
+    )
+
+    page.get_by_role("tab", name="Schema Setup").click()
+    page.locator("#schema-name-input").fill("My Schema")
+    page.locator("#btn-fetch-schema").click()
+
+    expect(page.locator("#schema-status")).to_contain_text("Save Jira credentials", timeout=3000)
+
+
+def test_fetch_schema_success_flow(page: Page, live_server_url: str):
+    """Happy path: POST schema, reload dropdown, badge updates."""
+    saved_schemas: list[str] = ["Default_Jira_Cloud"]
+    schema_details = {
+        "Default_Jira_Cloud": {
+            "schema_name": "Default_Jira_Cloud",
+            "fields": {"story_points": {"id": "customfield_10016", "type": "number"}},
+        }
+    }
+
+    def _stateful_schemas_route(route):
+        url = route.request.url
+        if route.request.method == "POST":
+            body = route.request.post_data_json or {}
+            name = body.get("schema_name", "NewSchema")
+            if name not in saved_schemas:
+                saved_schemas.append(name)
+            schema_details[name] = {
+                "schema_name": name,
+                "fields": {"story_points": {"id": "customfield_10099", "type": "number"}},
+            }
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps(
+                    {
+                        "ok": True,
+                        "schema": schema_details[name],
+                    }
+                ),
+            )
+        elif "name=" in url:
+            name_idx = url.find("name=") + 5
+            name = url[name_idx:].split("&")[0]
+            name = name.split("%20")[0] if "%" in name else name
+            schema = schema_details.get(name)
+            if schema:
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    body=json.dumps({"ok": True, "schema": schema}),
+                )
+            else:
+                route.fulfill(
+                    status=404,
+                    content_type="application/json",
+                    body=json.dumps({"ok": False, "error": f"Schema '{name}' not found"}),
+                )
+        else:
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({"ok": True, "schemas": saved_schemas}),
+            )
+
+    page.route("**/api/schemas**", _stateful_schemas_route)
+    _goto(page, live_server_url)
+
+    # Pre-populate credentials
+    page.evaluate(
+        """() => {
+      localStorage.setItem('jira_url', 'https://fake.atlassian.net');
+      localStorage.setItem('jira_email', 'a@b.com');
+      localStorage.setItem('jira_api_token', 'tok');
+    }"""
+    )
+
+    page.get_by_role("tab", name="Schema Setup").click()
+    page.locator("#schema-name-input").fill("Test Schema")
+    page.locator("#btn-fetch-schema").click()
+
+    # Assert success message
+    expect(page.locator("#schema-status")).to_contain_text('Schema "Test Schema" saved', timeout=5000)
+
+    # Assert dropdown now includes the new schema
+    expect(page.locator("#schema-select")).to_contain_text("Test Schema")
+
+    # Assert badge shows the new schema's field
+    expect(page.locator("#schema-sp-badge")).to_contain_text("customfield_10099", timeout=5000)
+
+
+def test_fetch_schema_api_error_shows_message(page: Page, live_server_url: str):
+    """POST error response shows error message in status element."""
+
+    def _error_route(route):
+        if route.request.method == "POST":
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({"ok": False, "error": "Could not reach Jira"}),
+            )
+        else:
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({"ok": True, "schemas": ["Default_Jira_Cloud"]}),
+            )
+
+    page.route("**/api/schemas**", _error_route)
+    _goto(page, live_server_url)
+
+    # Pre-populate credentials
+    page.evaluate(
+        """() => {
+      localStorage.setItem('jira_url', 'https://fake.atlassian.net');
+      localStorage.setItem('jira_email', 'a@b.com');
+      localStorage.setItem('jira_api_token', 'tok');
+    }"""
+    )
+
+    page.get_by_role("tab", name="Schema Setup").click()
+    page.locator("#schema-name-input").fill("Test Schema")
+    page.locator("#btn-fetch-schema").click()
+
+    expect(page.locator("#schema-status")).to_contain_text("Could not reach Jira", timeout=5000)
+    # Input should NOT be cleared on error
+    expect(page.locator("#schema-name-input")).to_have_value("Test Schema")
+
+
+def test_schema_creation_success_with_project_keys(page: Page, live_server_url: str):
+    """Positive: fill schema name + project keys → POST succeeds → status, input, dropdown, badge all update."""
+    # Mutable state shared in closure
+    saved_schemas: list[str] = ["Default_Jira_Cloud"]
+    schema_details = {
+        "Default_Jira_Cloud": {
+            "schema_name": "Default_Jira_Cloud",
+            "fields": {"story_points": {"id": "customfield_10016", "type": "number"}},
+        }
+    }
+
+    def _stateful_schemas_route(route):
+        """Handle GET (list/detail) and POST (creation) for /api/schemas endpoints."""
+        if route.request.method == "POST":
+            # POST: create new schema
+            body = route.request.post_data_json or {}
+            name = body.get("schema_name", "NewSchema")
+            new_schema = {
+                "schema_name": name,
+                "fields": {"story_points": {"id": "customfield_10016", "type": "number"}},
+            }
+            if name not in saved_schemas:
+                saved_schemas.append(name)
+            schema_details[name] = new_schema
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({"ok": True, "schema": new_schema}),
+            )
+        elif "name=" in route.request.url:
+            # GET /api/schemas?name=<name> → return schema detail
+            url = route.request.url
+            name_idx = url.find("name=") + 5
+            name = url[name_idx:].split("&")[0]
+            name = name.split("%20")[0] if "%" in name else name
+            schema = schema_details.get(name)
+            if schema:
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    body=json.dumps({"ok": True, "schema": schema}),
+                )
+            else:
+                route.fulfill(
+                    status=404,
+                    content_type="application/json",
+                    body=json.dumps({"ok": False, "error": f"Schema '{name}' not found"}),
+                )
+        else:
+            # GET /api/schemas → return list of schema names
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps({"ok": True, "schemas": saved_schemas}),
+            )
+
+    with allure.step("Register stateful /api/schemas mock (POST + GET)"):
+        page.route("**/api/schemas**", _stateful_schemas_route)
+
+    with allure.step("Navigate to app"):
+        _goto(page, live_server_url)
+
+    with allure.step("Set Jira credentials in localStorage"):
+        page.evaluate(
+            """() => {
+          localStorage.setItem('jira_url', 'https://test.atlassian.net');
+          localStorage.setItem('jira_email', 'user@example.com');
+          localStorage.setItem('jira_api_token', 'test-token-123');
+        }"""
+        )
+
+    with allure.step("Click Schema Setup tab"):
+        page.get_by_role("tab", name="Schema Setup").click()
+        # Give JS a moment to run activateTab
+        page.wait_for_timeout(200)
+        # Verify tab is marked as selected
+        expect(page.locator("#tab-schema")).to_have_attribute("aria-selected", "true", timeout=3000)
+
+    with allure.step("Fill schema name and project keys"):
+        page.locator("#schema-name-input").fill("My Test Schema")
+        page.locator("#schema-project-keys").fill("TEST,DEMO")
+
+    with allure.step("Click Fetch Schema from Jira"):
+        page.locator("#btn-fetch-schema").click()
+
+    with allure.step("Assert success status message"):
+        expect(page.locator("#schema-status")).to_contain_text(
+            'Schema "My Test Schema" saved successfully.', timeout=5000
+        )
+
+    with allure.step("Assert schema name input is cleared"):
+        expect(page.locator("#schema-name-input")).to_have_value("")
+
+    with allure.step("Assert dropdown includes new schema"):
+        expect(page.locator("#schema-select")).to_contain_text("My Test Schema")
+
+    with allure.step("Assert SP badge shows detected field"):
+        expect(page.locator("#schema-sp-badge")).to_contain_text("customfield_10016", timeout=5000)

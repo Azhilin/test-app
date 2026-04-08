@@ -533,7 +533,6 @@ class TestPostConfig:
             "JIRA_PROJECT": "PROJ",
             "JIRA_TEAM_ID": "abc-123",
             "JIRA_ISSUE_TYPES": "Bug,Story",
-            "JIRA_FILTER_STATUS": "Done,Closed",
             "JIRA_CLOSED_SPRINTS_ONLY": "false",
             "JIRA_FILTER_PAGE_SIZE": "50",
             "AI_ASSISTED_LABEL": "AI_yes",
@@ -554,7 +553,6 @@ class TestPostConfig:
         assert cfg["JIRA_PROJECT"] == "PROJ"
         assert cfg["JIRA_TEAM_ID"] == "abc-123"
         assert cfg["JIRA_ISSUE_TYPES"] == "Bug,Story"
-        assert cfg["JIRA_FILTER_STATUS"] == "Done,Closed"
         assert cfg["JIRA_CLOSED_SPRINTS_ONLY"] == "false"
         assert cfg["JIRA_FILTER_PAGE_SIZE"] == "50"
         assert cfg["AI_ASSISTED_LABEL"] == "AI_yes"

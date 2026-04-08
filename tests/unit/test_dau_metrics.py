@@ -167,12 +167,13 @@ def test_malformed_json_file_is_skipped(tmp_path: Path) -> None:
 
 def test_build_metrics_dict_includes_dau_key(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("DAU_RESPONSES_DIR", str(tmp_path))
+    monkeypatch.setenv("DAU_NORMALIZED_DIR", str(tmp_path))
     import app.core.config as config
 
     importlib.reload(config)
     from app.core.metrics import build_metrics_dict
 
-    result = build_metrics_dict([], {}, [])
+    result = build_metrics_dict([], {})
     assert "dau" in result
     assert result["dau"]["response_count"] == 0
     assert "dau_trend" in result
@@ -293,3 +294,52 @@ def test_compute_dau_trend_dedup_applied(tmp_path: Path) -> None:
     assert len(trend) == 1
     assert trend[0]["response_count"] == 1
     assert trend[0]["team_avg"] == pytest.approx(5.0, abs=0.01)
+
+
+# ---------------------------------------------------------------------------
+# DAU-F-028: compute_dau_metrics now applies dedup (consistent with trend)
+# ---------------------------------------------------------------------------
+
+
+def test_compute_dau_metrics_dedup_applied(tmp_path: Path) -> None:
+    """Two responses from same user in same week → response_count is 1, latest score used."""
+    _write(
+        tmp_path,
+        "dau_a1_20260327T080000Z.json",
+        _response("alice", "Not used", week="2026-W13", timestamp="2026-03-27T08:00:00Z"),
+    )
+    _write(
+        tmp_path,
+        "dau_a2_20260327T160000Z.json",
+        _response("alice", "Every day (5 days)", week="2026-W13", timestamp="2026-03-27T16:00:00Z"),
+    )
+    result = compute_dau_metrics(tmp_path)
+    assert result["response_count"] == 1
+    assert result["team_avg"] == pytest.approx(5.0, abs=0.01)
+
+
+# ---------------------------------------------------------------------------
+# DAU-F-027: _load_dau_records derives week from timestamp when field is absent
+# ---------------------------------------------------------------------------
+
+
+def test_load_dau_records_derives_week_from_timestamp(tmp_path: Path) -> None:
+    """A record without 'week' gets it derived from 'timestamp'."""
+    payload = {
+        "username": "no_week",
+        "role": "Developer",
+        "usage": "Not used",
+        "score": 0,
+        "timestamp": "2026-03-30T05:47:29+00:00",
+    }
+    _write(tmp_path, "dau_no_week_20260330T054729Z.json", payload)
+    records = _load_dau_records(tmp_path)
+    assert len(records) == 1
+    assert records[0]["week"] == "2026-W14"
+
+
+def test_load_dau_records_preserves_existing_week(tmp_path: Path) -> None:
+    """A record that already has 'week' keeps it unchanged."""
+    _write(tmp_path, "dau_a_20260101T000000Z.json", _response("a", "Not used", week="2026-W01"))
+    records = _load_dau_records(tmp_path)
+    assert records[0]["week"] == "2026-W01"

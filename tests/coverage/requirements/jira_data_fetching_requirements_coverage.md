@@ -3,7 +3,7 @@
 > Source document: [docs/product/requirements/jira_data_fetching_requirements.md](../../../docs/product/requirements/jira_data_fetching_requirements.md)  
 > Back to summary: [tests/coverage/test_coverage.md](../test_coverage.md)
 
-**Total:** 22 | **✅ Covered:** 16 | **🔶 Partial:** 1 | **❌ Gap:** 2 | **⬜ N/T:** 3 | **Functional:** 89%
+**Total:** 19 | **✅ Covered:** 14 | **🔶 Partial:** 1 | **❌ Gap:** 1 | **⬜ N/T:** 3 | **Functional:** 94%
 
 
 #### Board Discovery
@@ -22,6 +22,7 @@
 | JDF-SP-002 | Sprints are sorted by startDate descending (newest first) | ✅ | `unit/test_jira_client.py::test_get_sprints_sorted_desc_by_start_date` |
 | JDF-SP-003 | Sprint count is capped at JIRA_SPRINT_COUNT | ✅ | `unit/test_jira_client.py::test_get_sprints_capped_at_sprint_count` |
 | JDF-SP-004 | An empty sprint list is tolerated without crashing | ✅ | `unit/test_jira_client.py::test_get_sprints_empty` |
+| JDF-SP-005 | All closed-sprint pages are fetched so the NEWEST sprints are returned | ✅ | `unit/test_jira_client.py::test_get_sprints_returns_newest_when_paginated` |
 
 #### Issue Fetching
 
@@ -32,15 +33,6 @@
 | JDF-I-003 | All sprint issues are returned when no filter is set | ✅ | `unit/test_jira_client.py::test_get_issues_for_sprint_single_page` |
 | JDF-I-004 | An empty issue list for a sprint is tolerated | ✅ | `unit/test_jira_client.py::test_get_issues_for_sprint_empty` |
 | JDF-I-005 | A network failure during pagination terminates the loop safely | ❌ | — |
-
-#### Changelog Fetching
-
-| ID | Requirement | Status | Tests |
-|----|-------------|--------|-------|
-| JDF-CL-001 | Changelog with status transition history is returned per issue | ✅ | `unit/test_jira_client.py::test_get_issue_with_changelog_expand_param` |
-| JDF-CL-002 | Fetching changelogs for multiple issues returns a list in key order | ✅ | `unit/test_jira_client.py::test_get_issues_with_changelog_multiple_keys` |
-| JDF-CL-003 | A per-issue changelog failure logs a warning and appends {} | ✅ | `unit/test_jira_client.py::test_get_issues_with_changelog_skips_failures` |
-| JDF-CL-004 | Changelog timestamps must be timezone-aware ISO-8601 strings | ❌ | — |
 
 #### Filter JQL Resolution
 

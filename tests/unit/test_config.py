@@ -44,6 +44,7 @@ def test_validate_config_all_set():
             "JIRA_URL": "https://example.atlassian.net",
             "JIRA_EMAIL": "user@example.com",
             "JIRA_API_TOKEN": "secret",
+            "JIRA_BOARD_ID": "42",
         }
     )
     assert cfg.validate_config() == []
@@ -55,6 +56,7 @@ def test_validate_config_missing_url():
             "JIRA_URL": "",
             "JIRA_EMAIL": "user@example.com",
             "JIRA_API_TOKEN": "secret",
+            "JIRA_BOARD_ID": "42",
         }
     )
     errors = cfg.validate_config()
@@ -68,6 +70,7 @@ def test_validate_config_missing_email():
             "JIRA_URL": "https://example.atlassian.net",
             "JIRA_EMAIL": "",
             "JIRA_API_TOKEN": "secret",
+            "JIRA_BOARD_ID": "42",
         }
     )
     errors = cfg.validate_config()
@@ -81,6 +84,7 @@ def test_validate_config_missing_token():
             "JIRA_URL": "https://example.atlassian.net",
             "JIRA_EMAIL": "user@example.com",
             "JIRA_API_TOKEN": "",
+            "JIRA_BOARD_ID": "42",
         }
     )
     errors = cfg.validate_config()
@@ -90,7 +94,7 @@ def test_validate_config_missing_token():
 
 def test_validate_config_all_missing():
     cfg = _reload_config({"JIRA_URL": "", "JIRA_EMAIL": "", "JIRA_API_TOKEN": ""})
-    assert len(cfg.validate_config()) == 3
+    assert len(cfg.validate_config()) == 4
 
 
 def test_board_id_numeric():
@@ -361,10 +365,8 @@ def test_env_bool_values(raw, expected):
 def test_metric_toggles_default_true():
     cfg = _reload_config(_BASE_ENV)
     assert cfg.METRIC_VELOCITY is True
-    assert cfg.METRIC_CYCLE_TIME is True
     assert cfg.METRIC_AI_ASSISTANCE_TREND is True
     assert cfg.METRIC_AI_USAGE_DETAILS is True
-    assert cfg.METRIC_CUSTOM_TRENDS is True
     assert cfg.METRIC_DAU is True
 
 
@@ -372,16 +374,12 @@ def test_metric_toggles_explicit_false():
     env = {
         **_BASE_ENV,
         "METRIC_VELOCITY": "false",
-        "METRIC_CYCLE_TIME": "0",
         "METRIC_AI_ASSISTANCE_TREND": "no",
         "METRIC_AI_USAGE_DETAILS": "false",
-        "METRIC_CUSTOM_TRENDS": "0",
         "METRIC_DAU": "no",
     }
     cfg = _reload_config(env)
     assert cfg.METRIC_VELOCITY is False
-    assert cfg.METRIC_CYCLE_TIME is False
     assert cfg.METRIC_AI_ASSISTANCE_TREND is False
     assert cfg.METRIC_AI_USAGE_DETAILS is False
-    assert cfg.METRIC_CUSTOM_TRENDS is False
     assert cfg.METRIC_DAU is False

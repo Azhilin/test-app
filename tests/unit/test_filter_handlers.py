@@ -97,7 +97,6 @@ def test_default_filter_entry_is_present_and_correct(monkeypatch, tmp_path):
     assert d["slug"] == "default_jira_filter"
     # JFM-D-002: sensible parameter defaults
     params = d.get("params", {})
-    assert params.get("JIRA_FILTER_STATUS") == "Done"
     assert params.get("JIRA_CLOSED_SPRINTS_ONLY") == "true"
     assert params.get("schema_name") == "Default_Jira_Cloud"
 
@@ -180,16 +179,16 @@ def test_delete_unknown_slug_returns_not_found(monkeypatch, tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# JFM-P-005 — Reject missing JIRA_PROJECT
+# JFM-P-005 — Reject when neither JIRA_PROJECT nor JIRA_FILTER_ID is set
 # ---------------------------------------------------------------------------
 
 
-def test_post_filter_rejects_blank_project(monkeypatch, tmp_path):
-    """_handle_post_filter() returns ok=False when JIRA_PROJECT is missing or blank."""
+def test_post_filter_rejects_blank_project_and_filter_id(monkeypatch, tmp_path):
+    """_handle_post_filter() returns ok=False when both JIRA_PROJECT and JIRA_FILTER_ID are absent."""
     srv, handler = _make_handler(
         monkeypatch,
         tmp_path,
-        body={"name": "My Filter", "params": {"JIRA_PROJECT": ""}},
+        body={"name": "My Filter", "params": {"JIRA_PROJECT": "", "JIRA_FILTER_ID": ""}},
     )
     _ensure_config_dir(tmp_path)
 
@@ -198,7 +197,24 @@ def test_post_filter_rejects_blank_project(monkeypatch, tmp_path):
 
     assert status == 200
     assert data["ok"] is False
-    assert "JIRA_PROJECT is required" in data["error"]
+    assert "JIRA_PROJECT" in data["error"] or "JIRA_FILTER_ID" in data["error"]
+
+
+def test_post_filter_accepts_filter_id_without_project(monkeypatch, tmp_path):
+    """_handle_post_filter() succeeds when only JIRA_FILTER_ID is provided (no JIRA_PROJECT)."""
+    srv, handler = _make_handler(
+        monkeypatch,
+        tmp_path,
+        body={"name": "Native Filter", "params": {"JIRA_PROJECT": "", "JIRA_FILTER_ID": "10042"}},
+    )
+    _ensure_config_dir(tmp_path)
+
+    handler._handle_post_filter()
+    status, data = _json_response(handler)
+
+    assert status == 200
+    assert data["ok"] is True
+    assert data["jql"] == ""  # no project → no JQL built; native filter ID is used at runtime
 
 
 # ---------------------------------------------------------------------------
@@ -277,11 +293,6 @@ def test_post_filter_updates_existing_entry(monkeypatch, tmp_path):
         ({"JIRA_PROJECT": "A,B"}, "project IN (A, B)", None),
         ({"JIRA_PROJECT": "PROJ", "JIRA_TEAM_ID": "T1"}, '"Team[Team]" = T1', None),
         (
-            {"JIRA_PROJECT": "PROJ", "JIRA_FILTER_STATUS": "Done,Closed"},
-            "status IN (Done, Closed)",
-            None,
-        ),
-        (
             {"JIRA_PROJECT": "PROJ", "JIRA_CLOSED_SPRINTS_ONLY": "false"},
             "project = PROJ",
             "sprint in closedSprints()",
@@ -300,6 +311,13 @@ def test_build_jql_from_params(monkeypatch, tmp_path, params, expected_contains,
     assert expected_contains in jql
     if expected_absent:
         assert expected_absent not in jql
+
+
+def test_build_jql_status_always_done(monkeypatch, tmp_path):
+    """status = Done is always emitted regardless of whether JIRA_FILTER_STATUS is present."""
+    srv, _ = _make_handler(monkeypatch, tmp_path)
+    jql = srv.Handler._build_jql_from_params({"JIRA_PROJECT": "PROJ"})
+    assert "status = Done" in jql
 
 
 # ---------------------------------------------------------------------------

@@ -29,7 +29,7 @@ This document defines requirements for fetching Jira data used in metrics comput
 
 | ID | Requirement | Acceptance Criterion | Status | Tests |
 |----|-------------|----------------------|--------|-------|
-| JDF-SP-001 | Closed and active sprints are both returned | `get_sprints()` fetches sprints in both `closed` and `active` states and combines them into a single list | ✓ Met | `test_get_sprints_sorted_desc_by_start_date` |
+| JDF-SP-001 | Closed and active sprints are both returned | `get_sprints()` fetches sprints in both `closed` and `active` states and combines them into a single list | ✗ Not met | `test_get_sprints_sorted_desc_by_start_date` |
 | JDF-SP-002 | Sprints are sorted by `startDate` descending (newest first) | The list returned by `get_sprints()` is ordered so that the sprint with the most recent `startDate` appears first | ✓ Met | `test_get_sprints_sorted_desc_by_start_date` |
 | JDF-SP-003 | Sprint count is capped at `JIRA_SPRINT_COUNT` | `get_sprints()` returns at most `config.JIRA_SPRINT_COUNT` sprints (default 10); excess sprints are discarded after sorting | ✓ Met | `test_get_sprints_capped_at_sprint_count` |
 | JDF-SP-004 | An empty sprint list is tolerated without crashing | When the board has no sprints, `get_sprints()` returns an empty list and no exception is raised | ✓ Met | `test_get_sprints_empty` |
@@ -48,18 +48,7 @@ This document defines requirements for fetching Jira data used in metrics comput
 
 ---
 
-## 4. Changelog Fetching
-
-| ID | Requirement | Acceptance Criterion | Status | Tests |
-|----|-------------|----------------------|--------|-------|
-| JDF-CL-001 | Changelog with status transition history is returned per issue | `get_issue_with_changelog()` calls `jira.issue(key, expand="changelog")` and returns a dict with a `changelog.histories` array containing `items` describing status transitions | ✓ Met | `test_get_issue_with_changelog_expand_param` |
-| JDF-CL-002 | Fetching changelogs for multiple issues returns a list in key order | `get_issues_with_changelog()` iterates the supplied key list and returns one dict per key in the same order; all keys in the input list produce a corresponding entry in the output | ✓ Met | `test_get_issues_with_changelog_multiple_keys` |
-| JDF-CL-003 | A per-issue changelog failure logs a warning and appends `{}` | If fetching the changelog for one issue raises an exception, `get_issues_with_changelog()` logs a sanitised `logger.warning`, appends `{}` for that key, and continues processing the remaining keys | ✓ Met | `test_get_issues_with_changelog_skips_failures` |
-| JDF-CL-004 | Changelog timestamps must be timezone-aware ISO-8601 strings | All `created` timestamps in `changelog.histories` must include a UTC offset (e.g. `2026-03-01T10:00:00+00:00`); naive datetimes cause `_parse_iso()` to return `None` and cycle-time computation to skip that transition | ✓ Met | — |
-
----
-
-## 5. Filter JQL Resolution
+## 4. Filter JQL Resolution
 
 | ID | Requirement | Acceptance Criterion | Status | Tests |
 |----|-------------|----------------------|--------|-------|

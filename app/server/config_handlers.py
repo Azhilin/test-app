@@ -15,7 +15,6 @@ _CONFIG_KEYS = [
     "JIRA_PROJECT",
     "JIRA_TEAM_ID",
     "JIRA_ISSUE_TYPES",
-    "JIRA_FILTER_STATUS",
     "JIRA_CLOSED_SPRINTS_ONLY",
     "JIRA_FILTER_PAGE_SIZE",
     "AI_ASSISTED_LABEL",
@@ -72,11 +71,14 @@ class ConfigHandlerMixin:
 
         updates: dict[str, str] = {}
         for key in _CONFIG_KEYS:
+            if key not in body:
+                continue  # client didn't touch this key — leave it alone
             val = (body.get(key) or "").strip()
             if key == "JIRA_API_TOKEN" and val == "***":
-                continue
-            if val:
-                updates[key] = val
+                continue  # preserve existing token
+            if key in _SECRET_KEYS and not val:
+                continue  # don't blank out credentials
+            updates[key] = val
 
         try:
             secret_updates = {k: v for k, v in updates.items() if k in _SECRET_KEYS}

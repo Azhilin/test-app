@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 
 from app.core import metrics
-from tests.conftest import make_issue, make_issue_with_changelog, make_issue_with_labels, make_sprint
+from tests.conftest import make_issue, make_issue_with_labels, make_sprint
 
 pytestmark = pytest.mark.unit
 
@@ -26,6 +26,7 @@ pytestmark = pytest.mark.unit
         ("In Progress", False),
         ("To Do", False),
         ("", False),
+        ("Released", False),  # custom status, no resolutiondate
     ],
 )
 def test_is_done(status, expected):
@@ -37,6 +38,34 @@ def test_is_done_missing_fields():
     assert metrics._is_done({}) is False
     assert metrics._is_done({"fields": {}}) is False
     assert metrics._is_done({"fields": {"status": {}}}) is False
+
+
+def test_is_done_resolutiondate_fallback():
+    """Issues with resolutiondate are done regardless of status name (covers KANBAN custom statuses)."""
+    issue = make_issue("K-1", status="Released")
+    issue["fields"]["resolutiondate"] = "2024-03-01T10:00:00.000+0000"
+    assert metrics._is_done(issue) is True
+
+
+def test_is_done_no_resolutiondate_custom_status():
+    """Custom terminal status name without resolutiondate is not considered done."""
+    issue = make_issue("K-2", status="Released")
+    assert metrics._is_done(issue) is False
+
+
+def test_compute_velocity_kanban_periods():
+    """KANBAN week periods with resolved issues (custom status + resolutiondate) count correctly."""
+    period = {
+        "id": "week-2024-W14",
+        "name": "2024-W14",
+        "startDate": "2024-04-01",
+        "endDate": "2024-04-07",
+    }
+    issue = make_issue("K-1", status="Released", points=5.0)
+    issue["fields"]["resolutiondate"] = "2024-04-03T10:00:00.000+0000"
+    result = metrics.compute_velocity([period], {"week-2024-W14": [issue]})
+    assert result[0]["velocity"] == 5.0
+    assert result[0]["issue_count"] == 1
 
 
 # ---------------------------------------------------------------------------
@@ -141,32 +170,6 @@ def test_compute_velocity_preserves_sprint_name():
 
 
 # ---------------------------------------------------------------------------
-# get_done_issue_keys_for_changelog
-# ---------------------------------------------------------------------------
-
-
-def test_get_done_issue_keys_filters_non_done():
-    sprint = make_sprint(1)
-    issues = [make_issue("X-1", "Done"), make_issue("X-2", "In Progress")]
-    result = metrics.get_done_issue_keys_for_changelog([sprint], {1: issues})
-    assert result == ["X-1"]
-
-
-def test_get_done_issue_keys_deduplicates_across_sprints():
-    s1, s2 = make_sprint(1), make_sprint(2)
-    issues = [make_issue("X-1", "Done")]
-    result = metrics.get_done_issue_keys_for_changelog([s1, s2], {1: issues, 2: issues})
-    assert result.count("X-1") == 1
-
-
-def test_get_done_issue_keys_respects_max_count():
-    sprint = make_sprint(1)
-    issues = [make_issue(f"X-{i}", "Done") for i in range(10)]
-    result = metrics.get_done_issue_keys_for_changelog([sprint], {1: issues}, max_count=3)
-    assert len(result) == 3
-
-
-# ---------------------------------------------------------------------------
 # build_metrics_dict
 # ---------------------------------------------------------------------------
 
@@ -174,8 +177,7 @@ def test_get_done_issue_keys_respects_max_count():
 def test_build_metrics_dict_keys():
     sprint = make_sprint(1)
     issue = make_issue("X-1", "Done", 5.0)
-    issue_cl = make_issue_with_changelog("X-1", "2026-03-01T00:00:00+00:00", "2026-03-03T00:00:00+00:00")
-    result = metrics.build_metrics_dict([sprint], {1: [issue]}, [issue_cl])
+    result = metrics.build_metrics_dict([sprint], {1: [issue]})
     expected_keys = {
         "velocity",
         "generated_at",
@@ -198,7 +200,7 @@ def test_build_metrics_dict_keys():
 def test_build_metrics_dict_generated_at_is_iso():
     from datetime import datetime
 
-    result = metrics.build_metrics_dict([], {}, [])
+    result = metrics.build_metrics_dict([], {})
     ts = result["generated_at"]
     # Should parse without error
     parsed = datetime.fromisoformat(ts)
@@ -461,20 +463,6 @@ def test_compute_velocity_custom_field_and_statuses():
     assert result[0]["issue_count"] == 1
 
 
-def test_get_done_issue_keys_custom_statuses():
-    sprint = make_sprint(1)
-    issues = [
-        {"key": "X-1", "fields": {"status": {"name": "Shipped"}}},
-        {"key": "X-2", "fields": {"status": {"name": "Done"}}},
-    ]
-    result = metrics.get_done_issue_keys_for_changelog(
-        [sprint],
-        {1: issues},
-        done_statuses=frozenset(("shipped",)),
-    )
-    assert result == ["X-1"]
-
-
 def test_build_metrics_dict_with_schema():
     schema = {
         "schema_name": "Test Schema",
@@ -486,7 +474,7 @@ def test_build_metrics_dict_with_schema():
     }
     sprint = make_sprint(1)
     issue = {"key": "X-1", "fields": {"status": {"name": "Shipped"}, "cf_sp": 10.0}}
-    result = metrics.build_metrics_dict([sprint], {1: [issue]}, [], schema=schema)
+    result = metrics.build_metrics_dict([sprint], {1: [issue]}, schema=schema)
     assert result["schema_name"] == "Test Schema"
     assert result["velocity"][0]["velocity"] == 10.0
     assert result["velocity"][0]["issue_count"] == 1
@@ -495,7 +483,7 @@ def test_build_metrics_dict_with_schema():
 def test_build_metrics_dict_without_schema_backward_compat():
     sprint = make_sprint(1)
     issue = make_issue("X-1", "Done", 5.0)
-    result = metrics.build_metrics_dict([sprint], {1: [issue]}, [])
+    result = metrics.build_metrics_dict([sprint], {1: [issue]})
     assert result["schema_name"] is None
     assert result["velocity"][0]["velocity"] == 5.0
 
@@ -508,7 +496,7 @@ def test_build_metrics_dict_jira_tickets_velocity_uses_issue_count(monkeypatch):
         make_issue("X-2", "Done", 3.0),
         make_issue("X-3", "In Progress", 2.0),
     ]
-    result = metrics.build_metrics_dict([sprint], {1: issues}, [])
+    result = metrics.build_metrics_dict([sprint], {1: issues})
     row = result["velocity"][0]
     assert row["issue_count"] == 2
     assert row["velocity"] == 2, "JiraTickets mode should use issue_count as velocity"
@@ -518,7 +506,7 @@ def test_build_metrics_dict_story_points_velocity_unchanged(monkeypatch):
     monkeypatch.setattr("app.core.config.ESTIMATION_TYPE", "StoryPoints")
     sprint = make_sprint(1, "Sprint 1")
     issues = [make_issue("X-1", "Done", 5.0), make_issue("X-2", "Done", 3.0)]
-    result = metrics.build_metrics_dict([sprint], {1: issues}, [])
+    result = metrics.build_metrics_dict([sprint], {1: issues})
     row = result["velocity"][0]
     assert row["velocity"] == 8.0, "StoryPoints mode should sum story points"
     assert row["issue_count"] == 2

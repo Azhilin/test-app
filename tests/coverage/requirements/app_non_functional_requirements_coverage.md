@@ -3,7 +3,7 @@
 > Source document: [docs/product/requirements/app_non_functional_requirements.md](../../../docs/product/requirements/app_non_functional_requirements.md)  
 > Back to summary: [tests/coverage/test_coverage.md](../test_coverage.md)
 
-**Total:** 33 | **✅ Covered:** 23 | **🔶 Partial:** 0 | **❌ Gap:** 0 | **⬜ N/T:** 10 | **Functional:** 100%
+**Total:** 32 | **✅ Covered:** 22 | **🔶 Partial:** 0 | **❌ Gap:** 0 | **⬜ N/T:** 10 | **Functional:** 100%
 
 
 #### Performance
@@ -44,7 +44,6 @@
 | NFR-R-001 | Missing required config detected before any Jira API call is made | ✅ | `unit/test_config.py::test_validate_config_all_set`, `unit/test_config.py::test_validate_config_missing_url`, `unit/test_config.py::test_validate_config_missing_email`, `unit/test_config.py::test_validate_config_missing_token`, `integration/test_integration.py::test_main_pipeline_config_fail` |
 | NFR-R-002 | Jira connectivity failure reported as SSE error; server continues | ✅ | `component/test_server.py::test_test_connection_http_error`, `unit/test_server_handlers.py::test_handle_generate_emits_error_event_for_nonzero_exit` |
 | NFR-R-003 | Client disconnect mid-stream caught and suppressed; no unhandled exception | ✅ | `unit/test_server_handlers.py::test_client_disconnect_tuple_includes_all_error_types`, `unit/test_server_handlers.py::test_serve_file_catches_client_disconnect`, `component/test_server.py::test_handle_error_swallows_connection_aborted_error` |
-| NFR-R-004 | Changelog fetch failure for one issue skipped; full report still generated | ✅ | `unit/test_jira_client.py::test_get_issues_with_changelog_skips_failures` |
 | NFR-R-005 | SSE stream always sends final event: close before connection ends | ✅ | `component/test_server.py::test_generate_ends_with_close_event` |
 
 #### Data Privacy

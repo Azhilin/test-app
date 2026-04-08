@@ -258,6 +258,8 @@ def build_schema_from_fields(
     populated_set: set[str] = set(populated_fields or [])
 
     for field in jira_fields:
+        if not isinstance(field, dict):
+            continue
         fid = field.get("id", "")
         fname = field.get("name", "")
         is_custom = field.get("custom", False)

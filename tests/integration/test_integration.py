@@ -8,7 +8,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from tests.conftest import make_issue, make_issue_with_changelog, make_sprint
+from tests.conftest import make_issue, make_sprint
 
 pytestmark = pytest.mark.integration
 
@@ -22,17 +22,16 @@ def test_main_pipeline_success(monkeypatch, tmp_path):
     """Mock jira_client functions, call main.main(), verify HTML/MD files are created."""
     sprints = [make_sprint(1, "Sprint 1", "2026-01-01", "2026-01-14")]
     issues = [make_issue("T-1", "Done", 5.0)]
-    cl_issue = make_issue_with_changelog("T-1", "2026-01-02T10:00:00+00:00", "2026-01-05T10:00:00+00:00")
 
     monkeypatch.setattr("app.core.config.JIRA_URL", "https://test.atlassian.net")
     monkeypatch.setattr("app.core.config.JIRA_EMAIL", "u@t.com")
     monkeypatch.setattr("app.core.config.JIRA_API_TOKEN", "tok")
+    monkeypatch.setattr("app.core.config.JIRA_BOARD_ID", 42)
     monkeypatch.setattr("app.core.config.JIRA_FILTER_ID", None)
 
     mock_jira = MagicMock()
     monkeypatch.setattr("app.core.jira_client.create_client", lambda: mock_jira)
     monkeypatch.setattr("app.core.jira_client.fetch_sprint_data", lambda j: (sprints, {1: issues}))
-    monkeypatch.setattr("app.core.jira_client.get_issues_with_changelog", lambda j, keys: [cl_issue])
 
     # Redirect reports to tmp_path
     monkeypatch.setattr("app.cli.REPORTS_DIR", tmp_path / "generated" / "reports")
@@ -102,11 +101,11 @@ def test_main_clean_removes_reports(monkeypatch, tmp_path):
 def test_filter_metadata_in_html(monkeypatch, tmp_path):
     sprints = [make_sprint(1, "Sprint 1", "2026-01-01", "2026-01-14")]
     issues = [make_issue("T-1", "Done", 5.0)]
-    cl_issue = make_issue_with_changelog("T-1", "2026-01-02T10:00:00+00:00", "2026-01-05T10:00:00+00:00")
 
     monkeypatch.setattr("app.core.config.JIRA_URL", "https://test.atlassian.net")
     monkeypatch.setattr("app.core.config.JIRA_EMAIL", "u@t.com")
     monkeypatch.setattr("app.core.config.JIRA_API_TOKEN", "tok")
+    monkeypatch.setattr("app.core.config.JIRA_BOARD_ID", 7)
     monkeypatch.setattr("app.core.config.JIRA_FILTER_ID", 42)
 
     mock_jira = MagicMock()
@@ -117,7 +116,6 @@ def test_filter_metadata_in_html(monkeypatch, tmp_path):
 
     monkeypatch.setattr("app.core.jira_client.create_client", lambda: mock_jira)
     monkeypatch.setattr("app.core.jira_client.fetch_sprint_data", lambda j: (sprints, {1: issues}))
-    monkeypatch.setattr("app.core.jira_client.get_issues_with_changelog", lambda j, keys: [cl_issue])
     monkeypatch.setattr("app.core.jira_client.get_filter_jql", lambda j: "project = TEST")
 
     monkeypatch.setattr("app.cli.REPORTS_DIR", tmp_path / "generated" / "reports")
