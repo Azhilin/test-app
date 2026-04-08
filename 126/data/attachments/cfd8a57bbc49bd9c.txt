@@ -1,1 +1,0 @@
-WARNING  app.core.jira_client:jira_client.py:83 Could not fetch JQL for filter 123: API error

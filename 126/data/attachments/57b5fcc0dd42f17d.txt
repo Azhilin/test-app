@@ -1,2 +1,0 @@
-DEBUG    app.core.jira_client:jira_client.py:92 Fetching issues for sprint 10 (board 1, jql='')
-DEBUG    app.core.jira_client:jira_client.py:103 Sprint 10: fetched 0 issue(s)
