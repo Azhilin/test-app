@@ -22,7 +22,7 @@ import allure
 import pytest
 from playwright.sync_api import Page, expect
 
-# _goto, _mock_schemas_api, _mock_filters_api are provided by tests/e2e/conftest.py
+from tests.e2e.conftest import _goto, _mock_filters_api, _mock_schemas_api
 
 pytestmark = pytest.mark.e2e
 
@@ -90,17 +90,18 @@ def test_positive_end_to_end_flow(page: Page, live_server_url: str) -> None:
     # Phase 2 — Jira Connection
     # ------------------------------------------------------------------
     with allure.step("Phase 2 — Jira Connection: fill credentials, test, save"):
-
         page.route(
             "**/api/test-connection",
             lambda r: r.fulfill(
                 status=200,
                 content_type="application/json",
-                body=json.dumps({
-                    "ok": True,
-                    "displayName": "Test User",
-                    "emailAddress": _JIRA_EMAIL,
-                }),
+                body=json.dumps(
+                    {
+                        "ok": True,
+                        "displayName": "Test User",
+                        "emailAddress": _JIRA_EMAIL,
+                    }
+                ),
             ),
         )
         # POST /api/config override (GET is already mocked by _goto)
@@ -133,9 +134,7 @@ def test_positive_end_to_end_flow(page: Page, live_server_url: str) -> None:
         with allure.step("Save credentials → confirmation flash appears"):
             expect(page.locator("#btn-save-conn")).to_be_enabled()
             page.locator("#btn-save-conn").click()
-            expect(page.locator("#save-confirm-conn")).to_have_class(
-                re.compile(r"visible"), timeout=5_000
-            )
+            expect(page.locator("#save-confirm-conn")).to_have_class(re.compile(r"visible"), timeout=5_000)
 
         with allure.step("Assert credentials persisted to localStorage"):
             assert page.evaluate("localStorage.getItem('jira_url')") == _JIRA_URL
@@ -145,7 +144,6 @@ def test_positive_end_to_end_flow(page: Page, live_server_url: str) -> None:
     # Phase 3 — Schema Setup
     # ------------------------------------------------------------------
     with allure.step("Phase 3 — Schema Setup: fetch schema from Jira"):
-
         # Shared mutable state: POST handler appends to these, GET handler reads them.
         _schemas: list[str] = []
         _details: dict = {}
@@ -206,9 +204,7 @@ def test_positive_end_to_end_flow(page: Page, live_server_url: str) -> None:
             page.locator("#btn-save-jira-filter").click()
 
         with allure.step("Assert filter log shows JQL and Saved confirmation"):
-            expect(page.locator("#filter-log-output")).to_contain_text(
-                f"project = {_PROJECT_KEY}", timeout=5_000
-            )
+            expect(page.locator("#filter-log-output")).to_contain_text(f"project = {_PROJECT_KEY}", timeout=5_000)
             expect(page.locator("#filter-log-output")).to_contain_text("Saved", timeout=5_000)
 
         with allure.step("Assert filter appears in the saved filters list"):
@@ -219,23 +215,24 @@ def test_positive_end_to_end_flow(page: Page, live_server_url: str) -> None:
     # Phase 5 — Data Retrieval
     # ------------------------------------------------------------------
     with allure.step("Phase 5 — Data Retrieval: save settings and preview sprints"):
-
         page.route(
             "**/api/data-preview**",
             lambda r: r.fulfill(
                 status=200,
                 content_type="application/json",
-                body=json.dumps({
-                    "ok": True,
-                    "board_id": int(_BOARD_ID),
-                    "board_name": "Test Board",
-                    "project_type": "SCRUM",
-                    "total_sprints": 2,
-                    "sprints": [
-                        {"id": 1, "name": "Sprint 1", "startDate": "2026-03-01", "endDate": "2026-03-14"},
-                        {"id": 2, "name": "Sprint 2", "startDate": "2026-03-15", "endDate": "2026-03-28"},
-                    ],
-                }),
+                body=json.dumps(
+                    {
+                        "ok": True,
+                        "board_id": int(_BOARD_ID),
+                        "board_name": "Test Board",
+                        "project_type": "SCRUM",
+                        "total_sprints": 2,
+                        "sprints": [
+                            {"id": 1, "name": "Sprint 1", "startDate": "2026-03-01", "endDate": "2026-03-14"},
+                            {"id": 2, "name": "Sprint 2", "startDate": "2026-03-15", "endDate": "2026-03-28"},
+                        ],
+                    }
+                ),
             ),
         )
 
@@ -249,9 +246,7 @@ def test_positive_end_to_end_flow(page: Page, live_server_url: str) -> None:
 
         with allure.step("Click Save Data Settings → confirmation flash appears"):
             page.locator("#btn-save-data").click()
-            expect(page.locator("#save-confirm-data")).to_have_class(
-                re.compile(r"visible"), timeout=5_000
-            )
+            expect(page.locator("#save-confirm-data")).to_have_class(re.compile(r"visible"), timeout=5_000)
 
         with allure.step("Select saved filter in preview dropdown and fetch preview"):
             preview_select = page.locator("#data-preview-filter")
@@ -267,7 +262,6 @@ def test_positive_end_to_end_flow(page: Page, live_server_url: str) -> None:
     # Phase 6 — Generate Report
     # ------------------------------------------------------------------
     with allure.step("Phase 6 — Generate Report: select filter, run, assert report link"):
-
         page.route(
             "**/api/generate**",
             lambda r: r.fulfill(
@@ -283,9 +277,7 @@ def test_positive_end_to_end_flow(page: Page, live_server_url: str) -> None:
             lambda r: r.fulfill(
                 status=200,
                 content_type="application/json",
-                body=json.dumps({
-                    "reports": [{"ts": _REPORT_TS, "html_file": "report.html"}]
-                }),
+                body=json.dumps({"reports": [{"ts": _REPORT_TS, "html_file": "report.html"}]}),
             ),
         )
 

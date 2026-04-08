@@ -128,8 +128,9 @@ def test_single_file_without_week_gets_week_derived(tmp_path: Path) -> None:
 def test_single_file_with_existing_week_keeps_it(tmp_path: Path) -> None:
     raw = tmp_path / "raw"
     raw.mkdir()
-    _write(raw, "dau_alice_20260330T054729Z.json",
-           _raw("alice", timestamp="2026-03-30T05:47:29+00:00", week="2026-W99"))
+    _write(
+        raw, "dau_alice_20260330T054729Z.json", _raw("alice", timestamp="2026-03-30T05:47:29+00:00", week="2026-W99")
+    )
     norm = tmp_path / "norm"
     normalize_dau_responses(raw, norm)
     files = list(norm.glob("dau_*.json"))
@@ -146,12 +147,16 @@ def test_dedup_keeps_latest_per_user_week(tmp_path: Path) -> None:
     """Two files from same user, same week — only the later one survives."""
     raw = tmp_path / "raw"
     raw.mkdir()
-    _write(raw, "dau_alice_20260330T080000Z.json",
-           _raw("alice", usage="Not used", score=0,
-                timestamp="2026-03-30T08:00:00+00:00", week="2026-W14"))
-    _write(raw, "dau_alice_20260330T160000Z.json",
-           _raw("alice", usage="Every day (5 days)", score=5,
-                timestamp="2026-03-30T16:00:00+00:00", week="2026-W14"))
+    _write(
+        raw,
+        "dau_alice_20260330T080000Z.json",
+        _raw("alice", usage="Not used", score=0, timestamp="2026-03-30T08:00:00+00:00", week="2026-W14"),
+    )
+    _write(
+        raw,
+        "dau_alice_20260330T160000Z.json",
+        _raw("alice", usage="Every day (5 days)", score=5, timestamp="2026-03-30T16:00:00+00:00", week="2026-W14"),
+    )
     norm = tmp_path / "norm"
     count = normalize_dau_responses(raw, norm)
     assert count == 1
@@ -164,10 +169,12 @@ def test_dedup_different_weeks_both_kept(tmp_path: Path) -> None:
     """Same user, different weeks → two records written."""
     raw = tmp_path / "raw"
     raw.mkdir()
-    _write(raw, "dau_alice_20260323T100000Z.json",
-           _raw("alice", timestamp="2026-03-23T10:00:00+00:00", week="2026-W13"))
-    _write(raw, "dau_alice_20260330T100000Z.json",
-           _raw("alice", timestamp="2026-03-30T10:00:00+00:00", week="2026-W14"))
+    _write(
+        raw, "dau_alice_20260323T100000Z.json", _raw("alice", timestamp="2026-03-23T10:00:00+00:00", week="2026-W13")
+    )
+    _write(
+        raw, "dau_alice_20260330T100000Z.json", _raw("alice", timestamp="2026-03-30T10:00:00+00:00", week="2026-W14")
+    )
     norm = tmp_path / "norm"
     count = normalize_dau_responses(raw, norm)
     assert count == 2
@@ -176,10 +183,8 @@ def test_dedup_different_weeks_both_kept(tmp_path: Path) -> None:
 def test_dedup_different_users_same_week_both_kept(tmp_path: Path) -> None:
     raw = tmp_path / "raw"
     raw.mkdir()
-    _write(raw, "dau_alice_20260330T100000Z.json",
-           _raw("alice", timestamp="2026-03-30T10:00:00+00:00"))
-    _write(raw, "dau_bob_20260330T110000Z.json",
-           _raw("bob", timestamp="2026-03-30T11:00:00+00:00"))
+    _write(raw, "dau_alice_20260330T100000Z.json", _raw("alice", timestamp="2026-03-30T10:00:00+00:00"))
+    _write(raw, "dau_bob_20260330T110000Z.json", _raw("bob", timestamp="2026-03-30T11:00:00+00:00"))
     norm = tmp_path / "norm"
     count = normalize_dau_responses(raw, norm)
     assert count == 2
@@ -196,10 +201,8 @@ def test_stale_normalized_files_cleared_on_rerun(tmp_path: Path) -> None:
     raw.mkdir()
     norm = tmp_path / "norm"
     # First run: two users
-    _write(raw, "dau_alice_20260330T100000Z.json",
-           _raw("alice", timestamp="2026-03-30T10:00:00+00:00"))
-    _write(raw, "dau_bob_20260330T110000Z.json",
-           _raw("bob", timestamp="2026-03-30T11:00:00+00:00"))
+    _write(raw, "dau_alice_20260330T100000Z.json", _raw("alice", timestamp="2026-03-30T10:00:00+00:00"))
+    _write(raw, "dau_bob_20260330T110000Z.json", _raw("bob", timestamp="2026-03-30T11:00:00+00:00"))
     normalize_dau_responses(raw, norm)
     assert len(list(norm.glob("dau_*.json"))) == 2
     # Remove bob from raw, re-run
@@ -219,8 +222,7 @@ def test_malformed_json_skipped_no_exception(tmp_path: Path) -> None:
     raw = tmp_path / "raw"
     raw.mkdir()
     (raw / "dau_bad_20260101T000000Z.json").write_text("{not json", encoding="utf-8")
-    _write(raw, "dau_good_20260330T100000Z.json",
-           _raw("good", timestamp="2026-03-30T10:00:00+00:00"))
+    _write(raw, "dau_good_20260330T100000Z.json", _raw("good", timestamp="2026-03-30T10:00:00+00:00"))
     norm = tmp_path / "norm"
     count = normalize_dau_responses(raw, norm)
     assert count == 1
@@ -230,8 +232,7 @@ def test_non_dau_files_ignored(tmp_path: Path) -> None:
     raw = tmp_path / "raw"
     raw.mkdir()
     (raw / "other_report.json").write_text(json.dumps({"x": 1}), encoding="utf-8")
-    _write(raw, "dau_alice_20260330T100000Z.json",
-           _raw("alice", timestamp="2026-03-30T10:00:00+00:00"))
+    _write(raw, "dau_alice_20260330T100000Z.json", _raw("alice", timestamp="2026-03-30T10:00:00+00:00"))
     norm = tmp_path / "norm"
     count = normalize_dau_responses(raw, norm)
     assert count == 1
@@ -246,8 +247,7 @@ def test_output_filename_format(tmp_path: Path) -> None:
     """Output file must be named dau_<username>_<compact_ts>.json."""
     raw = tmp_path / "raw"
     raw.mkdir()
-    _write(raw, "dau_alice_20260330T054729Z.json",
-           _raw("alice", timestamp="2026-03-30T05:47:29+00:00"))
+    _write(raw, "dau_alice_20260330T054729Z.json", _raw("alice", timestamp="2026-03-30T05:47:29+00:00"))
     norm = tmp_path / "norm"
     normalize_dau_responses(raw, norm)
     files = list(norm.glob("dau_*.json"))

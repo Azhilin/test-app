@@ -18,6 +18,8 @@ import allure
 import pytest
 from playwright.sync_api import Page, expect
 
+from tests.e2e.conftest import _goto, _mock_filters_api, _mock_schemas_api
+
 pytestmark = pytest.mark.e2e
 
 
@@ -1072,6 +1074,4 @@ def test_schema_creation_success_with_project_keys(page: Page, live_server_url: 
         expect(page.locator("#schema-select")).to_contain_text("My Test Schema")
 
     with allure.step("Assert SP badge shows detected field"):
-        expect(page.locator("#schema-sp-badge")).to_contain_text(
-            "customfield_10016", timeout=5000
-        )
+        expect(page.locator("#schema-sp-badge")).to_contain_text("customfield_10016", timeout=5000)

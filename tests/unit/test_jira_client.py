@@ -126,9 +126,9 @@ def test_get_sprints_returns_newest_when_paginated(monkeypatch, mock_jira):
         {"id": 53, "name": "S53", "startDate": "2025-03-01"},
     ]
     mock_jira.get_all_sprints_from_board.side_effect = [
-        {"values": old_sprints},   # page 1: closed (full page → fetch next)
-        {"values": new_sprints},   # page 2: closed (partial → stop)
-        {"values": []},            # active
+        {"values": old_sprints},  # page 1: closed (full page → fetch next)
+        {"values": new_sprints},  # page 2: closed (partial → stop)
+        {"values": []},  # active
     ]
     result = jira_client.get_sprints(mock_jira, 1)
     assert len(result) == 2
