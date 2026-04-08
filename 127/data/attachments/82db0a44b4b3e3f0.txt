@@ -1,4 +1,0 @@
-DEBUG    app.core.schema:schema.py:119 Active schema: 'Default_Jira_Cloud' (17 fields)
-DEBUG    app.core.metrics:metrics.py:396 Computing metrics: 1 sprint(s)
-DEBUG    app.core.metrics:metrics.py:414 Velocity computed for 1 sprint(s); totals: ['Sprint 1=5.0'] (estimation_type=StoryPoints)
-SUCCESS  app.cli:cli.py:123 Reports written: /tmp/pytest-of-runner/pytest-0/test_main_pipeline_success0/generated/reports/2026-04-08T07-31-10/report.html, /tmp/pytest-of-runner/pytest-0/test_main_pipeline_success0/generated/reports/2026-04-08T07-31-10/report.md
