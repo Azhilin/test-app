@@ -25,12 +25,12 @@
              /----------\
             / Integration \           19 tests   (3%)  (cross-module flows, subprocess)       → tests/integration/
            /----------------\
-          /    Component      \      155 tests  (27%)  (filesystem, HTTP, data shapes)        → tests/component/
+          /    Component      \      159 tests  (27%)  (filesystem, HTTP, data shapes)        → tests/component/
          /--------------------\
         /        Unit            \   299 tests  (52%)  (pure functions, no I/O)               → tests/unit/
        /------------------------\
                                      ────────────────
-                                     576 tests total
+                                     580 tests total
 ```
 
 ## Coverage Matrix
