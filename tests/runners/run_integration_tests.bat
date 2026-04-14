@@ -16,4 +16,3 @@ if exist ".venv\Scripts\python.exe" (
 echo  Running INTEGRATION tests...
 echo.
 %PYTHON% -m pytest tests\integration\ -v -m integration
-pause

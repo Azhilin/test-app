@@ -510,3 +510,63 @@ def test_build_metrics_dict_story_points_velocity_unchanged(monkeypatch):
     row = result["velocity"][0]
     assert row["velocity"] == 8.0, "StoryPoints mode should sum story points"
     assert row["issue_count"] == 2
+
+
+# ---------------------------------------------------------------------------
+# deduplicate_sprint_issues
+# ---------------------------------------------------------------------------
+
+
+def test_dedup_basic_issue_kept_in_last_sprint():
+    s1, s2 = make_sprint(1), make_sprint(2)
+    issue = make_issue("X-1", "Done", 5.0)
+    result = metrics.deduplicate_sprint_issues([s1, s2], {1: [issue], 2: [issue]})
+    assert result[1] == []
+    assert result[2] == [issue]
+
+
+def test_dedup_three_sprints_kept_in_last():
+    s1, s2, s3 = make_sprint(1), make_sprint(2), make_sprint(3)
+    issue = make_issue("X-1", "Done", 5.0)
+    result = metrics.deduplicate_sprint_issues([s1, s2, s3], {1: [issue], 2: [issue], 3: [issue]})
+    assert result[1] == []
+    assert result[2] == []
+    assert result[3] == [issue]
+
+
+def test_dedup_no_duplicates_unchanged():
+    s1, s2 = make_sprint(1), make_sprint(2)
+    i1, i2 = make_issue("X-1", "Done", 5.0), make_issue("X-2", "Done", 3.0)
+    result = metrics.deduplicate_sprint_issues([s1, s2], {1: [i1], 2: [i2]})
+    assert result[1] == [i1]
+    assert result[2] == [i2]
+
+
+def test_dedup_kanban_string_sprint_ids():
+    s1 = {"id": "week-2024-W01", "name": "W01"}
+    s2 = {"id": "week-2024-W02", "name": "W02"}
+    issue = make_issue("X-1", "Done", 8.0)
+    result = metrics.deduplicate_sprint_issues([s1, s2], {"week-2024-W01": [issue], "week-2024-W02": [issue]})
+    assert result["week-2024-W01"] == []
+    assert result["week-2024-W02"] == [issue]
+
+
+def test_dedup_issue_without_key_not_moved():
+    s1, s2 = make_sprint(1), make_sprint(2)
+    keyless = {"fields": {"status": {"name": "Done"}}}
+    result = metrics.deduplicate_sprint_issues([s1, s2], {1: [keyless], 2: []})
+    # keyless issue has empty key — not tracked, stays where it was placed
+    assert keyless in result[1]
+    assert result[2] == []
+
+
+def test_dedup_mixed_unique_and_duplicate():
+    s1, s2 = make_sprint(1), make_sprint(2)
+    shared = make_issue("X-1", "Done", 5.0)
+    unique_s1 = make_issue("X-2", "Done", 3.0)
+    unique_s2 = make_issue("X-3", "Done", 2.0)
+    result = metrics.deduplicate_sprint_issues([s1, s2], {1: [shared, unique_s1], 2: [shared, unique_s2]})
+    assert shared not in result[1]
+    assert unique_s1 in result[1]
+    assert shared in result[2]
+    assert unique_s2 in result[2]

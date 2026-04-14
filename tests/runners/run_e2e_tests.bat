@@ -16,4 +16,3 @@ if exist ".venv\Scripts\python.exe" (
 echo  Running E2E tests...
 echo.
 %PYTHON% -m pytest tests\e2e\ -v -m e2e
-pause

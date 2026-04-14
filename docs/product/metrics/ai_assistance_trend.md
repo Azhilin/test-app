@@ -62,6 +62,11 @@ AI_EXCLUDE_LABELS=spike,admin,tech-debt
 
 ## Calculation
 
+Before per-sprint computation, `sprint_issues` is pre-processed so that each ticket key
+appears only in its **last (most recent) sprint**. A ticket carried forward across sprints
+is therefore counted once — in the sprint where it was completed — preventing inflation of
+both `total_sp` and `ai_sp` in earlier sprints.
+
 For each sprint:
 
 1. **Filter to done issues** — keep issues whose `status.name` (lowercased) is in `done_statuses`.

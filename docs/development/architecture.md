@@ -82,7 +82,16 @@ test-app/                          ← project root
 ├── app/                           ← application package
 │   ├── __init__.py
 │   ├── cli.py                     ← CLI pipeline orchestration
-│   ├── server.py                  ← dev HTTP server (stdlib HTTPServer)
+│   ├── server/                    ← dev HTTP server package (stdlib HTTPServer)
+│   │   ├── __init__.py
+│   │   ├── _base.py               ← Handler base class, routing (do_GET/do_POST/do_DELETE)
+│   │   ├── cert_handlers.py       ← /api/cert-status, /api/fetch-cert
+│   │   ├── config_handlers.py     ← /api/config (GET + POST)
+│   │   ├── connection_handlers.py ← /api/test-connection
+│   │   ├── data_handlers.py       ← /api/reports, /generated/reports/…
+│   │   ├── filter_handlers.py     ← /api/filters (GET + POST + DELETE)
+│   │   ├── generate_handlers.py   ← /api/generate (SSE stream)
+│   │   └── schema_handlers.py     ← /api/schemas (GET + POST + DELETE)
 │   │
 │   ├── core/                      ← business logic & infrastructure
 │   │   ├── __init__.py
@@ -188,7 +197,7 @@ test-app/                          ← project root
 | `app/utils/cert_utils.py` | `validate_cert(Path)` — parses a PEM file with `cryptography`, returns a dict: `{valid, expires_at, days_remaining, subject}` (plus `error` on failure). |
 | `app/utils/logging_setup.py` | `setup_logging()` — configures the root logger with a timestamped `FileHandler` (`generated/logs/app-YYYYMMDD-HHMMSS.log`) and a `StreamHandler`; defines `SUCCESS_LEVEL = 25` and patches `.success()` onto `logging.Logger`. Called once per entry point. |
 | `app/cli.py` | Orchestrates the full report pipeline. Validates config, fetches Jira data, computes metrics, enriches with filter metadata, and generates HTML + MD in parallel via `ThreadPoolExecutor(max_workers=2)`. |
-| `app/server.py` | Stdlib `HTTPServer` dev server. Serves the UI, proxies Jira test-connection (avoids CORS), streams `main.py` output as SSE, and exposes config/cert/schema/filter management APIs. |
+| `app/server/` | Stdlib `HTTPServer` dev server package. `_base.py` contains the `Handler` class and routes `do_GET`/`do_POST`/`do_DELETE` to category handler modules (`cert_handlers`, `config_handlers`, `connection_handlers`, `data_handlers`, `filter_handlers`, `generate_handlers`, `schema_handlers`). |
 | `main.py` | Thin entry-point — re-exports `main`, `_parse_args`, `_timestamp_folder_name` from `app.cli` for test compatibility. |
 | `server.py` | Thin entry-point — re-exports `run`, `Server`, `Handler`, `PORT`, `ROOT`, `MIME`, `guess_mime` from `app.server` for test compatibility. |
 
@@ -434,10 +443,10 @@ Current counts (run `python tests/tools/test_coverage.py` to refresh):
 
 | Layer | Count | Files |
 |-------|-------|-------|
-| Unit | 210 | test_cert_validation, test_cli, test_config, test_dau_metrics, test_imports, test_jira_client, test_main_helpers, test_metrics, test_schema, test_server_handlers |
-| Component | 142 | test_contracts, test_dau_report, test_report_html, test_report_md, test_report_performance, test_server, test_server_config |
-| Integration | 18 | test_cli_server, test_fetch_ssl_cert, test_integration |
-| E2E | 88 | test_dau_survey_ui, test_e2e, test_e2e_connection, test_e2e_ui |
+| Unit | 299 | test_cert_validation, test_cli, test_config, test_dau_metrics, test_imports, test_jira_client, test_logging_setup, test_main_helpers, test_metrics, test_schema, test_server_handlers |
+| Component | 155 | test_contracts, test_dau_report, test_report_html, test_report_md, test_report_performance, test_server, test_server_config |
+| Integration | 19 | test_cli_server, test_fetch_ssl_cert, test_integration |
+| E2E | 103 | test_dau_survey_ui, test_e2e, test_e2e_connection, test_e2e_ui |
 
 ### Running tests
 

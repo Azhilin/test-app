@@ -644,16 +644,6 @@
         tabindex="-1"
         class="tab-btn"
       >Jira Connection</button>
-      <!-- SCHEMA TAB TEMPORARILY DISABLED — remove comment tags to re-enable
-      <button
-        role="tab"
-        id="tab-schema"
-        aria-controls="panel-schema"
-        aria-selected="false"
-        tabindex="-1"
-        class="tab-btn"
-      >Schema Setup</button>
-      -->
       <button
         role="tab"
         id="tab-filter"
@@ -2158,6 +2148,38 @@
         updateGenerateButtonState();
       });
       restoreReportOptions();
+
+      /* ── Filter option persistence (project type + estimation type radios) ── */
+      const FILTER_OPTS_STORAGE_KEY = 'filter-options';
+
+      function saveFilterOptions() {
+        try {
+          const pt = document.querySelector('input[name="filter-project-type"]:checked')?.value || 'SCRUM';
+          const et = document.querySelector('input[name="filter-estimation-type"]:checked')?.value || 'StoryPoints';
+          localStorage.setItem(FILTER_OPTS_STORAGE_KEY, JSON.stringify({ projectType: pt, estimationType: et }));
+        } catch (_) {}
+      }
+
+      function restoreFilterOptions() {
+        try {
+          const raw = localStorage.getItem(FILTER_OPTS_STORAGE_KEY);
+          if (!raw) return;
+          const opts = JSON.parse(raw);
+          if (opts.projectType) {
+            const r = document.querySelector(`input[name="filter-project-type"][value="${opts.projectType}"]`);
+            if (r) r.checked = true;
+          }
+          if (opts.estimationType) {
+            const r = document.querySelector(`input[name="filter-estimation-type"][value="${opts.estimationType}"]`);
+            if (r) r.checked = true;
+          }
+        } catch (_) {}
+      }
+
+      document.querySelectorAll('input[name="filter-project-type"], input[name="filter-estimation-type"]').forEach(r => {
+        r.addEventListener('change', saveFilterOptions);
+      });
+      restoreFilterOptions();
 
       const errNoMetrics = document.getElementById('err-no-metrics');
 

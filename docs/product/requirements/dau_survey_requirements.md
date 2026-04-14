@@ -57,7 +57,7 @@ For the metric definition, scoring rationale, and `compute_dau_metrics()` output
 | DAU-F-019 | `compute_dau_metrics` returns a `by_role` list with per-role averages and counts | A response set containing 2 Developers (scores 5 and 3.5) and 1 QA (score 1.5) returns `by_role` with entries `{"role": "Developer", "avg": 4.25, "count": 2}` and `{"role": "QA / Test Engineer", "avg": 1.5, "count": 1}` | ✓ Met |
 | DAU-F-020 | `compute_dau_metrics` returns a `breakdown` list with per-answer counts | Given 2 "Every day" responses and 1 "Not used" response, `breakdown` contains `{"answer": "Every day (5 days)", "count": 2}` and `{"answer": "Not used", "count": 1}` | ✓ Met |
 | DAU-F-021 | `build_metrics_dict()` calls `compute_dau_metrics()` and includes a `"dau"` key | The dict returned by `build_metrics_dict()` always contains a `"dau"` key whose value matches the shape defined in `dau_metric.md` | ✓ Met |
-| DAU-F-022 | The responses directory is configurable via `DAU_RESPONSES_DIR` environment variable | Setting `DAU_RESPONSES_DIR=/custom/path` causes `compute_dau_metrics` to read from that path; if unset, the default is `generated/` | ✓ Met |
+| DAU-F-022 | The responses directory is configurable via `DAU_RESPONSES_DIR` environment variable | Setting `DAU_RESPONSES_DIR=/custom/path` causes `compute_dau_metrics` to read from that path; if unset, the default is `config/dau/` | ✓ Met |
 
 ---
 

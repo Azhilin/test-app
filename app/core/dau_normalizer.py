@@ -1,10 +1,11 @@
 """
 DAU response normalizer.
 
-Reads raw survey JSON files from a source directory, enriches each record
-with the ISO ``week`` field (derived from ``timestamp`` when absent), deduplicates
-to one record per ``(username, week)`` keeping the latest submission, and writes
-the clean set to a normalized output directory.
+Reads raw survey JSON files from a source directory (recursively), enriches each
+record with the ISO ``week`` field (derived from ``timestamp`` when absent),
+deduplicates to one record per ``(username, week)`` keeping the latest submission,
+and writes the clean set to a normalized output directory that mirrors the source
+folder structure.
 
 Called automatically by ``app/cli.py`` before metric computation so that both
 ``compute_dau_metrics`` and ``compute_dau_trend`` always work from consistent data.
@@ -14,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -33,30 +35,14 @@ def _compact_timestamp(iso_ts: str) -> str:
     return dt.strftime("%Y%m%dT%H%M%SZ")
 
 
-def normalize_dau_responses(raw_dir: str | Path, normalized_dir: str | Path) -> int:
-    """Enrich, deduplicate, and write DAU survey responses to *normalized_dir*.
+def _normalize_dir(files: list[Path], out_dir: Path) -> tuple[int, int]:
+    """Enrich, deduplicate, and write records from *files* into *out_dir*.
 
-    Steps:
-    1. Create *normalized_dir* if it does not exist.
-    2. Remove any existing ``dau_*.json`` files from *normalized_dir* (prevent stale data).
-    3. Load all ``dau_*.json`` files from *raw_dir*; skip malformed files with a warning.
-    4. For each record: use ``week`` if present and non-empty, otherwise derive from ``timestamp``.
-    5. Deduplicate: keep the record with the latest ``timestamp`` per ``(username, week)``.
-    6. Write each surviving record as ``dau_<username>_<compact_ts>.json`` in *normalized_dir*.
-
-    Returns the number of records written.
+    Returns ``(records_written, raw_files_read)``.
     """
-    raw_path = Path(raw_dir)
-    norm_path = Path(normalized_dir)
-    norm_path.mkdir(parents=True, exist_ok=True)
-
-    # Clear stale normalized files
-    for stale in norm_path.glob("dau_*.json"):
-        stale.unlink()
-
     # Load raw records
     records: list[dict] = []
-    for fpath in sorted(raw_path.glob("dau_*.json")):
+    for fpath in files:
         try:
             data = json.loads(fpath.read_text(encoding="utf-8"))
             if not isinstance(data, dict):
@@ -91,16 +77,57 @@ def normalize_dau_responses(raw_dir: str | Path, normalized_dir: str | Path) -> 
             filename = f"dau_{rec['username']}_{_compact_timestamp(rec['timestamp'])}.json"
         except Exception:
             filename = f"dau_{rec.get('username', 'unknown')}_{rec.get('week', 'unknown')}.json"
-        (norm_path / filename).write_text(
+        (out_dir / filename).write_text(
             json.dumps(rec, indent=2, ensure_ascii=False),
             encoding="utf-8",
         )
 
-    count = len(best)
+    return len(best), len(records)
+
+
+def normalize_dau_responses(raw_dir: str | Path, normalized_dir: str | Path) -> int:
+    """Enrich, deduplicate, and write DAU survey responses to *normalized_dir*.
+
+    Walks *raw_dir* recursively. For each subdirectory that contains ``dau_*.json``
+    files, a matching subdirectory is created under *normalized_dir* and the records
+    from that directory are processed independently (enriched, deduplicated, written).
+
+    Steps:
+    1. Create *normalized_dir* if it does not exist.
+    2. Remove any existing ``dau_*.json`` files from *normalized_dir* recursively (prevent stale data).
+    3. Discover all ``dau_*.json`` files under *raw_dir* at any nesting level.
+    4. Group files by their parent directory relative to *raw_dir*.
+    5. For each group: enrich, deduplicate, and write to the mirrored output subdirectory.
+
+    Returns the total number of records written across all subdirectories.
+    """
+    raw_path = Path(raw_dir)
+    norm_path = Path(normalized_dir)
+
+    # Wipe and recreate normalized dir for a clean slate on every run
+    if norm_path.exists():
+        shutil.rmtree(norm_path)
+    norm_path.mkdir(parents=True, exist_ok=True)
+
+    # Group source files by their directory relative to raw_path
+    by_rel_dir: dict[Path, list[Path]] = {}
+    for fpath in sorted(raw_path.rglob("dau_*.json")):
+        rel_dir = fpath.parent.relative_to(raw_path)
+        by_rel_dir.setdefault(rel_dir, []).append(fpath)
+
+    total_written = 0
+    total_raw = 0
+    for rel_dir, files in sorted(by_rel_dir.items()):
+        out_dir = norm_path / rel_dir
+        out_dir.mkdir(parents=True, exist_ok=True)
+        written, raw_count = _normalize_dir(files, out_dir)
+        total_written += written
+        total_raw += raw_count
+
     logger.info(
         "DAU normalisation: %d raw file(s) → %d record(s) written to %s",
-        len(records),
-        count,
+        total_raw,
+        total_written,
         norm_path,
     )
-    return count
+    return total_written

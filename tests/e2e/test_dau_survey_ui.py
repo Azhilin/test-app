@@ -69,7 +69,7 @@ _MOCK_ONLY = """
 def _goto(page: Page) -> None:
     """Load the survey with FS API mocked and localStorage cleared."""
     page.add_init_script(_SETUP_SCRIPT)
-    page.goto(SURVEY_URL, wait_until="domcontentloaded", timeout=15000)
+    page.goto(SURVEY_URL, wait_until="domcontentloaded", timeout=5000)
 
 
 def _fill_all(
@@ -305,7 +305,7 @@ def test_username_saved_to_localstorage_after_submit(page: Page) -> None:
 def test_username_restored_from_localstorage_on_page_load(page: Page) -> None:
     """A username stored in localStorage is pre-filled in the input on load."""
     page.add_init_script(_MOCK_ONLY + "\nlocalStorage.setItem('dau_username', 'eve88');")
-    page.goto(SURVEY_URL, wait_until="domcontentloaded", timeout=15000)
+    page.goto(SURVEY_URL, wait_until="domcontentloaded", timeout=5000)
     expect(page.locator("#input-username")).to_have_value("eve88")
 
 
@@ -334,7 +334,7 @@ def test_fs_api_abort_keeps_form_intact(page: Page) -> None:
         "  throw new DOMException('User aborted', 'AbortError');"
         "};"
     )
-    page.goto(SURVEY_URL, wait_until="domcontentloaded", timeout=15000)
+    page.goto(SURVEY_URL, wait_until="domcontentloaded", timeout=5000)
     _fill_all(page)
     page.locator("#btn-submit").click()
     page.wait_for_timeout(500)
@@ -355,7 +355,7 @@ def test_fs_api_non_abort_error_falls_back_to_download(page: Page) -> None:
         "  _origClick.call(this);"
         "};"
     )
-    page.goto(SURVEY_URL, wait_until="domcontentloaded", timeout=15000)
+    page.goto(SURVEY_URL, wait_until="domcontentloaded", timeout=5000)
     _fill_all(page)
     page.locator("#btn-submit").click()
     expect(page.locator("#confirmation")).to_be_visible(timeout=3000)
@@ -376,7 +376,7 @@ def test_fs_api_unavailable_falls_back_to_download(page: Page) -> None:
         "  _origClick.call(this);"
         "};"
     )
-    page.goto(SURVEY_URL, wait_until="domcontentloaded", timeout=15000)
+    page.goto(SURVEY_URL, wait_until="domcontentloaded", timeout=5000)
     _fill_all(page)
     page.locator("#btn-submit").click()
     expect(page.locator("#confirmation")).to_be_visible(timeout=3000)

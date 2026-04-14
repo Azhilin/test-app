@@ -41,6 +41,9 @@
   {% if section_visibility.velocity_trend %}
   <section>
     <h2>{{ display_labels.velocity_section_title }}</h2>
+    <p style="color:#666;font-size:0.85rem;margin:0 0 0.75rem 0">
+      {{ unit_abbr }} completed {{ display_labels.per_period_phrase }} for done issues.
+    </p>
     {% if metrics.velocity %}
     <div class="chart-container">
       <canvas id="velocityChart" aria-label="Velocity per sprint bar chart"></canvas>
@@ -363,22 +366,46 @@
       Chart.register({
         id: 'avgVelocityLabels',
         afterDatasetsDraw: function(chart) {
-          var lineIdx = 1;
-          if (!chart.data.datasets[lineIdx] || chart.data.datasets[lineIdx].type !== 'line') return;
-          var meta = chart.getDatasetMeta(lineIdx);
-          if (!meta || !meta.data.length) return;
           var ctx = chart.ctx;
-          var dataset = chart.data.datasets[lineIdx];
           var padding = 4;
           var fontSize = 11;
+
+          // Bar labels: SP value above each bar (dataset 0)
+          var barMeta = chart.getDatasetMeta(0);
+          if (barMeta && barMeta.data && barMeta.data.length) {
+            var barDataset = chart.data.datasets[0] || {};
+            var barValues = barDataset.data || [];
+            ctx.save();
+            ctx.font = '600 ' + fontSize + 'px system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'bottom';
+            ctx.fillStyle = 'rgb(0, 140, 80)';
+            for (var j = 0; j < barMeta.data.length; j++) {
+              var bar = barMeta.data[j];
+              var bv = barValues[j];
+              if (typeof bv !== 'number' || bv <= 0) continue;
+              var bx = bar.x;
+              var by = bar.y - 3;
+              if (by - fontSize < chart.chartArea.top) by = chart.chartArea.top + fontSize + 2;
+              ctx.fillText(String(bv), bx, by);
+            }
+            ctx.restore();
+          }
+
+          // Average line labels: boxed value above each point (dataset 1)
+          var lineIdx = 1;
+          if (!chart.data.datasets[lineIdx] || chart.data.datasets[lineIdx].type !== 'line') return;
+          var lineMeta = chart.getDatasetMeta(lineIdx);
+          if (!lineMeta || !lineMeta.data.length) return;
+          var lineDataset = chart.data.datasets[lineIdx];
           var labelOffset = 16;
           ctx.save();
           ctx.font = fontSize + 'px system-ui, sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'bottom';
-          for (var i = 0; i < meta.data.length; i++) {
-            var point = meta.data[i];
-            var value = dataset.data[i];
+          for (var i = 0; i < lineMeta.data.length; i++) {
+            var point = lineMeta.data[i];
+            var value = lineDataset.data[i];
             var text = String(value);
             var w = ctx.measureText(text).width + padding * 2;
             var h = fontSize + padding;
@@ -459,7 +486,8 @@
             y: {
               beginAtZero: true,
               ticks: { stepSize: maxVal <= 10 ? 1 : Math.ceil(maxVal / 10) },
-              grid: { borderDash: [4, 4] }
+              grid: { borderDash: [4, 4] },
+              title: { display: true, text: '{{ unit_abbr }}' }
             }
           }
         }

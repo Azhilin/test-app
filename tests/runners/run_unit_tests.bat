@@ -16,4 +16,3 @@ if exist ".venv\Scripts\python.exe" (
 echo  Running UNIT tests...
 echo.
 %PYTHON% -m pytest tests\unit\ -v -m unit
-pause

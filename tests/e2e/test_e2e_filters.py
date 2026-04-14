@@ -69,7 +69,7 @@ def _goto(page: Page, url: str, filters: list | None = None) -> None:
 
     for attempt in range(3):
         try:
-            page.goto(url, wait_until="domcontentloaded", timeout=15000)
+            page.goto(url, wait_until="domcontentloaded", timeout=5000)
             return
         except Exception:
             if attempt == 2:
@@ -93,7 +93,7 @@ def _route_filters_get(page: Page, filters: list) -> None:
 
 
 def _open_filter_tab(page: Page) -> None:
-    page.get_by_role("tab", name="Jira Filter").click()
+    page.get_by_role("tab", name="Filter Builder").click()
     expect(page.locator("#panel-filter")).to_be_visible()
 
 
@@ -140,7 +140,7 @@ def test_filter_name_not_overwritten_after_user_edit(page: Page, live_server_url
 
     with allure.step("Switch to Generate tab and back to Filter tab"):
         page.get_by_role("tab", name="Generate Report").click()
-        page.get_by_role("tab", name="Jira Filter").click()
+        page.get_by_role("tab", name="Filter Builder").click()
         expect(page.locator("#panel-filter")).to_be_visible()
 
     with allure.step("Filter-name still shows the user's value"):

@@ -253,3 +253,71 @@ def test_output_filename_format(tmp_path: Path) -> None:
     files = list(norm.glob("dau_*.json"))
     assert len(files) == 1
     assert files[0].name == "dau_alice_20260330T054729Z.json"
+
+
+# ---------------------------------------------------------------------------
+# normalize_dau_responses: nested folder support
+# ---------------------------------------------------------------------------
+
+
+def test_nested_folders_are_traversed(tmp_path: Path) -> None:
+    """Files in a nested subdirectory of raw_dir are discovered and processed."""
+    raw = tmp_path / "raw"
+    sub = raw / "team-a"
+    sub.mkdir(parents=True)
+    _write(sub, "dau_bob_20260330T100000Z.json", _raw("bob", timestamp="2026-03-30T10:00:00+00:00"))
+    norm = tmp_path / "norm"
+    count = normalize_dau_responses(raw, norm)
+    assert count == 1
+
+
+def test_nested_folder_structure_mirrored(tmp_path: Path) -> None:
+    """Output subdirectory mirrors the source subdirectory under normalized_dir."""
+    raw = tmp_path / "raw"
+    sub = raw / "team-a"
+    sub.mkdir(parents=True)
+    _write(sub, "dau_bob_20260330T100000Z.json", _raw("bob", timestamp="2026-03-30T10:00:00+00:00"))
+    norm = tmp_path / "norm"
+    normalize_dau_responses(raw, norm)
+    out_files = list((norm / "team-a").glob("dau_*.json"))
+    assert len(out_files) == 1
+    assert out_files[0].name == "dau_bob_20260330T100000Z.json"
+    # root of norm must not contain any dau files
+    assert list(norm.glob("dau_*.json")) == []
+
+
+def test_dedup_per_directory_independent(tmp_path: Path) -> None:
+    """Same (username, week) in two different subdirs both survive — dedup is per-directory."""
+    raw = tmp_path / "raw"
+    dir_a = raw / "team-a"
+    dir_b = raw / "team-b"
+    dir_a.mkdir(parents=True)
+    dir_b.mkdir(parents=True)
+    rec_a = _raw("alice", timestamp="2026-03-30T10:00:00+00:00", week="2026-W14")
+    _write(dir_a, "dau_alice_20260330T100000Z.json", rec_a)
+    rec_b = _raw("alice", timestamp="2026-03-30T11:00:00+00:00", week="2026-W14")
+    _write(dir_b, "dau_alice_20260330T110000Z.json", rec_b)
+    norm = tmp_path / "norm"
+    count = normalize_dau_responses(raw, norm)
+    assert count == 2
+    assert len(list((norm / "team-a").glob("dau_*.json"))) == 1
+    assert len(list((norm / "team-b").glob("dau_*.json"))) == 1
+
+
+def test_stale_nested_normalized_files_cleared_on_rerun(tmp_path: Path) -> None:
+    """Re-run removes stale normalized files from nested output subdirectories."""
+    raw = tmp_path / "raw"
+    sub = raw / "team-a"
+    sub.mkdir(parents=True)
+    norm = tmp_path / "norm"
+    # First run: two users in team-a
+    _write(sub, "dau_alice_20260330T100000Z.json", _raw("alice", timestamp="2026-03-30T10:00:00+00:00"))
+    _write(sub, "dau_bob_20260330T110000Z.json", _raw("bob", timestamp="2026-03-30T11:00:00+00:00"))
+    normalize_dau_responses(raw, norm)
+    assert len(list((norm / "team-a").glob("dau_*.json"))) == 2
+    # Remove bob, re-run
+    (sub / "dau_bob_20260330T110000Z.json").unlink()
+    normalize_dau_responses(raw, norm)
+    files = list((norm / "team-a").glob("dau_*.json"))
+    assert len(files) == 1
+    assert "alice" in files[0].name
