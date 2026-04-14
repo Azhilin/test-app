@@ -16,4 +16,3 @@ if exist ".venv\Scripts\python.exe" (
 echo  Running COMPONENT tests...
 echo.
 %PYTHON% -m pytest tests\component\ -v -m component
-pause

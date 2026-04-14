@@ -21,16 +21,16 @@
 ## Test Pyramid
 
 ```text
-              /  E2E  \              112 tests  (19%)  (Playwright browser UI)  → tests/e2e/
+              /  E2E  \              103 tests  (18%)  (Playwright browser UI)  → tests/e2e/
              /----------\
             / Integration \           19 tests   (3%)  (cross-module flows, subprocess)       → tests/integration/
            /----------------\
           /    Component      \      155 tests  (27%)  (filesystem, HTTP, data shapes)        → tests/component/
          /--------------------\
-        /        Unit            \   289 tests  (50%)  (pure functions, no I/O)               → tests/unit/
+        /        Unit            \   299 tests  (52%)  (pure functions, no I/O)               → tests/unit/
        /------------------------\
                                      ────────────────
-                                     575 tests total
+                                     576 tests total
 ```
 
 ## Coverage Matrix
@@ -92,7 +92,7 @@ tests\run_e2e_tests.bat
 | `unit/test_config.py`             | Unit        |   44  | Config loading, validation          |
 | `unit/test_cert_validation.py`    | Unit        |    5  | Certificate validation helpers      |
 | `unit/test_cli.py`                | Unit        |    4  | `app.cli.main()` orchestration      |
-| `unit/test_metrics.py`            | Unit        |   57  | All metrics functions incl. AI      |
+| `unit/test_metrics.py`            | Unit        |   63  | All metrics functions incl. AI      |
 | `unit/test_main_helpers.py`       | Unit        |    5  | `_timestamp_folder_name()`          |
 | `unit/test_jira_client.py`        | Unit        |   29  | All jira_client functions (mocked)  |
 | `unit/test_server_handlers.py`    | Unit        |   24  | Internal `app.server` handler logic |
@@ -105,5 +105,5 @@ tests\run_e2e_tests.bat
 | `integration/test_integration.py` | Integration |    6  | Full pipeline, filter flow, server  |
 | `integration/test_fetch_ssl_cert.py` | Integration |   10  | fetch_ssl_cert function + CLI smoke |
 | `e2e/test_e2e.py`                 | E2E         |    3  | CLI subprocess, server health       |
-| `e2e/test_e2e_ui.py`              | E2E         |   41  | Playwright browser UI tests         || `e2e/test_dau_survey_ui.py`      | E2E         |   23  | DAU survey form Playwright tests    |
+| `e2e/test_e2e_ui.py`              | E2E         |   32  | Playwright browser UI tests         || `e2e/test_dau_survey_ui.py`      | E2E         |   23  | DAU survey form Playwright tests    |
 | `e2e/test_e2e_connection.py`     | E2E         |   41  | Connection panel Playwright tests   |

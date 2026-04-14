@@ -29,7 +29,7 @@ with sync_playwright() as p:
         body=json.dumps({"filters": []}),
     ))
 
-    page.goto(URL, wait_until="domcontentloaded", timeout=15000)
+    page.goto(URL, wait_until="domcontentloaded", timeout=5000)
     page.wait_for_timeout(1000)
 
     # What tab is active by default?
@@ -99,7 +99,7 @@ with sync_playwright() as p:
     page.on("console", lambda msg: errors.append(msg.text) if msg.type == "error" else None)
     page.on("pageerror", lambda err: errors.append(str(err)))
 
-    page.goto(URL, wait_until="domcontentloaded", timeout=10000)
+    page.goto(URL, wait_until="domcontentloaded", timeout=5000)
     page.wait_for_timeout(1000)
 
     default_tab = page.evaluate("document.querySelector('[aria-selected=\"true\"]')?.id")

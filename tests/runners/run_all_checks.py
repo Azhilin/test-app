@@ -8,11 +8,17 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
 import os
 import subprocess
 import sys
 import threading
 import time
+
+# Ensure stdout uses UTF-8 on Windows (cp1252 can't encode replacement chars
+# that appear when subprocess output contains non-Latin bytes).
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
 # ── Ensure CWD is project root (mirrors `cd /d "%~dp0..\.."` in the bat) ────
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -58,6 +64,12 @@ def _find_pip_audit(python: str) -> list[str] | None:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--integration", action="store_true")
+    parser.add_argument("--e2e", action="store_true")
+    parser.add_argument("--all", action="store_true", dest="all_stages")
+    args = parser.parse_args()
+
     python = r".venv\Scripts\python.exe" if os.path.exists(r".venv\Scripts\python.exe") else "python"
     pip_audit = _find_pip_audit(python)
 
@@ -65,15 +77,20 @@ def main() -> int:
 
     stages = [
         Stage("Lint", ["cmd", "/c", "tests\\runners\\run_lint.bat"]),
-        Stage("Unit", [python, "-m", "pytest", "tests/unit", "-m", "unit and not windows_only", *xdist]),
-        Stage("Component", [python, "-m", "pytest", "tests/component", "-m", "component and not windows_only", *xdist]),
+        Stage("Unit", ["cmd", "/c", "tests\\runners\\run_unit_tests.bat"]),
+        Stage("Component", ["cmd", "/c", "tests\\runners\\run_component_tests.bat"]),
         Stage("Windows", [python, "-m", "pytest", "tests", "-m", "windows_only", *xdist]),
         Stage("Security", (pip_audit or ["pip-audit"]) + ["-r", "requirements.txt"]),
         Stage(
             "Integration",
-            [python, "-m", "pytest", "tests/integration", "-m", "integration and not windows_only", *xdist],
+            ["cmd", "/c", "tests\\runners\\run_integration_tests.bat"],
+            skip=not (args.integration or args.all_stages),
         ),
-        Stage("E2E", [python, "-m", "pytest", "tests/e2e", "-m", "e2e and not windows_only", *xdist]),
+        Stage(
+            "E2E",
+            ["cmd", "/c", "tests\\runners\\run_e2e_tests.bat"],
+            skip=not (args.e2e or args.all_stages),
+        ),
     ]
 
     active = [s for s in stages if not s.skip]
@@ -113,7 +130,9 @@ def main() -> int:
     any_failed = any(s.returncode != 0 for s in active)
     for s in active:
         if s.returncode != 0:
-            print(f"\n{SEP}\n  FAILED: {s.name}\n{SEP}\n{s.output}")
+            text = f"\n{SEP}\n  FAILED: {s.name}\n{SEP}\n{s.output}\n"
+            sys.stdout.buffer.write(text.encode("utf-8", errors="replace"))
+            sys.stdout.flush()
 
     # ── Summary ───────────────────────────────────────────────────────────────
     print(f"\n{SEP}\n  SUMMARY\n{SEP}\n")

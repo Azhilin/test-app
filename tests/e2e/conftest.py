@@ -107,7 +107,7 @@ def _goto(page: Page, url: str) -> None:
     )
     for attempt in range(3):
         try:
-            page.goto(url, wait_until="domcontentloaded", timeout=15000)
+            page.goto(url, wait_until="domcontentloaded", timeout=5000)
             return
         except Exception:
             if attempt == 2:

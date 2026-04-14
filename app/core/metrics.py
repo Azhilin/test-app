@@ -65,6 +65,43 @@ def _is_done(
     return bool(fields.get("resolutiondate"))
 
 
+def deduplicate_sprint_issues(
+    sprints: list[dict[str, Any]],
+    sprint_issues: dict[int | str, list[dict[str, Any]]],
+) -> dict[int | str, list[dict[str, Any]]]:
+    """Return sprint_issues with each issue key kept only in its last (highest) sprint.
+
+    When the Jira API returns the same issue for multiple sprints, it should count
+    only toward the most recent sprint. The sprints list is assumed to be ordered
+    chronologically (oldest first), so the last occurrence wins.
+    """
+    # Map each issue key to the last sprint ID it appears in (last write wins)
+    issue_last_sprint: dict[str, int | str] = {}
+    for sprint in sprints:
+        sid = sprint.get("id")
+        if sid is None:
+            continue
+        for iss in sprint_issues.get(sid) or []:
+            key = iss.get("key") or ""
+            if key:
+                issue_last_sprint[key] = sid
+
+    # Rebuild: keep each issue only in its mapped (last) sprint.
+    # Issues without a key are untrackable and stay wherever they appear.
+    result: dict[int | str, list[dict[str, Any]]] = {}
+    for sprint in sprints:
+        sid = sprint.get("id")
+        if sid is None:
+            continue
+        kept = []
+        for iss in sprint_issues.get(sid) or []:
+            key = iss.get("key") or ""
+            if not key or issue_last_sprint.get(key) == sid:
+                kept.append(iss)
+        result[sid] = kept
+    return result
+
+
 def compute_velocity(
     sprints: list[dict[str, Any]],
     sprint_issues: dict[int | str, list[dict[str, Any]]],
@@ -369,6 +406,120 @@ def compute_dau_trend(responses_dir: str | Path) -> list[dict[str, Any]]:
     return rows
 
 
+def get_done_issue_keys_for_changelog(
+    sprints: list[dict[str, Any]],
+    sprint_issues: dict[int | str, list[dict[str, Any]]],
+    max_count: int = 100,
+    done_statuses: frozenset[str] | None = None,
+) -> list[str]:
+    """Return up to *max_count* done-issue keys, most recent sprint first.
+
+    Used to select which issues to fetch changelogs for before calling
+    ``compute_cycle_time``.
+    """
+    seen: set[str] = set()
+    candidates: list[tuple[str, str]] = []
+    for sprint in sprints:
+        sid = sprint.get("id")
+        if sid is None:
+            continue
+        end_date = sprint.get("endDate") or ""
+        for iss in sprint_issues.get(sid) or []:
+            if not _is_done(iss, done_statuses):
+                continue
+            key = iss.get("key") or ""
+            if key and key not in seen:
+                seen.add(key)
+                candidates.append((end_date, key))
+    candidates.sort(key=lambda t: t[0], reverse=True)
+    return [key for _, key in candidates[:max_count]]
+
+
+def _cycle_time_from_changelog(
+    issue: dict[str, Any],
+    done_statuses: frozenset[str] | None = None,
+    in_progress_statuses: frozenset[str] | None = None,
+) -> float | None:
+    """Return cycle days for *issue* using its changelog, or None if not computable.
+
+    Scans changelog histories in order:
+    - ``in_progress_at``: timestamp of the *first* transition into an in-progress status.
+    - ``done_at``: timestamp of the *last* transition into a done status.
+
+    Excludes issues whose changelog timestamps are timezone-naive or where
+    ``done_at < in_progress_at``.
+    """
+    ip_statuses = in_progress_statuses or _DEFAULT_IN_PROGRESS
+    d_statuses = done_statuses or _DEFAULT_DONE
+    changelog = issue.get("changelog") or {}
+    histories = changelog.get("histories") or []
+    in_progress_at: datetime | None = None
+    done_at: datetime | None = None
+    for history in histories:
+        ts = _parse_iso(history.get("created"))
+        if ts is None or ts.tzinfo is None:
+            continue
+        for item in history.get("items") or []:
+            if item.get("field") != "status":
+                continue
+            to_status = (item.get("toString") or "").lower()
+            if to_status in ip_statuses and in_progress_at is None:
+                in_progress_at = ts
+            if to_status in d_statuses:
+                done_at = ts
+    if in_progress_at is None or done_at is None:
+        return None
+    if done_at < in_progress_at:
+        return None
+    return round((done_at - in_progress_at).total_seconds() / 86400, 1)
+
+
+def compute_cycle_time(
+    issues_with_changelog: list[dict[str, Any]],
+    done_statuses: frozenset[str] | None = None,
+    in_progress_statuses: frozenset[str] | None = None,
+) -> dict[str, Any]:
+    """Compute cycle time statistics across issues that carry changelog data.
+
+    Returns::
+
+        {
+            "mean_days":   float | None,
+            "median_days": float | None,
+            "min_days":    float | None,
+            "max_days":    float | None,
+            "sample_size": int,
+            "values":      list[float],   # sorted ascending
+        }
+    """
+    values: list[float] = sorted(
+        ct
+        for issue in issues_with_changelog
+        if (ct := _cycle_time_from_changelog(issue, done_statuses, in_progress_statuses)) is not None
+    )
+    n = len(values)
+    if n == 0:
+        return {
+            "mean_days": None,
+            "median_days": None,
+            "min_days": None,
+            "max_days": None,
+            "sample_size": 0,
+            "values": [],
+        }
+    mean_days = round(sum(values) / n, 1)
+    mid = n // 2
+    median_days = round((values[mid - 1] + values[mid]) / 2, 1) if n % 2 == 0 else values[mid]
+    return {
+        "mean_days": mean_days,
+        "median_days": median_days,
+        "min_days": values[0],
+        "max_days": values[-1],
+        "sample_size": n,
+        "values": values,
+    }
+
+
 def _resolve_schema_params(
     schema: dict[str, Any] | None,
 ) -> tuple[str | None, frozenset[str] | None, frozenset[str] | None]:
@@ -390,9 +541,11 @@ def build_metrics_dict(
     sprints: list[dict[str, Any]],
     sprint_issues: dict[int | str, list[dict[str, Any]]],
     schema: dict[str, Any] | None = None,
+    issues_with_changelog: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Build the single metrics dict used by both HTML and MD reporters."""
     sp_field, done_fs, ip_fs = _resolve_schema_params(schema)
+    sprint_issues = deduplicate_sprint_issues(sprints, sprint_issues)
     logger.debug("Computing metrics: %s sprint(s)", len(sprints))
 
     velocity = compute_velocity(sprints, sprint_issues, sp_field, done_fs)
@@ -429,10 +582,12 @@ def build_metrics_dict(
         sprint_issues,
         done_statuses=done_fs,
     )
+    cycle_time = compute_cycle_time(issues_with_changelog or [], done_fs, ip_fs)
     dau = compute_dau_metrics(config.DAU_NORMALIZED_DIR)
     dau_trend = compute_dau_trend(config.DAU_NORMALIZED_DIR)
     return {
         "velocity": velocity,
+        "cycle_time": cycle_time,
         "ai_assistance_trend": ai_trend,
         "ai_usage_details": ai_usage,
         "ai_assisted_label": config.AI_ASSISTED_LABEL,

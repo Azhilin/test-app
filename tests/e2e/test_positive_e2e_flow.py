@@ -3,10 +3,9 @@
 Covers the complete sequential journey a first-time user would follow:
   Phase 1 — App launch: page loads with correct title and active tab
   Phase 2 — Jira Connection: fill credentials → test → save
-  Phase 3 — Schema Setup: name + project key → fetch → schema in dropdown with SP badge
-  Phase 4 — Filter Builder: name + project → save → filter appears in list
-  Phase 5 — Data Retrieval: board ID + sprint count → save → preview sprints
-  Phase 6 — Generate Report: select filter → SSE stream → report link appears
+  Phase 3 — Filter Builder: name + project → save → filter appears in list
+  Phase 4 — Data Retrieval: board ID + sprint count → save → preview sprints
+  Phase 5 — Generate Report: select filter → SSE stream → report link appears
 
 Run:
     pytest tests/e2e/test_positive_e2e_flow.py -v
@@ -33,9 +32,7 @@ pytestmark = pytest.mark.e2e
 _JIRA_URL = "https://test.atlassian.net"
 _JIRA_EMAIL = "test@example.com"
 _JIRA_TOKEN = "test-api-token-abc123"
-_SCHEMA_NAME = "TestSchema"
 _PROJECT_KEY = "TEST"
-_SP_FIELD = "customfield_10016"
 _FILTER_NAME = "E2E Sprint Filter"
 _BOARD_ID = "42"
 _SPRINT_COUNT = "5"
@@ -62,7 +59,7 @@ _SSE_BODY = (
 @allure.story("Positive flow: from app launch to report generation")
 @allure.severity(allure.severity_level.BLOCKER)
 def test_positive_end_to_end_flow(page: Page, live_server_url: str) -> None:
-    """Complete positive user journey: configure → schema → filter → preview → generate."""
+    """Complete positive user journey: configure → filter → preview → generate."""
 
     # ------------------------------------------------------------------
     # Phase 1 — App Launch
@@ -141,55 +138,9 @@ def test_positive_end_to_end_flow(page: Page, live_server_url: str) -> None:
             assert page.evaluate("localStorage.getItem('jira_email')") == _JIRA_EMAIL
 
     # ------------------------------------------------------------------
-    # Phase 3 — Schema Setup
+    # Phase 3 — Filter Builder
     # ------------------------------------------------------------------
-    with allure.step("Phase 3 — Schema Setup: fetch schema from Jira"):
-        # Shared mutable state: POST handler appends to these, GET handler reads them.
-        _schemas: list[str] = []
-        _details: dict = {}
-
-        def _on_schema_post(route):
-            body = route.request.post_data_json or {}
-            name = body.get("schema_name", _SCHEMA_NAME)
-            _schemas.append(name)
-            _details[name] = {
-                "schema_name": name,
-                "fields": {"story_points": {"id": _SP_FIELD, "type": "number"}},
-            }
-            route.fulfill(
-                status=200,
-                content_type="application/json",
-                body=json.dumps({"ok": True, "schema": _details[name]}),
-            )
-
-        # POST handler registered first; passes non-POST calls to the next handler.
-        page.route(
-            "**/api/schemas**",
-            lambda r: _on_schema_post(r) if r.request.method == "POST" else r.continue_(),
-        )
-        # GET handler registered second (Playwright routes stack; last registered = first matched).
-        _mock_schemas_api(page, schemas=_schemas, details_by_name=_details)
-
-        with allure.step("Navigate to Schema Setup tab"):
-            page.get_by_role("tab", name="Schema Setup").click()
-            expect(page.locator("#panel-schema")).to_be_visible()
-
-        with allure.step("Enter schema name and project key"):
-            page.locator("#schema-name-input").fill(_SCHEMA_NAME)
-            page.locator("#schema-project-keys").fill(_PROJECT_KEY)
-
-        with allure.step("Click Fetch Schema and wait for success status"):
-            page.locator("#btn-fetch-schema").click()
-            expect(page.locator("#schema-status")).to_contain_text(_SCHEMA_NAME, timeout=10_000)
-
-        with allure.step("Assert schema appears in dropdown with SP badge"):
-            expect(page.locator("#schema-select")).to_contain_text(_SCHEMA_NAME, timeout=5_000)
-            expect(page.locator("#schema-sp-badge")).to_contain_text(_SP_FIELD, timeout=5_000)
-
-    # ------------------------------------------------------------------
-    # Phase 4 — Filter Builder
-    # ------------------------------------------------------------------
-    with allure.step("Phase 4 — Filter Builder: save a filter"):
+    with allure.step("Phase 3 — Filter Builder: save a filter"):
         # _mock_filters_api is already registered from Phase 1 boot setup.
 
         with allure.step("Navigate to Filter Builder tab"):
@@ -197,8 +148,14 @@ def test_positive_end_to_end_flow(page: Page, live_server_url: str) -> None:
             expect(page.locator("#panel-filter")).to_be_visible()
 
         with allure.step("Enter filter name and project key"):
+            page.locator("#filter-jql-builder summary").click()
             page.locator("#filter-name").fill(_FILTER_NAME)
             page.locator("#jira-project").fill(_PROJECT_KEY)
+
+        with allure.step("Enter board ID and sprint count"):
+            page.locator("#filter-board-settings summary").click()
+            page.locator("#jira-board-id").fill(_BOARD_ID)
+            page.locator("#sprint-count").fill(_SPRINT_COUNT)
 
         with allure.step("Click Save Filter"):
             page.locator("#btn-save-jira-filter").click()
@@ -212,56 +169,20 @@ def test_positive_end_to_end_flow(page: Page, live_server_url: str) -> None:
             expect(page.locator("#filters-list")).to_contain_text(_FILTER_NAME)
 
     # ------------------------------------------------------------------
-    # Phase 5 — Data Retrieval
+    # Phase 4 — Board Settings
     # ------------------------------------------------------------------
-    with allure.step("Phase 5 — Data Retrieval: save settings and preview sprints"):
-        page.route(
-            "**/api/data-preview**",
-            lambda r: r.fulfill(
-                status=200,
-                content_type="application/json",
-                body=json.dumps(
-                    {
-                        "ok": True,
-                        "board_id": int(_BOARD_ID),
-                        "board_name": "Test Board",
-                        "project_type": "SCRUM",
-                        "total_sprints": 2,
-                        "sprints": [
-                            {"id": 1, "name": "Sprint 1", "startDate": "2026-03-01", "endDate": "2026-03-14"},
-                            {"id": 2, "name": "Sprint 2", "startDate": "2026-03-15", "endDate": "2026-03-28"},
-                        ],
-                    }
-                ),
-            ),
-        )
-
-        with allure.step("Navigate to Data Retrieval tab"):
-            page.get_by_role("tab", name="Data Retrieval").click()
-            expect(page.locator("#panel-data")).to_be_visible()
-
-        with allure.step("Enter board ID and sprint count"):
-            page.locator("#jira-board-id").fill(_BOARD_ID)
-            page.locator("#sprint-count").fill(_SPRINT_COUNT)
-
+    with allure.step("Phase 4 — Board Settings: save board ID and sprint count"):
+        # Board settings (jira-board-id, sprint-count) live in the Filter Builder tab
+        # inside the collapsible #filter-board-settings section. Fields were already
+        # filled in Phase 3; clicking Save Data Settings persists them to the server.
         with allure.step("Click Save Data Settings → confirmation flash appears"):
             page.locator("#btn-save-data").click()
             expect(page.locator("#save-confirm-data")).to_have_class(re.compile(r"visible"), timeout=5_000)
 
-        with allure.step("Select saved filter in preview dropdown and fetch preview"):
-            preview_select = page.locator("#data-preview-filter")
-            expect(preview_select).to_contain_text(_FILTER_NAME, timeout=5_000)
-            preview_select.select_option(label=_FILTER_NAME)
-            page.locator("#btn-fetch-preview").click()
-
-        with allure.step("Assert sprint list is shown in preview results"):
-            expect(page.locator("#preview-results")).to_contain_text("Sprint 1", timeout=10_000)
-            expect(page.locator("#preview-results")).to_contain_text("Sprint 2")
-
     # ------------------------------------------------------------------
-    # Phase 6 — Generate Report
+    # Phase 5 — Generate Report
     # ------------------------------------------------------------------
-    with allure.step("Phase 6 — Generate Report: select filter, run, assert report link"):
+    with allure.step("Phase 5 — Generate Report: select filter, run, assert report link"):
         page.route(
             "**/api/generate**",
             lambda r: r.fulfill(

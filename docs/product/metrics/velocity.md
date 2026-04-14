@@ -58,11 +58,14 @@ Story points and other field IDs always come from the active schema (file or bui
 
 1. **Fetch sprints** — retrieve the last `JIRA_SPRINT_COUNT` sprints for the board.
 2. **Fetch issues** — for each sprint, retrieve all issues assigned to it.
-3. **Filter to done issues** — keep only issues whose `status.name` (lowercased) is in the
+3. **Deduplicate across sprints** — a ticket returned by multiple sprint API calls is counted
+   only in the **last (most recent) sprint** it appears in. This prevents double-counting when
+   Jira carries a ticket forward from one sprint to the next.
+4. **Filter to done issues** — keep only issues whose `status.name` (lowercased) is in the
    configured `done_statuses` set.
-4. **Sum story points** — add up the `story_points` field value for each done issue.
+5. **Sum story points** — add up the `story_points` field value for each done issue.
    Issues with a missing or non-numeric value contribute 0.
-5. **Record per sprint** — store `velocity` (rounded to 1 decimal place) and `issue_count`
+6. **Record per sprint** — store `velocity` (rounded to 1 decimal place) and `issue_count`
    (number of done issues) for each sprint.
 
 **Formula:**

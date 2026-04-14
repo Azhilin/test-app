@@ -82,9 +82,9 @@ def _goto(page: Page, url: str, config: dict | None = None, cert_status: dict | 
     )
     for attempt in range(3):
         try:
-            page.goto(url, wait_until="domcontentloaded", timeout=15000)
+            page.goto(url, wait_until="domcontentloaded", timeout=5000)
             # Wait for async config/cert loading to complete
-            page.wait_for_function("window.restoreValuesReady === true", timeout=15000)
+            page.wait_for_function("window.restoreValuesReady === true", timeout=5000)
             return
         except Exception:
             if attempt == 2:
@@ -116,7 +116,7 @@ def _fill_credentials(
 
 def _run_test_connection_and_wait_success(page: Page) -> None:
     page.locator("#btn-test-conn").click()
-    expect(page.locator("#conn-status-badge")).to_have_text("Connected", timeout=10000)
+    expect(page.locator("#conn-status-badge")).to_have_text("Connected", timeout=5000)
 
 
 def _mock_cert_status(page: Page, response: dict, status: int = 200) -> None:
@@ -255,7 +255,7 @@ def test_badge_shows_connected_on_success(page: Page, live_server_url: str):
     _open_connection_tab(page)
     _fill_credentials(page)
     page.locator("#btn-test-conn").click()
-    expect(page.locator("#conn-status-badge")).to_have_text("Connected", timeout=10000)
+    expect(page.locator("#conn-status-badge")).to_have_text("Connected", timeout=5000)
     expect(page.locator("#conn-status-detail")).to_contain_text("Alice Smith")
 
 
@@ -266,7 +266,7 @@ def test_badge_shows_error_on_401(page: Page, live_server_url: str):
     _open_connection_tab(page)
     _fill_credentials(page)
     page.locator("#btn-test-conn").click()
-    expect(page.locator("#conn-status-badge")).to_have_text("Error", timeout=10000)
+    expect(page.locator("#conn-status-badge")).to_have_text("Error", timeout=5000)
     expect(page.locator("#conn-status-detail")).to_contain_text("Authentication failed")
 
 
@@ -277,7 +277,7 @@ def test_badge_shows_error_on_403(page: Page, live_server_url: str):
     _open_connection_tab(page)
     _fill_credentials(page)
     page.locator("#btn-test-conn").click()
-    expect(page.locator("#conn-status-badge")).to_have_text("Error", timeout=10000)
+    expect(page.locator("#conn-status-badge")).to_have_text("Error", timeout=5000)
     expect(page.locator("#conn-status-detail")).to_contain_text("403")
 
 
@@ -315,7 +315,7 @@ def test_save_remains_disabled_after_failed_test_connection(page: Page, live_ser
     _open_connection_tab(page)
     _fill_credentials(page)
     page.locator("#btn-test-conn").click()
-    expect(page.locator("#conn-status-badge")).to_have_text("Error", timeout=10000)
+    expect(page.locator("#conn-status-badge")).to_have_text("Error", timeout=5000)
     expect(page.locator("#btn-save-conn")).to_be_disabled()
 
 
@@ -462,7 +462,7 @@ def test_save_with_new_token_sends_real_token(page: Page, live_server_url: str):
     _open_connection_tab(page)
     page.locator("#jira-token").fill("newtoken456")
     page.locator("#btn-test-conn").click()
-    expect(page.locator("#conn-status-badge")).to_have_text("Connected", timeout=10000)
+    expect(page.locator("#conn-status-badge")).to_have_text("Connected", timeout=5000)
 
     page.locator("#btn-save-conn").click()
     expect(page.locator("#save-confirm-conn")).to_have_class(re.compile(r"visible"), timeout=3000)
@@ -502,7 +502,7 @@ def test_save_with_server_token_sends_star_token(page: Page, live_server_url: st
     # Token field empty — hasServerToken=true means the guard allows Test Connection
     expect(page.locator("#jira-token")).to_have_value("")
     page.locator("#btn-test-conn").click()
-    expect(page.locator("#conn-status-badge")).to_have_text("Connected", timeout=10000)
+    expect(page.locator("#conn-status-badge")).to_have_text("Connected", timeout=5000)
     expect(page.locator("#btn-save-conn")).to_be_enabled()
 
     page.locator("#btn-save-conn").click()
@@ -534,7 +534,7 @@ def test_can_re_test_after_field_edit_to_re_enable_save(page: Page, live_server_
 
     # Re-run Test Connection → Save re-enabled
     page.locator("#btn-test-conn").click()
-    expect(page.locator("#conn-status-badge")).to_have_text("Connected", timeout=10000)
+    expect(page.locator("#conn-status-badge")).to_have_text("Connected", timeout=5000)
     expect(page.locator("#btn-save-conn")).to_be_enabled()
 
 
@@ -584,12 +584,12 @@ def test_multiple_test_connection_attempts_last_result_wins(page: Page, live_ser
 
     # First attempt → error
     page.locator("#btn-test-conn").click()
-    expect(page.locator("#conn-status-badge")).to_have_text("Error", timeout=10000)
+    expect(page.locator("#conn-status-badge")).to_have_text("Error", timeout=5000)
     expect(page.locator("#btn-save-conn")).to_be_disabled()
 
     # Second attempt → success
     page.locator("#btn-test-conn").click()
-    expect(page.locator("#conn-status-badge")).to_have_text("Connected", timeout=10000)
+    expect(page.locator("#conn-status-badge")).to_have_text("Connected", timeout=5000)
     expect(page.locator("#btn-save-conn")).to_be_enabled()
 
 
