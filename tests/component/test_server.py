@@ -477,54 +477,159 @@ def test_get_schema_not_found(server_url):
 # ---------------------------------------------------------------------------
 
 
-def test_post_schema_missing_name(server_url):
-    """POST /api/schemas without schema_name returns 400."""
-    body = json.dumps({"jira_url": "https://x.atlassian.net", "jira_email": "a@b", "jira_token": "t"}).encode()
+def _post_schema(server_url, body_obj):
+    """Helper: POST JSON to /api/schemas, return (http_status, parsed_json)."""
+    body = json.dumps(body_obj).encode()
     req = urllib.request.Request(
         f"{server_url}/api/schemas",
         data=body,
         headers={"Content-Type": "application/json"},
         method="POST",
     )
-    with pytest.raises(urllib.error.HTTPError) as exc_info:
-        urllib.request.urlopen(req)
-    assert exc_info.value.code == 400
+    try:
+        resp = urllib.request.urlopen(req)
+        return resp.status, json.loads(resp.read())
+    except urllib.error.HTTPError as exc:
+        return exc.code, json.loads(exc.read())
 
 
-def test_post_schema_missing_credentials(server_url):
-    """POST /api/schemas without jira credentials returns 400."""
-    body = json.dumps({"schema_name": "Test"}).encode()
-    req = urllib.request.Request(
-        f"{server_url}/api/schemas",
-        data=body,
-        headers={"Content-Type": "application/json"},
-        method="POST",
+@pytest.fixture
+def isolated_schema_file(monkeypatch, tmp_path):
+    """Redirect schema_mod.SCHEMA_PATH to a temp file seeded with the default schema."""
+    from pathlib import Path
+
+    tmp_file = tmp_path / "jira_schema.json"
+    default_copy = json.loads(json.dumps(schema_mod._DEFAULT_SCHEMA))
+    tmp_file.write_text(
+        json.dumps({"schemas": [default_copy]}, indent=2) + "\n",
+        encoding="utf-8",
     )
-    with pytest.raises(urllib.error.HTTPError) as exc_info:
-        urllib.request.urlopen(req)
-    assert exc_info.value.code == 400
+    monkeypatch.setattr(schema_mod, "SCHEMA_PATH", Path(tmp_file))
+    return tmp_file
 
 
-def test_post_schema_unreachable_jira(server_url):
-    """POST /api/schemas with unreachable Jira returns ok:false."""
-    body = json.dumps(
-        {
-            "schema_name": "Test",
-            "jira_url": "https://nonexistent-jira-12345.invalid",
-            "jira_email": "a@b.com",
-            "jira_token": "tok",
-        }
-    ).encode()
-    req = urllib.request.Request(
-        f"{server_url}/api/schemas",
-        data=body,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
-    resp = urllib.request.urlopen(req, timeout=20)
-    data = json.loads(resp.read())
+def test_post_schema_missing_schema_key(server_url):
+    """POST with no top-level 'schema' returns 400."""
+    status, data = _post_schema(server_url, {"not_a_schema": {}})
+    assert status == 400
     assert data["ok"] is False
-    assert "error" in data
+    assert "schema" in data["error"].lower()
+
+
+def test_post_schema_missing_name(server_url):
+    """POST with empty 'schema' object returns 400 about schema_name."""
+    status, data = _post_schema(server_url, {"schema": {}})
+    assert status == 400
+    assert "schema_name" in data["error"]
+
+
+def test_post_schema_rejects_non_dict_fields(server_url):
+    """POST where fields is not an object returns 400."""
+    status, data = _post_schema(
+        server_url,
+        {
+            "schema": {
+                "schema_name": "X",
+                "fields": "oops",
+                "status_mapping": {"done_statuses": [], "in_progress_statuses": []},
+            },
+        },
+    )
+    assert status == 400
+    assert "fields" in data["error"]
+
+
+def test_post_schema_rejects_invalid_status_mapping(server_url):
+    """POST with missing done_statuses returns 400."""
+    status, data = _post_schema(
+        server_url,
+        {
+            "schema": {
+                "schema_name": "X",
+                "fields": {},
+                "status_mapping": {"in_progress_statuses": []},
+            },
+        },
+    )
+    assert status == 400
+    assert "status_mapping" in data["error"]
+
+
+def test_post_schema_creates_new_entry(server_url, isolated_schema_file):
+    """POST with a fresh schema_name inserts and returns updated:false."""
+    payload = {
+        "schema": {
+            "schema_name": "E2E_New",
+            "description": "created by test",
+            "fields": {"story_points": {"id": "customfield_99999", "type": "number"}},
+            "status_mapping": {"done_statuses": ["Done"], "in_progress_statuses": ["In Progress"]},
+        },
+    }
+    status, data = _post_schema(server_url, payload)
+    assert status == 200
+    assert data["ok"] is True
+    assert data["updated"] is False
+    assert data["schema"]["schema_name"] == "E2E_New"
+
+    # Confirm it appears in the list
+    resp = urllib.request.urlopen(f"{server_url}/api/schemas")
+    listing = json.loads(resp.read())
+    assert "E2E_New" in listing["schemas"]
+
+
+def test_post_schema_updates_existing(server_url, isolated_schema_file):
+    """Second POST with the same schema_name returns updated:true."""
+    payload = {
+        "schema": {
+            "schema_name": "E2E_Upsert",
+            "fields": {"story_points": {"id": "customfield_10016", "type": "number"}},
+            "status_mapping": {"done_statuses": ["Done"], "in_progress_statuses": ["In Progress"]},
+        },
+    }
+    first_status, first = _post_schema(server_url, payload)
+    assert first_status == 200 and first["updated"] is False
+
+    payload["schema"]["description"] = "updated"
+    second_status, second = _post_schema(server_url, payload)
+    assert second_status == 200
+    assert second["updated"] is True
+    assert second["schema"]["description"] == "updated"
+
+
+def test_post_schema_rename_collision_overwrites(server_url, isolated_schema_file):
+    """Editing schema_name to match an existing entry overwrites that entry (upsert)."""
+    first = {
+        "schema": {
+            "schema_name": "Alpha",
+            "fields": {},
+            "status_mapping": {"done_statuses": ["Done"], "in_progress_statuses": ["In Progress"]},
+        },
+    }
+    second = {
+        "schema": {
+            "schema_name": "Beta",
+            "fields": {},
+            "status_mapping": {"done_statuses": ["Done"], "in_progress_statuses": ["In Progress"]},
+            "description": "originally Beta",
+        },
+    }
+    _post_schema(server_url, first)
+    _post_schema(server_url, second)
+
+    # Now "rename" Alpha to Beta — existing Beta should be overwritten.
+    rename = {
+        "schema": {
+            "schema_name": "Beta",
+            "fields": {"labels": {"id": "labels", "type": "array"}},
+            "status_mapping": {"done_statuses": ["Done"], "in_progress_statuses": ["In Progress"]},
+            "description": "came from Alpha",
+        },
+    }
+    status, data = _post_schema(server_url, rename)
+    assert status == 200
+    assert data["updated"] is True
+    assert data["schema"]["description"] == "came from Alpha"
+    assert "labels" in data["schema"]["fields"]
 
 
 # ---------------------------------------------------------------------------

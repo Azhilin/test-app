@@ -6,7 +6,6 @@ import importlib
 import io
 import json
 import sys
-import urllib.error
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -130,109 +129,137 @@ def test_resolve_report_path_rejects_path_traversal(monkeypatch, tmp_path):
     assert resolved is None
 
 
-def test_post_schema_requires_saved_jira_credentials(monkeypatch, tmp_path):
+def _isolate_schema_file(monkeypatch, tmp_path: Path) -> Path:
+    """Redirect schema_mod.SCHEMA_PATH to a seeded temp file and return the path."""
+    from app.core import schema as schema_mod
+
+    tmp_file = tmp_path / "jira_schema.json"
+    tmp_file.write_text(json.dumps({"schemas": []}) + "\n", encoding="utf-8")
+    monkeypatch.setattr(schema_mod, "SCHEMA_PATH", tmp_file)
+    return tmp_file
+
+
+def test_post_schema_requires_schema_key(monkeypatch, tmp_path):
+    """POST body without top-level 'schema' returns 400."""
+    _isolate_schema_file(monkeypatch, tmp_path)
+    (_, handler) = _make_handler(monkeypatch, tmp_path, body={"not_schema": {}})
+
+    handler._handle_post_schema()
+    status, data = _json_response(handler)
+
+    assert status == 400
+    assert data["ok"] is False
+    assert "schema" in data["error"].lower()
+
+
+def test_post_schema_requires_schema_name(monkeypatch, tmp_path):
+    """POST with empty schema dict returns 400 about schema_name."""
+    _isolate_schema_file(monkeypatch, tmp_path)
+    (_, handler) = _make_handler(monkeypatch, tmp_path, body={"schema": {}})
+
+    handler._handle_post_schema()
+    status, data = _json_response(handler)
+
+    assert status == 400
+    assert "schema_name" in data["error"]
+
+
+def test_post_schema_requires_dict_fields(monkeypatch, tmp_path):
+    """POST with fields not being an object returns 400."""
+    _isolate_schema_file(monkeypatch, tmp_path)
     (_, handler) = _make_handler(
         monkeypatch,
         tmp_path,
-        body={"name": "Team Schema", "projects": "TEAM"},
+        body={
+            "schema": {
+                "schema_name": "Test",
+                "fields": "oops",
+                "status_mapping": {"done_statuses": [], "in_progress_statuses": []},
+            },
+        },
     )
 
     handler._handle_post_schema()
     status, data = _json_response(handler)
 
     assert status == 400
-    assert "Jira credentials not found in .env" in data["error"]
+    assert "fields" in data["error"]
 
 
-def test_post_schema_fetches_and_saves_schema(monkeypatch, tmp_path):
+def test_post_schema_requires_status_mapping_lists(monkeypatch, tmp_path):
+    """POST with missing in_progress_statuses returns 400."""
+    _isolate_schema_file(monkeypatch, tmp_path)
     (_, handler) = _make_handler(
         monkeypatch,
         tmp_path,
-        body={"name": "Team Schema", "projects": "TEAM, CORE", "filter_id": "42"},
+        body={
+            "schema": {
+                "schema_name": "Test",
+                "fields": {},
+                "status_mapping": {"done_statuses": []},
+            },
+        },
     )
-    (tmp_path / ".env").write_text(
-        "JIRA_URL=https://example.atlassian.net\nJIRA_EMAIL=user@example.com\nJIRA_API_TOKEN=secret-token\n",
-        encoding="utf-8",
-    )
-
-    def _fake_jira_get(endpoint: str, url: str, email: str, token: str):
-        assert url == "https://example.atlassian.net"
-        assert email == "user@example.com"
-        assert token == "secret-token"
-        if endpoint == "/rest/api/2/field":
-            return [
-                {"id": "summary", "name": "Summary", "custom": False, "schema": {"type": "string"}},
-                {
-                    "id": "customfield_10016",
-                    "name": "Story Points",
-                    "custom": True,
-                    "schema": {"type": "number", "custom": "com.atlassian.jira.plugin", "system": ""},
-                },
-            ]
-        if endpoint.startswith("/rest/api/2/search?"):
-            return {
-                "issues": [
-                    {
-                        "key": "TEAM-123",
-                        "fields": {
-                            "summary": "Latest issue",
-                            "customfield_10016": 5,
-                            "description": None,
-                        },
-                    }
-                ]
-            }
-        if endpoint == "/rest/api/2/filter/42":
-            return {"jql": "project in (TEAM, CORE)"}
-        raise AssertionError(f"Unexpected endpoint: {endpoint}")
-
-    monkeypatch.setattr(handler, "_jira_api_get", _fake_jira_get)
 
     handler._handle_post_schema()
     status, data = _json_response(handler)
 
-    saved_path = tmp_path / "generated" / "schemas" / "team_schema.json"
-    saved_data = json.loads(saved_path.read_text(encoding="utf-8"))
+    assert status == 400
+    assert "status_mapping" in data["error"]
+
+
+def test_post_schema_inserts_new_entry(monkeypatch, tmp_path):
+    """POST with a fresh schema_name saves and returns updated:false."""
+    schema_file = _isolate_schema_file(monkeypatch, tmp_path)
+    (_, handler) = _make_handler(
+        monkeypatch,
+        tmp_path,
+        body={
+            "schema": {
+                "schema_name": "Inserted",
+                "fields": {"labels": {"id": "labels", "type": "array"}},
+                "status_mapping": {"done_statuses": ["Done"], "in_progress_statuses": ["In Progress"]},
+            },
+        },
+    )
+
+    handler._handle_post_schema()
+    status, data = _json_response(handler)
 
     assert status == 200
     assert data["ok"] is True
     assert data["updated"] is False
-    assert data["filename"] == "team_schema.json"
-    assert data["field_count"] == 2
-    assert data["custom_count"] == 1
-    assert saved_data["projects"] == ["TEAM", "CORE"]
-    assert saved_data["filter_id"] == "42"
-    assert saved_data["filter_jql"] == "project in (TEAM, CORE)"
-    assert saved_data["sample_issue_key"] == "TEAM-123"
-    assert saved_data["populated_fields"] == ["summary", "customfield_10016"]
+    assert data["schema"]["schema_name"] == "Inserted"
+
+    persisted = json.loads(schema_file.read_text(encoding="utf-8"))
+    assert any(s["schema_name"] == "Inserted" for s in persisted["schemas"])
 
 
-def test_post_schema_returns_jira_error_when_fields_request_fails(monkeypatch, tmp_path):
-    (_, handler) = _make_handler(
-        monkeypatch,
-        tmp_path,
-        body={"name": "Team Schema", "projects": "TEAM"},
-    )
-    (tmp_path / ".env").write_text(
-        "JIRA_URL=https://example.atlassian.net\nJIRA_EMAIL=user@example.com\nJIRA_API_TOKEN=secret-token\n",
-        encoding="utf-8",
-    )
+def test_post_schema_updates_existing_entry(monkeypatch, tmp_path):
+    """Second POST for the same name returns updated:true."""
+    schema_file = _isolate_schema_file(monkeypatch, tmp_path)
+    seed_body = {
+        "schema": {
+            "schema_name": "Upsert",
+            "fields": {"labels": {"id": "labels", "type": "array"}},
+            "status_mapping": {"done_statuses": ["Done"], "in_progress_statuses": ["In Progress"]},
+        },
+    }
+    (_, h1) = _make_handler(monkeypatch, tmp_path, body=seed_body)
+    h1._handle_post_schema()
 
-    http_error = urllib.error.HTTPError(
-        url="https://example.atlassian.net/rest/api/2/field",
-        code=500,
-        msg="Server Error",
-        hdrs=None,
-        fp=None,
-    )
-    monkeypatch.setattr(handler, "_jira_api_get", lambda *args: (_ for _ in ()).throw(http_error))
-
-    handler._handle_post_schema()
-    status, data = _json_response(handler)
+    update_body = json.loads(json.dumps(seed_body))
+    update_body["schema"]["description"] = "changed"
+    (_, h2) = _make_handler(monkeypatch, tmp_path, body=update_body)
+    h2._handle_post_schema()
+    status, data = _json_response(h2)
 
     assert status == 200
-    assert data["ok"] is False
-    assert "HTTP 500 Server Error" in data["error"]
+    assert data["updated"] is True
+    persisted = json.loads(schema_file.read_text(encoding="utf-8"))
+    matches = [s for s in persisted["schemas"] if s["schema_name"] == "Upsert"]
+    assert len(matches) == 1
+    assert matches[0]["description"] == "changed"
 
 
 def test_delete_schema_removes_existing_file(monkeypatch, tmp_path):

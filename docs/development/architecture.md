@@ -191,7 +191,7 @@ test-app/                          ← project root
 | `app/core/config.py` | Loads `.env` from project root via `python-dotenv`. Exposes all `JIRA_*` and `AI_*` constants as module-level names. `validate_config()` returns a list of error strings. |
 | `app/core/jira_client.py` | Wraps `atlassian-python-api`. `create_client()` returns an authenticated `Jira` instance. `fetch_sprint_data()` returns `(sprints, sprint_issues)`. Handles pagination and optional filter JQL. |
 | `app/core/metrics.py` | Pure functions: `compute_velocity`, `compute_cycle_time`, `compute_ai_assistance_trend`, `compute_ai_usage_details`, `compute_custom_trends` (placeholder). `build_metrics_dict()` assembles all results into a single dict consumed by both reporters. |
-| `app/core/schema.py` | Loads/saves/queries Jira field schemas from `config/jira_schema.json`. Provides field ID lookups, status mapping accessors, and auto-detection from Jira's `/rest/api/2/field` response. Ships a built-in `Default_Jira_Cloud` schema as fallback. |
+| `app/core/schema.py` | Loads/saves/queries Jira field schemas from `config/jira_schema.json`. Provides field ID lookups and status mapping accessors. Ships a built-in `Default_Jira_Cloud` schema as fallback. |
 | `app/reporters/report_html.py` | Renders `templates/report.html.j2` via Jinja2. Accepts a `section_visibility` dict to hide/show individual report sections. |
 | `app/reporters/report_md.py` | Builds a Markdown string (velocity bar chart, tables, cycle time stats) and writes to disk. Accepts a `section_visibility` dict to hide/show individual sections. |
 | `app/utils/cert_utils.py` | `validate_cert(Path)` — parses a PEM file with `cryptography`, returns a dict: `{valid, expires_at, days_remaining, subject}` (plus `error` on failure). |
@@ -315,8 +315,9 @@ browser → GET /api/generate          → spawn subprocess: python main.py
 browser → GET /api/cert-status       → app.utils.cert_utils.validate_cert(...)
 browser → POST /api/fetch-cert       → ssl.get_server_certificate → certs/jira_ca_bundle.pem
 browser → GET /api/schemas           → list schemas from config/jira_schema.json
-browser → POST /api/schemas          → create/update a schema entry
-browser → DELETE /api/schemas/<name> → remove a schema entry
+browser → GET /api/schemas?name=...  → return a single schema body by name
+browser → POST /api/schemas          → upsert a schema entry from raw JSON body ({schema: {...}})
+browser → DELETE /api/schemas?name=… → remove a non-default schema entry
 browser → GET /api/filters           → list filters from config/jira_filters.json
 browser → POST /api/filters          → create/update (upsert) a saved filter; builds JQL
 browser → DELETE /api/filters/<slug> → remove a user filter (default filter protected)
@@ -385,9 +386,9 @@ All routes are served by `app/server.py` (stdlib `HTTPServer`). CORS headers (`A
 | `GET` | `/api/generate` | Run `main.py` as subprocess; stream stdout/stderr as SSE |
 | `GET` | `/api/cert-status` | Return cert existence and validity from `certs/jira_ca_bundle.pem` |
 | `POST` | `/api/fetch-cert` | Fetch TLS cert from Jira host via `ssl.get_server_certificate` and save to `certs/` |
-| `GET` | `/api/schemas` | List all schemas from `config/jira_schema.json` |
-| `POST` | `/api/schemas` | Create or update a schema entry (upsert by `schema_name`) |
-| `DELETE` | `/api/schemas/<name>` | Delete a schema entry by name |
+| `GET` | `/api/schemas` | List all schemas from `config/jira_schema.json`; pass `?name=<schema_name>` to return a single schema body |
+| `POST` | `/api/schemas` | Upsert a schema entry by `schema_name` from a `{schema: {...}}` request body; no Jira credentials required |
+| `DELETE` | `/api/schemas?name=<schema_name>` | Delete a non-default schema entry by name (`Default_Jira_Cloud` is protected and returns 400) |
 | `GET` | `/api/filters` | List all saved filters from `config/jira_filters.json` (default filter always first) |
 | `POST` | `/api/filters` | Create or update a saved filter; builds JQL from params; upsert by `name` |
 | `DELETE` | `/api/filters/<slug>` | Delete a user filter by slug (the default filter cannot be deleted) |

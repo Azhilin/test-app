@@ -97,17 +97,20 @@ with a 12-second timeout and reports success or HTTP error status.
 
 ---
 
-### Jira Field Schema tab
+### Schema Setup tab
 
-Manages the Jira field schema used to locate story-points and status fields on each instance.
-Schemas are stored in `config/jira_schema.json`.
+Manages the Jira field schema used to locate story-points, sprint, team, and status fields
+on each Jira instance. Schemas are stored in `config/jira_schema.json`; the tab sits between
+**Jira Connection** and **Filter Builder**.
 
 | Feature | Description |
 |---------|-------------|
-| Schema list | All saved schemas; `Default_Jira_Cloud` is always available as fallback |
-| Create / edit schema | Schema name, story-points field ID, done/in-progress status lists |
-| Delete schema | Removes any non-default schema entry |
-| Active schema selection | The active schema name is read from `JIRA_SCHEMA_NAME` in `.env` |
+| Schema dropdown | Lists every schema from `config/jira_schema.json`; `Default_Jira_Cloud` is always present and selected by default |
+| JSON editor | Full schema body is shown as pretty-printed JSON in a textarea; all fields (`schema_name`, `description`, `fields`, `status_mapping`, ...) are editable in one place |
+| New Schema | Loads a blank template into the editor; user sets `schema_name` directly in the JSON body before saving |
+| Save | Upserts the schema by `schema_name` via `POST /api/schemas`; client-side JSON validation blocks malformed bodies before the request is sent |
+| Delete | Removes any non-default schema entry; disabled while `Default_Jira_Cloud` is selected |
+| Active schema selection | The active schema name used by reports is read from `JIRA_SCHEMA_NAME` in `.env` |
 
 ---
 

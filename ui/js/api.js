@@ -73,6 +73,13 @@ export async function postSchema(body) {
   return res.json();
 }
 
+export async function deleteSchema(name) {
+  const res = await fetch(`/api/schemas?name=${encodeURIComponent(name)}`, {
+    method: 'DELETE',
+  });
+  return res.json();
+}
+
 export async function testConnection(body) {
   return jsonFetch('/api/test-connection', {
     method:  'POST',
