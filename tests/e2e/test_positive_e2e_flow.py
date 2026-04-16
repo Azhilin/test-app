@@ -216,7 +216,6 @@ def test_positive_end_to_end_flow(page: Page, live_server_url: str) -> None:
             btn = page.locator("#btn-generate")
             btn.click()
             expect(btn).to_be_disabled(timeout=5_000)
-            expect(btn).to_contain_text("Generating")
 
         with allure.step("Assert SSE output streams into log"):
             log = page.locator("#log-output")

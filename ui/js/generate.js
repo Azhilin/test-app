@@ -156,8 +156,18 @@ function runGenerateSSE(log, select, setBusy, resetBtn) {
     resetBtn();
   });
 
+  // Server emits `event: close` in its finally block — guaranteed terminal
+  // event that re-enables the button even if done/error were missed.
+  evtSource.addEventListener('close', () => {
+    evtSource.close();
+    resetBtn();
+  });
+
   evtSource.onerror = () => {
-    if (evtSource.readyState === EventSource.CLOSED) return;
+    if (evtSource.readyState === EventSource.CLOSED) {
+      resetBtn();
+      return;
+    }
     evtSource.close();
     log.line('Connection to server lost. Is server.py still running?', 'log-error');
     resetBtn();
