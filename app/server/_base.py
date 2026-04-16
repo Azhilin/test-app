@@ -209,6 +209,22 @@ class HandlerBase(BaseHTTPRequestHandler):
                 self._send_json(404, {"ok": False, "error": "Not found"})
                 return
             self._serve_file(target)
+        elif path.startswith("/ui/"):
+            ui_root = (_root() / "ui").resolve()
+            rel = urlunquote(path[len("/ui/") :]).lstrip("/")
+            if not rel:
+                self._send_json(404, {"ok": False, "error": "Not found"})
+                return
+            target = (ui_root / rel).resolve()
+            try:
+                target.relative_to(ui_root)
+            except ValueError:
+                self._send_json(404, {"ok": False, "error": "Not found"})
+                return
+            if not target.is_file():
+                self._send_json(404, {"ok": False, "error": "Not found"})
+                return
+            self._serve_file(target)
         else:
             self._send_json(404, {"ok": False, "error": "Not found"})
 
