@@ -1,0 +1,120 @@
+.app-header {
+  max-width: 860px;
+  margin: 0 auto;
+  padding: 28px 0 20px;
+  border-bottom: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.app-header-icon {
+  width: 40px;
+  height: 40px;
+  background: var(--accent);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.app-header-icon svg { display: block; }
+.app-header h1 {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  line-height: 1.2;
+}
+.app-header p {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.app-body {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 2px solid var(--border);
+  margin-top: 6px;
+}
+.tab-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  padding: 14px 20px 12px;
+  position: relative;
+  outline: none;
+  transition: color 0.15s;
+  white-space: nowrap;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn[aria-selected="true"] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.tab-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+  border-radius: 3px 3px 0 0;
+}
+
+.tab-panel { padding: 28px 0; }
+.tab-panel[hidden] { display: none; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.card-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.card-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+
+.report-desc {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: var(--accent-light);
+  border: 1px solid #B3D4FF;
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin-bottom: 24px;
+}
+.report-desc-icon { flex-shrink: 0; margin-top: 1px; }
+.report-desc p {
+  font-size: 0.85rem;
+  color: #0747A6;
+  line-height: 1.6;
+}
+.report-desc strong { font-weight: 600; }
+
+@media (max-width: 600px) {
+  .app-header { padding: 20px 0 16px; }
+  .app-header h1 { font-size: 1.1rem; }
+  .tab-btn { padding: 12px 14px 10px; font-size: 0.82rem; }
+  .card { padding: 18px; }
+  .reports-list li { flex-direction: column; align-items: flex-start; gap: 6px; }
+}
