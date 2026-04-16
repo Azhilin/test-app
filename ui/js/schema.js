@@ -1,17 +1,50 @@
 import { IS_SERVED, STORE_KEYS } from './config.js';
 import { store } from './store.js';
-import { getSchemas, getSchemaByName, postSchema } from './api.js';
+import { getSchemas, getSchemaByName, postSchema, deleteSchema } from './api.js';
+
+const DEFAULT_SCHEMA_NAME = 'Default_Jira_Cloud';
+
+const TEMPLATE_SCHEMA = {
+  schema_name: '',
+  description: '',
+  jira_url_pattern: '',
+  fields: {
+    story_points: { id: 'customfield_10016', type: 'number', description: 'Story point estimate' },
+    sprint:       { id: 'customfield_10020', type: 'array',  description: 'Sprint(s) the issue belongs to' },
+    team:         { id: 'customfield_10001', type: 'string', jql_name: 'Team[Team]', description: 'Team field' },
+    labels:       { id: 'labels',            type: 'array',  description: 'Issue labels' },
+    status:       { id: 'status',            type: 'string', description: 'Issue status' },
+    resolution_date: { id: 'resolutiondate', type: 'string', description: 'Timestamp when the issue was resolved' },
+  },
+  status_mapping: {
+    done_statuses:        ['Done', 'Closed', 'Resolved', 'Complete'],
+    in_progress_statuses: ['In Progress'],
+  },
+};
 
 let _activeSchemaCache = null;
 
 function schemaStatus(el, msg, isError) {
+  if (!el) return;
   el.textContent = msg;
   el.style.color = isError ? 'var(--danger, #d32f2f)' : 'var(--success, #2e7d32)';
 }
 
+function writeLog(msg) {
+  const log = document.getElementById('schema-log-output');
+  if (!log) return;
+  log.textContent = msg;
+}
+
+function clearLog() {
+  const log = document.getElementById('schema-log-output');
+  if (log) log.textContent = '';
+}
+
 export async function loadSchemas() {
   if (!IS_SERVED) return;
-  const schemaSelect  = document.getElementById('schema-select');
+  const schemaSelect = document.getElementById('schema-select');
+  if (!schemaSelect) return;
   try {
     const data = await getSchemas();
     if (!data.ok) return;
@@ -29,9 +62,9 @@ export async function loadSchemas() {
     if (!saved && names.length) {
       schemaSelect.value = names[0];
     }
-    await applyActiveSchema();
+    await loadSelectedIntoEditor();
   } catch {
-    schemaSelect.innerHTML = '<option value="">Default (Jira Cloud)</option>';
+    schemaSelect.innerHTML = `<option value="${DEFAULT_SCHEMA_NAME}">${DEFAULT_SCHEMA_NAME}</option>`;
   }
 }
 
@@ -43,18 +76,24 @@ async function fetchSchemaDetails(name) {
   } catch { return null; }
 }
 
-async function applyActiveSchema() {
+async function loadSelectedIntoEditor() {
   const schemaSelect = document.getElementById('schema-select');
-  const schemaSPBadge = document.getElementById('schema-sp-badge');
+  const editor       = document.getElementById('schema-json-editor');
+  const deleteBtn    = document.getElementById('btn-schema-delete');
+  if (!schemaSelect) return;
+
   const name = schemaSelect.value;
   store.set(STORE_KEYS.JIRA_SCHEMA, name);
   const schema = await fetchSchemaDetails(name);
   _activeSchemaCache = schema;
 
-  const spId = schema?.fields?.story_points?.id;
-  ['badge-neutral', 'badge-success'].forEach((c) => schemaSPBadge.classList.remove(c));
-  schemaSPBadge.textContent = spId ? `Story Points: ${spId}` : 'Story Points: not detected';
-  schemaSPBadge.classList.add(spId ? 'badge-success' : 'badge-neutral');
+  if (editor) {
+    editor.value = schema ? JSON.stringify(schema, null, 2) : '';
+  }
+  if (deleteBtn) {
+    deleteBtn.disabled = !name || name === DEFAULT_SCHEMA_NAME;
+  }
+  clearLog();
 }
 
 export function getActiveTeamJqlName() {
@@ -64,68 +103,129 @@ export function getActiveTeamJqlName() {
   return 'Team[Team]';
 }
 
+function validateEditorContent(rawText) {
+  let parsed;
+  try {
+    parsed = JSON.parse(rawText);
+  } catch (err) {
+    return { ok: false, error: `Invalid JSON: ${err.message}` };
+  }
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    return { ok: false, error: 'Schema must be a JSON object.' };
+  }
+  if (typeof parsed.schema_name !== 'string' || !parsed.schema_name.trim()) {
+    return { ok: false, error: '"schema_name" must be a non-empty string.' };
+  }
+  if (!parsed.fields || typeof parsed.fields !== 'object' || Array.isArray(parsed.fields)) {
+    return { ok: false, error: '"fields" must be an object.' };
+  }
+  const sm = parsed.status_mapping;
+  if (
+    !sm || typeof sm !== 'object'
+    || !Array.isArray(sm.done_statuses)
+    || !Array.isArray(sm.in_progress_statuses)
+  ) {
+    return {
+      ok: false,
+      error: '"status_mapping" must contain "done_statuses" and "in_progress_statuses" as arrays.',
+    };
+  }
+  return { ok: true, parsed };
+}
+
+async function onSaveClick() {
+  const editor   = document.getElementById('schema-json-editor');
+  const statusEl = document.getElementById('schema-status');
+  if (!editor) return;
+
+  clearLog();
+  const validation = validateEditorContent(editor.value);
+  if (!validation.ok) {
+    writeLog(validation.error);
+    schemaStatus(statusEl, 'Schema not saved — see validation error.', true);
+    return;
+  }
+
+  schemaStatus(statusEl, 'Saving…', false);
+  try {
+    const data = await postSchema({ schema: validation.parsed });
+    if (data.ok) {
+      const savedName = data.schema?.schema_name || validation.parsed.schema_name;
+      _activeSchemaCache = null;
+      store.set(STORE_KEYS.JIRA_SCHEMA, savedName);
+      await loadSchemas();
+      const schemaSelect = document.getElementById('schema-select');
+      if (schemaSelect) schemaSelect.value = savedName;
+      await loadSelectedIntoEditor();
+      const verb = data.updated ? 'updated' : 'created';
+      schemaStatus(statusEl, `Schema "${savedName}" ${verb}.`, false);
+      window.dispatchEvent(new Event('jira-schema-changed'));
+    } else {
+      writeLog(data.error || 'Unknown server error.');
+      schemaStatus(statusEl, 'Save failed.', true);
+    }
+  } catch (err) {
+    writeLog(`Request failed: ${err.message}`);
+    schemaStatus(statusEl, 'Save failed.', true);
+  }
+}
+
+function onNewClick() {
+  const editor       = document.getElementById('schema-json-editor');
+  const schemaSelect = document.getElementById('schema-select');
+  const statusEl     = document.getElementById('schema-status');
+  const deleteBtn    = document.getElementById('btn-schema-delete');
+  if (!editor) return;
+
+  editor.value = JSON.stringify(TEMPLATE_SCHEMA, null, 2);
+  if (schemaSelect) schemaSelect.value = '';
+  if (deleteBtn) deleteBtn.disabled = true;
+  clearLog();
+  schemaStatus(statusEl, 'Editing new schema — set schema_name and Save.', false);
+  editor.focus();
+}
+
+async function onDeleteClick() {
+  const schemaSelect = document.getElementById('schema-select');
+  const statusEl     = document.getElementById('schema-status');
+  if (!schemaSelect) return;
+
+  const name = schemaSelect.value;
+  if (!name || name === DEFAULT_SCHEMA_NAME) return;
+  if (!window.confirm(`Delete schema "${name}"? This cannot be undone.`)) return;
+
+  clearLog();
+  try {
+    const data = await deleteSchema(name);
+    if (data.ok) {
+      store.set(STORE_KEYS.JIRA_SCHEMA, DEFAULT_SCHEMA_NAME);
+      _activeSchemaCache = null;
+      await loadSchemas();
+      schemaSelect.value = DEFAULT_SCHEMA_NAME;
+      await loadSelectedIntoEditor();
+      schemaStatus(statusEl, `Schema "${name}" deleted.`, false);
+      window.dispatchEvent(new Event('jira-schema-changed'));
+    } else {
+      writeLog(data.error || 'Delete failed.');
+      schemaStatus(statusEl, 'Delete failed.', true);
+    }
+  } catch (err) {
+    writeLog(`Request failed: ${err.message}`);
+    schemaStatus(statusEl, 'Delete failed.', true);
+  }
+}
+
 export function initSchema() {
-  const schemaSelect    = document.getElementById('schema-select');
-  const schemaNameInput = document.getElementById('schema-name-input');
-  const btnFetchSchema  = document.getElementById('btn-fetch-schema');
-  const schemaStatusEl  = document.getElementById('schema-status');
-  if (!schemaSelect || !btnFetchSchema) return;
+  const schemaSelect = document.getElementById('schema-select');
+  const btnNew       = document.getElementById('btn-schema-new');
+  const btnSave      = document.getElementById('btn-schema-save');
+  const btnDelete    = document.getElementById('btn-schema-delete');
+  if (!schemaSelect || !btnSave) return;
 
-  schemaSelect.addEventListener('change', async () => {
-    await applyActiveSchema();
-    schemaStatus(schemaStatusEl, '');
+  schemaSelect.addEventListener('change', () => {
+    loadSelectedIntoEditor();
   });
-
-  btnFetchSchema.addEventListener('click', async () => {
-    const name = schemaNameInput.value.trim();
-    if (!name) {
-      schemaStatus(schemaStatusEl, 'Schema name is required.', true);
-      schemaNameInput.focus();
-      return;
-    }
-
-    const url   = store.get(STORE_KEYS.JIRA_URL);
-    const email = store.get(STORE_KEYS.JIRA_EMAIL);
-    const token = store.get(STORE_KEYS.JIRA_API_TOKEN);
-    if (!url || !email || !token) {
-      schemaStatus(schemaStatusEl, 'Save Jira credentials on the Connection tab first.', true);
-      return;
-    }
-
-    btnFetchSchema.disabled = true;
-    const origText = btnFetchSchema.innerHTML;
-    btnFetchSchema.innerHTML = '<span class="spinner" aria-hidden="true"></span> Fetching…';
-    schemaStatus(schemaStatusEl, '');
-
-    try {
-      const projectKeys = document.getElementById('schema-project-keys').value.trim();
-      const boardIdRaw  = document.getElementById('schema-board-id').value.trim();
-      const boardId     = boardIdRaw ? parseInt(boardIdRaw, 10) : null;
-      const filterId    = store.get(STORE_KEYS.JIRA_FILTER_ID) || null;
-      const data = await postSchema({
-        schema_name:   name,
-        jira_url:      url,
-        jira_email:    email,
-        jira_token:    token,
-        project_keys:  projectKeys || null,
-        board_id:      boardId,
-        filter_id:     filterId,
-      });
-      if (data.ok) {
-        schemaStatus(schemaStatusEl, `Schema "${name}" saved successfully.`, false);
-        schemaNameInput.value = '';
-        await loadSchemas();
-        schemaSelect.value = name;
-        store.set(STORE_KEYS.JIRA_SCHEMA, name);
-        await applyActiveSchema();
-      } else {
-        schemaStatus(schemaStatusEl, data.error || 'Failed to fetch schema.', true);
-      }
-    } catch (err) {
-      schemaStatus(schemaStatusEl, `Request failed: ${err.message}`, true);
-    } finally {
-      btnFetchSchema.disabled = false;
-      btnFetchSchema.innerHTML = origText;
-    }
-  });
+  if (btnNew)    btnNew.addEventListener('click', onNewClick);
+  btnSave.addEventListener('click', onSaveClick);
+  if (btnDelete) btnDelete.addEventListener('click', onDeleteClick);
 }

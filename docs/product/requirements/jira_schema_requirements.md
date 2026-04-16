@@ -12,7 +12,8 @@ This document defines requirements for the field schema system that maps Jira cu
 4. [Field ID & JQL Name Lookups](#4-field-id--jql-name-lookups)
 5. [Status Mappings](#5-status-mappings)
 6. [Auto-Detection from Jira Fields](#6-auto-detection-from-jira-fields)
-7. [Future Enhancements](#7-future-enhancements)
+7. [Schema Management UI](#7-schema-management-ui)
+8. [Future Enhancements](#8-future-enhancements)
 
 ---
 
@@ -83,7 +84,23 @@ This document defines requirements for the field schema system that maps Jira cu
 
 ---
 
-## 7. Future Enhancements
+## 7. Schema Management UI
+
+| ID | Requirement | Acceptance Criterion | Status | Tests |
+|----|-------------|----------------------|--------|-------|
+| JSR-UI-001 | Schema Setup tab is exposed between Jira Connection and Filter Builder | A `[role="tab"]` button with id `tab-schema` appears between `Jira Connection` and `Filter Builder`; clicking it reveals `#panel-schema` and sets `aria-selected="true"` | ✓ Met | `test_schema_tab_visible_between_connection_and_filter` |
+| JSR-UI-002 | Dropdown is populated from `GET /api/schemas` on load | On tab mount, `#schema-select` contains one `<option>` per schema returned by `GET /api/schemas`; `Default_Jira_Cloud` is always present | ✓ Met | `test_schema_load_into_editor_on_select` |
+| JSR-UI-003 | Selecting a schema loads its JSON into the editor | Changing `#schema-select` triggers `GET /api/schemas?name=<name>` and writes the pretty-printed (2-space indent) schema JSON into `#schema-json-editor` | ✓ Met | `test_schema_load_into_editor_on_select` |
+| JSR-UI-004 | "New Schema" clears the editor to a blank template | Clicking `#btn-schema-new` writes a template schema (empty `schema_name`, empty `description`, default `fields`/`status_mapping`) into `#schema-json-editor` and deselects the dropdown | ✓ Met | `test_schema_save_round_trip` |
+| JSR-UI-005 | Save issues `POST /api/schemas {schema: ...}` and upserts by `schema_name` | Clicking `#btn-schema-save` parses the editor JSON and POSTs `{schema: parsed}`; on `200`, the dropdown reloads, the saved name is re-selected, and `#schema-status` shows the `schema_name` | ✓ Met | `test_schema_save_round_trip`, `test_post_schema_creates_new_entry`, `test_post_schema_updates_existing` |
+| JSR-UI-006 | Invalid JSON in the editor blocks the POST and surfaces a parse error | When `#schema-json-editor` contains unparseable JSON, clicking Save writes the error to `#schema-log-output` (containing `"Invalid JSON"`) and does not call `POST /api/schemas` | ✓ Met | `test_schema_invalid_json_shows_error` |
+| JSR-UI-007 | Backend returns HTTP 400 when `schema_name`, `fields`, or `status_mapping` are missing or malformed | `POST /api/schemas` returns `{ok: false, error: ...}` with status 400 when the request body is missing `schema`, `schema_name` is empty, `fields` is not a dict, or either `done_statuses`/`in_progress_statuses` is not a list | ✓ Met | `test_post_schema_missing_schema_key`, `test_post_schema_missing_name`, `test_post_schema_rejects_non_dict_fields`, `test_post_schema_rejects_invalid_status_mapping` |
+| JSR-UI-008 | `Default_Jira_Cloud` cannot be deleted via UI or API | `#btn-schema-delete` is disabled while `#schema-select` value equals `Default_Jira_Cloud`; `DELETE /api/schemas?name=Default_Jira_Cloud` returns `{ok: false}` with HTTP 400 | ✓ Met | `test_schema_delete_button_disabled_for_default`, `test_delete_schema_refuses_default` |
+| JSR-UI-009 | Renaming `schema_name` to match another existing schema overwrites that entry (upsert-by-name semantics) | `POST /api/schemas` with a `schema_name` that already exists replaces the stored entry in-place and returns `{ok: true, updated: true}` | ✓ Met | `test_post_schema_rename_collision_overwrites`, `test_post_schema_updates_existing` |
+
+---
+
+## 8. Future Enhancements
 
 | ID | Requirement | Rationale | Status |
 |----|-------------|-----------|--------|

@@ -37,6 +37,10 @@ Use the UI to configure your Jira connection, select a filter, and generate repo
 
 If your Jira instance uses a custom CA certificate, use the Jira Connection tab to fetch it or place the PEM bundle at `certs/jira_ca_bundle.pem`.
 
+### Managing schemas
+
+The **Schema Setup** tab (between *Jira Connection* and *Filter Builder*) lets you view and edit the Jira field schemas stored in `config/jira_schema.json`. Pick a schema from the dropdown to load its full JSON body into the editor, tweak `schema_name`, `fields`, or `status_mapping`, and click **Save** — saves upsert by `schema_name`. Click **New Schema** to start from a blank template; **Delete** removes any non-default schema (`Default_Jira_Cloud` is always preserved). The active schema for report generation is selected via `JIRA_SCHEMA_NAME` in `config/defaults.env`.
+
 ## Troubleshooting
 
 ### Port 8080 already in use
