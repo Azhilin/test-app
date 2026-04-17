@@ -34,11 +34,11 @@ export async function getFilters() {
   return res.json();
 }
 
-export async function saveFilter(name, params) {
+export async function saveFilter(name, params, reportName) {
   const res = await fetch('/api/filters', {
     method:  'POST',
     headers: { 'Content-Type': 'application/json' },
-    body:    JSON.stringify({ name, params }),
+    body:    JSON.stringify({ name, params, report_name: reportName || name }),
   });
   return {
     httpOk: res.ok,

@@ -69,15 +69,20 @@ def deduplicate_sprint_issues(
     sprints: list[dict[str, Any]],
     sprint_issues: dict[int | str, list[dict[str, Any]]],
 ) -> dict[int | str, list[dict[str, Any]]]:
-    """Return sprint_issues with each issue key kept only in its last (highest) sprint.
+    """Return sprint_issues with each issue key kept only in its most recent sprint.
 
     When the Jira API returns the same issue for multiple sprints, it should count
-    only toward the most recent sprint. The sprints list is assumed to be ordered
-    chronologically (oldest first), so the last occurrence wins.
+    only toward the most recent sprint. Internally sorts oldest-first so the result
+    is independent of the caller's ordering.
     """
+    # Sort oldest-first so last write always wins with the most recent sprint.
+    # This makes the function independent of whether the caller passes newest-first
+    # or oldest-first (jira_client returns newest-first after sorting with reverse=True).
+    oldest_first = sorted(sprints, key=lambda s: s.get("startDate") or "")
+
     # Map each issue key to the last sprint ID it appears in (last write wins)
     issue_last_sprint: dict[str, int | str] = {}
-    for sprint in sprints:
+    for sprint in oldest_first:
         sid = sprint.get("id")
         if sid is None:
             continue
@@ -151,11 +156,12 @@ def compute_ai_assistance_trend(
     ai_exclude_labels: list[str] | None = None,
     story_points_field: str | None = None,
     done_statuses: frozenset[str] | None = None,
+    estimation_type: str | None = None,
 ) -> list[dict[str, Any]]:
     """
     Per-sprint AI assistance percentage.
 
-    For each sprint counts done-issue story points:
+    For each sprint counts done-issue story points (or issue count when JiraTickets):
     - total_sp: all done issues excluding those with any ai_exclude_labels
     - ai_sp: done issues that carry ai_assisted_label (and are not excluded)
     - ai_pct: ai_sp / total_sp * 100, rounded to 1 dp
@@ -166,7 +172,10 @@ def compute_ai_assistance_trend(
         ai_assisted_label = config.AI_ASSISTED_LABEL
     if ai_exclude_labels is None:
         ai_exclude_labels = config.AI_EXCLUDE_LABELS
+    if estimation_type is None:
+        estimation_type = config.ESTIMATION_TYPE
 
+    use_counts = estimation_type == "JiraTickets"
     exclude_set = set(ai_exclude_labels or [])
     rows = []
     for sprint in sprints:
@@ -182,7 +191,7 @@ def compute_ai_assistance_trend(
             labels = _get_labels(iss)
             if exclude_set and exclude_set.intersection(labels):
                 continue
-            pts = _get_story_points(iss, story_points_field)
+            pts = 1.0 if use_counts else _get_story_points(iss, story_points_field)
             total_sp += pts
             if ai_assisted_label in labels:
                 ai_sp += pts
@@ -286,7 +295,7 @@ def _load_dau_records(responses_dir: str | Path) -> list[dict[str, Any]]:
     path = Path(responses_dir)
     records: list[dict[str, Any]] = []
     if path.is_dir():
-        for fpath in sorted(path.glob("dau_*.json")):
+        for fpath in sorted(path.rglob("dau_*.json")):
             try:
                 data = json.loads(fpath.read_text(encoding="utf-8"))
                 if isinstance(data, dict):
@@ -550,17 +559,7 @@ def build_metrics_dict(
 
     velocity = compute_velocity(sprints, sprint_issues, sp_field, done_fs)
 
-    # Auto-fallback: if ESTIMATION_TYPE is StoryPoints but all SP values are 0, use JiraTickets
     estimation_type = config.ESTIMATION_TYPE
-    if estimation_type == "StoryPoints":
-        total_sp = sum(row["velocity"] for row in velocity)
-        if total_sp == 0:
-            logger.warning(
-                "All story point values are 0; automatically falling back to JiraTickets estimation. "
-                "This may indicate that the story points custom field is not configured or has no values."
-            )
-            estimation_type = "JiraTickets"
-
     if estimation_type == "JiraTickets":
         for row in velocity:
             row["velocity"] = row["issue_count"]
@@ -576,6 +575,7 @@ def build_metrics_dict(
         sprint_issues,
         story_points_field=sp_field,
         done_statuses=done_fs,
+        estimation_type=estimation_type,
     )
     ai_usage = compute_ai_usage_details(
         sprints,
@@ -601,5 +601,6 @@ def build_metrics_dict(
         "filter_id": None,
         "filter_jql": None,
         "project_key": None,
+        "report_name": None,
         "generated_at": datetime.now(UTC).isoformat(),
     }

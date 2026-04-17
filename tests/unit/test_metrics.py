@@ -191,10 +191,17 @@ def test_build_metrics_dict_keys():
         "filter_id",
         "filter_jql",
         "project_key",
+        "report_name",
         "project_type",
         "estimation_type",
     }
     assert expected_keys.issubset(result.keys())
+
+
+def test_build_metrics_dict_report_name_defaults_to_none():
+    result = metrics.build_metrics_dict([], {})
+    assert "report_name" in result
+    assert result["report_name"] is None
 
 
 def test_build_metrics_dict_generated_at_is_iso():
@@ -335,6 +342,26 @@ def test_ai_trend_no_ai_label():
     )
     assert result[0]["ai_sp"] == 0.0
     assert result[0]["ai_pct"] == 0.0
+
+
+def test_ai_trend_jira_tickets_mode_counts_issues_not_story_points():
+    """When estimation_type=JiraTickets, each done issue counts as 1 regardless of SP."""
+    sprint = make_sprint(1, "S1")
+    issues = [
+        make_issue_with_labels("X-1", "Done", 0.0, ["AI_assistance"]),
+        make_issue_with_labels("X-2", "Done", 0.0, []),
+        make_issue_with_labels("X-3", "In Progress", 0.0, ["AI_assistance"]),
+    ]
+    result = metrics.compute_ai_assistance_trend(
+        [sprint],
+        {1: issues},
+        ai_assisted_label="AI_assistance",
+        ai_exclude_labels=[],
+        estimation_type="JiraTickets",
+    )
+    assert result[0]["total_sp"] == 2.0, "Should count 2 done issues"
+    assert result[0]["ai_sp"] == 1.0, "Should count 1 done AI-labeled issue"
+    assert result[0]["ai_pct"] == 50.0
 
 
 # ---------------------------------------------------------------------------
@@ -570,3 +597,14 @@ def test_dedup_mixed_unique_and_duplicate():
     assert unique_s1 in result[1]
     assert shared in result[2]
     assert unique_s2 in result[2]
+
+
+def test_dedup_newest_first_input_still_keeps_issue_in_most_recent():
+    """jira_client returns sprints newest-first; dedup must still attribute to the most recent sprint."""
+    s_old = make_sprint(1, start="2026-03-01")
+    s_new = make_sprint(2, start="2026-03-15")
+    issue = make_issue("X-1", "Done", 5.0)
+    # Pass newest-first (as jira_client does)
+    result = metrics.deduplicate_sprint_issues([s_new, s_old], {1: [issue], 2: [issue]})
+    assert result[1] == [], "Older sprint should be emptied"
+    assert result[2] == [issue], "Newer sprint should keep the issue"

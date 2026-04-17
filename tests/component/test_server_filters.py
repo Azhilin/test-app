@@ -60,6 +60,30 @@ def _post_filter(base_url: str, name: str, project: str = "PROJ") -> dict:
     return json.loads(resp.read().decode())
 
 
+def _post_filter_with_report_name(base_url: str, name: str, project: str, report_name: str) -> dict:
+    body = json.dumps({"name": name, "report_name": report_name, "params": {"JIRA_PROJECT": project}}).encode()
+    req = urllib.request.Request(
+        f"{base_url}/api/filters",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    resp = urllib.request.urlopen(req)
+    return json.loads(resp.read().decode())
+
+
+def _post_filter_with_params(base_url: str, name: str, params: dict) -> dict:
+    body = json.dumps({"name": name, "params": params}).encode()
+    req = urllib.request.Request(
+        f"{base_url}/api/filters",
+        data=body,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    resp = urllib.request.urlopen(req)
+    return json.loads(resp.read().decode())
+
+
 def _delete_filter(base_url: str, slug: str) -> dict:
     req = urllib.request.Request(
         f"{base_url}/api/filters/{urllib.parse.quote(slug, safe='')}",
@@ -223,3 +247,53 @@ def test_filter_persists_across_server_restart(server_url, restore_filters):
         assert slug in slugs
     finally:
         server2.shutdown()
+
+
+# ---------------------------------------------------------------------------
+# JFM-P-007 — POST preserves params.schema_name across round-trip
+# ---------------------------------------------------------------------------
+
+
+def test_post_filter_round_trip_preserves_schema_name(server_url, restore_filters):
+    """POST /api/filters with params.schema_name stores it; GET returns the same value."""
+    params = {
+        "JIRA_PROJECT": "SCHEMA_RT",
+        "schema_name": "Default_Jira_Cloud",
+    }
+    post_data = _post_filter_with_params(server_url, "Schema Round Trip", params)
+    assert post_data["ok"] is True
+
+    filters = _get_filters(server_url)["filters"]
+    entry = next(
+        (f for f in filters if f.get("filter_name") == "Schema Round Trip"),
+        None,
+    )
+    assert entry is not None, "Posted filter was not returned by GET"
+    assert entry.get("params", {}).get("schema_name") == "Default_Jira_Cloud"
+
+
+# ---------------------------------------------------------------------------
+# report_name round-trip
+# ---------------------------------------------------------------------------
+
+
+def test_post_filter_round_trip_preserves_report_name(server_url, restore_filters):
+    """POST /api/filters with report_name stores it; GET returns the same value."""
+    post_data = _post_filter_with_report_name(server_url, "Report Name RT", "RPROJ", "Custom Report Title")
+    assert post_data["ok"] is True
+
+    filters = _get_filters(server_url)["filters"]
+    entry = next((f for f in filters if f.get("filter_name") == "Report Name RT"), None)
+    assert entry is not None, "Posted filter was not returned by GET"
+    assert entry.get("report_name") == "Custom Report Title"
+
+
+def test_post_filter_report_name_defaults_to_filter_name(server_url, restore_filters):
+    """When report_name is omitted, it defaults to the filter name."""
+    post_data = _post_filter(server_url, "Default Report Name", project="DPROJ")
+    assert post_data["ok"] is True
+
+    filters = _get_filters(server_url)["filters"]
+    entry = next((f for f in filters if f.get("filter_name") == "Default Report Name"), None)
+    assert entry is not None
+    assert entry.get("report_name") == "Default Report Name"

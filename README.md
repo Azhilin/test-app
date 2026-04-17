@@ -33,13 +33,13 @@ That is all that `.env` needs. Non-sensitive settings (`JIRA_BOARD_ID`, `JIRA_SP
 
 Double-click **`start_app.bat`** — this starts a local server bound to `127.0.0.1` and opens the app in your browser at `http://localhost:8080`.
 
-Use the UI to configure your Jira connection, select a filter, and generate reports.
+Use the UI to configure your Jira connection, select a filter, and generate reports. On the **Filter Builder** tab, pick an **Active Schema** before saving a filter — the saved filter's `schema_name` determines which schema the pipeline uses when the filter is run. Select an existing filter from the **Filter Name** dropdown to load it into the form for in-place editing, or pick `— New filter —` to create one from scratch.
 
 If your Jira instance uses a custom CA certificate, use the Jira Connection tab to fetch it or place the PEM bundle at `certs/jira_ca_bundle.pem`.
 
 ### Managing schemas
 
-The **Schema Setup** tab (between *Jira Connection* and *Filter Builder*) lets you view and edit the Jira field schemas stored in `config/jira_schema.json`. Pick a schema from the dropdown to load its full JSON body into the editor, tweak `schema_name`, `fields`, or `status_mapping`, and click **Save** — saves upsert by `schema_name`. Click **New Schema** to start from a blank template; **Delete** removes any non-default schema (`Default_Jira_Cloud` is always preserved). The active schema for report generation is selected via `JIRA_SCHEMA_NAME` in `config/defaults.env`.
+The **Schema Setup** tab (between *Jira Connection* and *Filter Builder*) is an editor for the Jira field schemas stored in `config/jira_schema.json`. Pick a schema from the dropdown to load its full JSON body into the editor, tweak `schema_name`, `fields`, or `status_mapping`, and click **Save** — saves upsert by `schema_name`. Click **New Schema** to start from a blank template; **Delete** removes any non-default schema (`Default_Jira_Cloud` is always preserved). The Schema Setup tab does not choose the schema used for report generation — that is determined by the selected filter's `schema_name` on the Filter Builder tab. For CLI-only runs (`python main.py`), `JIRA_SCHEMA_NAME` in `config/defaults.env` is used as a fallback.
 
 ## Troubleshooting
 

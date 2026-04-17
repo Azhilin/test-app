@@ -328,6 +328,16 @@ def test_project_type_invalid_falls_back():
     assert cfg.PROJECT_TYPE == "SCRUM"
 
 
+def test_jira_filter_jql_default_empty():
+    cfg = _reload_config(_BASE_ENV)
+    assert cfg.JIRA_FILTER_JQL == ""
+
+
+def test_jira_filter_jql_from_env():
+    cfg = _reload_config({**_BASE_ENV, "JIRA_FILTER_JQL": "project = X AND status = Done"})
+    assert cfg.JIRA_FILTER_JQL == "project = X AND status = Done"
+
+
 def test_estimation_type_default_story_points():
     cfg = _reload_config(_BASE_ENV)
     assert cfg.ESTIMATION_TYPE == "StoryPoints"

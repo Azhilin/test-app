@@ -336,6 +336,201 @@ def test_handle_generate_emits_error_when_main_file_missing(monkeypatch, tmp_pat
     assert "event: close" in output
 
 
+def _make_filter_handler(monkeypatch, tmp_path, body: dict):
+    """Helper: handler with a seeded filters file and isolated _load_filters/_save_filters."""
+    from app.server import filter_handlers as fh_mod
+
+    filters_path = tmp_path / "config" / "jira_filters.json"
+    filters_path.parent.mkdir(parents=True, exist_ok=True)
+    filters_path.write_text(json.dumps([fh_mod.FilterHandlerMixin._DEFAULT_FILTER]), encoding="utf-8")
+
+    srv, handler = _make_handler(monkeypatch, tmp_path, body=body)
+    monkeypatch.setattr(type(handler), "_filters_config_path", staticmethod(lambda: filters_path))
+    return srv, handler, filters_path
+
+
+def test_post_filter_saves_report_name(monkeypatch, tmp_path):
+    """POST /api/filters with report_name stores it; GET returns the same value."""
+    _, handler, filters_path = _make_filter_handler(
+        monkeypatch,
+        tmp_path,
+        body={"name": "My Report Filter", "report_name": "Q2 AI Adoption", "params": {"JIRA_PROJECT": "PROJ"}},
+    )
+
+    handler._handle_post_filter()
+    status, data = _json_response(handler)
+
+    assert status == 200
+    assert data["ok"] is True
+
+    persisted = json.loads(filters_path.read_text(encoding="utf-8"))
+    entry = next((f for f in persisted if f.get("filter_name") == "My Report Filter"), None)
+    assert entry is not None
+    assert entry["report_name"] == "Q2 AI Adoption"
+
+
+def test_post_filter_report_name_defaults_to_filter_name(monkeypatch, tmp_path):
+    """When report_name is omitted from POST body, it defaults to the filter name."""
+    _, handler, filters_path = _make_filter_handler(
+        monkeypatch,
+        tmp_path,
+        body={"name": "Fallback Filter", "params": {"JIRA_PROJECT": "PROJ"}},
+    )
+
+    handler._handle_post_filter()
+    _, data = _json_response(handler)
+    assert data["ok"] is True
+
+    persisted = json.loads(filters_path.read_text(encoding="utf-8"))
+    entry = next((f for f in persisted if f.get("filter_name") == "Fallback Filter"), None)
+    assert entry is not None
+    assert entry["report_name"] == "Fallback Filter"
+
+
+def test_generate_exports_filter_schema_name_to_subprocess(monkeypatch, tmp_path):
+    """JFM-P-011: /api/generate?filter=<slug> exports filter.params.schema_name as JIRA_SCHEMA_NAME.
+
+    The filter's schema_name must win over defaults.env values and be visible to main.py.
+    """
+    srv, handler = _make_handler(monkeypatch, tmp_path)
+    handler.path = "/api/generate?filter=team_alpha"
+
+    # Seed the project root with a filters file and a defaults.env carrying a different schema.
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "defaults.env").write_text("JIRA_SCHEMA_NAME=FromDefaults\n", encoding="utf-8")
+    (tmp_path / "config" / "jira_filters.json").write_text(
+        json.dumps(
+            [
+                {
+                    "filter_name": "Team Alpha",
+                    "slug": "team_alpha",
+                    "is_default": False,
+                    "jql": "",
+                    "params": {
+                        "JIRA_PROJECT": "ALPHA",
+                        "schema_name": "Team_Alpha_Schema",
+                    },
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    captured: dict = {}
+
+    class _FakeProc:
+        def __init__(self):
+            self.stdout = iter([])
+            self.returncode = 0
+
+        def wait(self):
+            return None
+
+    def _fake_popen(*args, **kwargs):
+        captured["env"] = kwargs.get("env") or {}
+        return _FakeProc()
+
+    monkeypatch.setattr(srv.subprocess, "Popen", _fake_popen)
+
+    handler._handle_generate()
+
+    env = captured.get("env") or {}
+    assert env.get("JIRA_SCHEMA_NAME") == "Team_Alpha_Schema", (
+        f"Expected filter's schema_name to win; got {env.get('JIRA_SCHEMA_NAME')!r}"
+    )
+    assert env.get("JIRA_PROJECT") == "ALPHA"
+
+
+def test_generate_exports_report_name_to_subprocess(monkeypatch, tmp_path):
+    """report_name query param is forwarded as REPORT_NAME env var to main.py."""
+    srv, handler = _make_handler(monkeypatch, tmp_path)
+    handler.path = "/api/generate?filter=team_alpha&report_name=My+Custom+Report"
+
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "defaults.env").write_text("", encoding="utf-8")
+    (tmp_path / "config" / "jira_filters.json").write_text(
+        json.dumps(
+            [
+                {
+                    "filter_name": "Team Alpha",
+                    "slug": "team_alpha",
+                    "is_default": False,
+                    "jql": "",
+                    "report_name": "Team Alpha",
+                    "params": {"JIRA_PROJECT": "ALPHA", "schema_name": "S"},
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    captured: dict = {}
+
+    class _FakeProc:
+        def __init__(self):
+            self.stdout = iter([])
+            self.returncode = 0
+
+        def wait(self):
+            return None
+
+    def _fake_popen(*args, **kwargs):
+        captured["env"] = kwargs.get("env") or {}
+        return _FakeProc()
+
+    monkeypatch.setattr(srv.subprocess, "Popen", _fake_popen)
+
+    handler._handle_generate()
+
+    env = captured.get("env") or {}
+    assert env.get("REPORT_NAME") == "My Custom Report"
+
+
+def test_generate_uses_stored_report_name_when_no_param(monkeypatch, tmp_path):
+    """When no report_name query param is given, the filter's stored report_name is used."""
+    srv, handler = _make_handler(monkeypatch, tmp_path)
+    handler.path = "/api/generate?filter=team_alpha"
+
+    (tmp_path / "config").mkdir()
+    (tmp_path / "config" / "defaults.env").write_text("", encoding="utf-8")
+    (tmp_path / "config" / "jira_filters.json").write_text(
+        json.dumps(
+            [
+                {
+                    "filter_name": "Team Alpha",
+                    "slug": "team_alpha",
+                    "is_default": False,
+                    "jql": "",
+                    "report_name": "Stored Report Name",
+                    "params": {"JIRA_PROJECT": "ALPHA", "schema_name": "S"},
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    captured: dict = {}
+
+    class _FakeProc:
+        def __init__(self):
+            self.stdout = iter([])
+            self.returncode = 0
+
+        def wait(self):
+            return None
+
+    def _fake_popen(*args, **kwargs):
+        captured["env"] = kwargs.get("env") or {}
+        return _FakeProc()
+
+    monkeypatch.setattr(srv.subprocess, "Popen", _fake_popen)
+
+    handler._handle_generate()
+
+    env = captured.get("env") or {}
+    assert env.get("REPORT_NAME") == "Stored Report Name"
+
+
 def test_handle_test_connection_returns_user_details_on_success(monkeypatch, tmp_path):
     srv, handler = _make_handler(
         monkeypatch,

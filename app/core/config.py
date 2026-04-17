@@ -66,6 +66,10 @@ AI_ACTION_LABELS = [lbl.strip() for lbl in os.getenv("AI_ACTION_LABELS", "").spl
 _project_type_raw = os.getenv("PROJECT_TYPE", "SCRUM").strip().upper()
 PROJECT_TYPE: str = _project_type_raw if _project_type_raw in ("SCRUM", "KANBAN") else "SCRUM"
 
+# Local filter JQL forwarded by the generate handler when a saved filter has a jql field
+# and JIRA_FILTER_ID is not set. Used as fallback in KANBAN data fetching.
+JIRA_FILTER_JQL: str = os.getenv("JIRA_FILTER_JQL", "").strip()
+
 # Estimation type: StoryPoints or JiraTickets (default: StoryPoints)
 _estimation_type_raw = os.getenv("ESTIMATION_TYPE", "StoryPoints").strip()
 ESTIMATION_TYPE: str = _estimation_type_raw if _estimation_type_raw in ("StoryPoints", "JiraTickets") else "StoryPoints"
@@ -82,6 +86,8 @@ def _env_bool(key: str, default: bool = True) -> bool:
 # Sprint scope: when True (default), only closed sprints are included in reports.
 # Set to False to also include the active sprint.
 JIRA_CLOSED_SPRINTS_ONLY: bool = _env_bool("JIRA_CLOSED_SPRINTS_ONLY", default=True)
+
+REPORT_NAME: str = os.getenv("REPORT_NAME", "").strip()
 
 METRIC_VELOCITY: bool = _env_bool("METRIC_VELOCITY")
 METRIC_AI_ASSISTANCE_TREND: bool = _env_bool("METRIC_AI_ASSISTANCE_TREND")

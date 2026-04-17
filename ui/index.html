@@ -111,6 +111,19 @@
           </button>
         </div>
         <p class="form-error" id="err-generate-filter" style="margin-bottom:12px;">Please select a saved filter before generating the report. <a href="#" id="goto-filter-tab" style="color:var(--accent);font-weight:500;">Go to Filter Builder tab →</a></p>
+        <div class="form-group" style="margin-bottom:4px;">
+          <label class="form-label" for="generate-report-name">Report Name <span class="optional">optional</span></label>
+          <input
+            class="form-input"
+            type="text"
+            id="generate-report-name"
+            placeholder="Defaults to filter name"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="150"
+          />
+          <p class="form-helper" style="margin-bottom:0;">Overrides the report title and output filename. Saved back to the filter when changed.</p>
+        </div>
         <p class="form-error" id="err-no-metrics" style="margin-bottom:12px;">Select at least one metric section to generate a report.</p>
         <p class="form-helper" style="margin-bottom:16px;">The selected filter's JQL will be used to scope sprint issues for the report.</p>
 
@@ -283,9 +296,26 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="filter-name">
+          <label class="form-label" for="filter-schema-select">
+            Active Schema <span class="required-star" aria-hidden="true">*</span>
+          </label>
+          <select class="form-input" id="filter-schema-select" aria-required="true">
+            <option value="">Loading…</option>
+          </select>
+          <p class="form-helper">
+            Jira field schema saved with this filter as <code>schema_name</code>. This is the schema the
+            report pipeline uses when the filter is run. Manage schema definitions on the
+            <em>Schema Setup</em> tab.
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="filter-name-select">
             Filter Name <span class="required-star" aria-hidden="true">*</span>
           </label>
+          <select class="form-input" id="filter-name-select" aria-required="true">
+            <option value="__new__">— New filter —</option>
+          </select>
           <input
             class="form-input"
             type="text"
@@ -295,8 +325,31 @@
             spellcheck="false"
             maxlength="100"
             aria-required="true"
+            style="margin-top:8px;"
           />
-          <p class="form-helper">A descriptive name for this saved filter.</p>
+          <p class="form-helper">
+            Pick an existing filter to edit, or choose <strong>— New filter —</strong> to create one.
+            Filter names are unique; saving with an existing name updates that entry.
+            The default filter is read-only — pick "— New filter —" to start from a copy.
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="report-name">
+            Report Name <span class="optional">optional</span>
+          </label>
+          <input
+            class="form-input"
+            type="text"
+            id="report-name"
+            placeholder="e.g. My Team AI Adoption Report"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="150"
+          />
+          <p class="form-helper">
+            Used as the report title and output filename. Defaults to the filter name when left empty.
+          </p>
         </div>
 
         <div class="form-group">
@@ -722,24 +775,28 @@
           </svg>
         </span>
         <p>
-          A <strong>schema</strong> maps your Jira instance's custom field IDs to the metrics engine.
-          Pick an existing schema from the dropdown to view and edit its JSON, or click
-          <strong>New Schema</strong> to start from a template. Changes are saved to
-          <code>config/jira_schema.json</code> when you click <strong>Save Schema</strong>.
-          The <code>schema_name</code> inside the JSON identifies the entry and must be unique.
+          The <strong>Schema Setup</strong> tab edits schema definitions in
+          <code>config/jira_schema.json</code>. Pick an existing schema from the dropdown to view
+          and edit its JSON, or click <strong>New Schema</strong> to start from a template. The
+          <code>schema_name</code> inside the JSON identifies the entry and must be unique. To
+          choose which schema a report run uses, set the <em>Active Schema</em> on the
+          <strong>Filter Builder</strong> tab — the selected filter's <code>schema_name</code>
+          is the source of truth.
         </p>
       </div>
 
       <div class="card">
         <div class="card-title">Jira Field Schema</div>
         <div class="card-subtitle">
-          The active schema is used for JQL building and metrics field resolution.
+          Edit schema definitions stored in <code>config/jira_schema.json</code>.
           <code>Default_Jira_Cloud</code> is always present and cannot be deleted.
+          The schema selected here is for editing only — the schema used for a report run is
+          determined by the selected filter's <code>schema_name</code> on the Filter Builder tab.
         </div>
 
         <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px;">
           <div class="form-group" style="flex:1;min-width:220px;margin-bottom:0;">
-            <label class="form-label" for="schema-select">Active Schema</label>
+            <label class="form-label" for="schema-select">Schema</label>
             <select class="form-input" id="schema-select">
               <option value="">Loading…</option>
             </select>

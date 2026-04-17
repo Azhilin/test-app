@@ -211,3 +211,56 @@ def test_schema_invalid_json_shows_error(page: Page, live_server_url: str):
     expect(log).to_contain_text("Invalid JSON")
     # State should be unchanged — only the default schema
     assert set(state["schemas"].keys()) == {"Default_Jira_Cloud"}
+
+
+# ---------------------------------------------------------------------------
+# JSR-UI-010 — Schema Setup is editor-only; does not set the filter's active schema
+# ---------------------------------------------------------------------------
+
+
+def test_schema_setup_does_not_set_active_schema_for_filter(page: Page, live_server_url: str):
+    """Changing the Schema Setup dropdown must not affect the Filter Builder's Active Schema."""
+    state = _install_stateful_schema_api(page)
+    # Seed a second schema so the Schema Setup dropdown has a non-default option.
+    other_schema = copy.deepcopy(DEFAULT_SCHEMA)
+    other_schema["schema_name"] = "Alt_Schema"
+    state["schemas"]["Alt_Schema"] = other_schema
+
+    page.route(
+        "**/api/filters",
+        lambda route: (
+            route.fulfill(
+                status=200,
+                content_type="application/json",
+                body=json.dumps(
+                    {
+                        "ok": True,
+                        "filters": [
+                            {
+                                "filter_name": "Default_Jira_Filter",
+                                "slug": "default_jira_filter",
+                                "is_default": True,
+                                "jql": "",
+                                "created_at": None,
+                                "params": {"schema_name": "Default_Jira_Cloud"},
+                            }
+                        ],
+                    }
+                ),
+            )
+            if route.request.method == "GET"
+            else route.continue_()
+        ),
+    )
+    _goto(page, live_server_url)
+
+    # Open Schema Setup tab and switch to the non-default schema.
+    page.get_by_role("tab", name="Schema Setup").click()
+    page.locator("#schema-select").select_option("Alt_Schema")
+    expect(page.locator("#schema-select")).to_have_value("Alt_Schema")
+
+    # Switch to Filter Builder and confirm the Active Schema is still Default_Jira_Cloud
+    # (taken from the selected filter's params.schema_name, not from Schema Setup).
+    page.get_by_role("tab", name="Filter Builder").click()
+    expect(page.locator("#panel-filter")).to_be_visible()
+    expect(page.locator("#filter-schema-select")).to_have_value("Default_Jira_Cloud")

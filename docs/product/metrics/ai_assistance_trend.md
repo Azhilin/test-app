@@ -52,7 +52,7 @@ measure for an AI adoption programme.
 |---|---|---|
 | `AI_ASSISTED_LABEL` | `AI_assistance` | The exact Jira label that marks an issue as AI-assisted |
 | `AI_EXCLUDE_LABELS` | _(empty)_ | Comma-separated labels; issues carrying any of these are excluded from **both** numerator and denominator. Use for overhead, non-delivery work (e.g. `admin`, `spike`). |
-| `JIRA_SCHEMA_NAME` | _(unset)_ | Optional CLI: schema entry in `config/jira_schema.json` (field IDs including story points) |
+| `JIRA_SCHEMA_NAME` | _(unset)_ | CLI-only fallback (`python main.py`); schema entry in `config/jira_schema.json` (field IDs including story points). UI runs use the active filter's `params.schema_name`, which overrides this env var via `/api/generate`. |
 
 **Example `.env` configuration:**
 ```

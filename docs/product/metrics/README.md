@@ -69,7 +69,7 @@ or future built-in metrics.
 
 | Environment variable | Default | Purpose |
 |---|---|---|
-| `JIRA_SCHEMA_NAME` | _(unset)_ | Optional CLI: which schema entry in `config/jira_schema.json` to use |
+| `JIRA_SCHEMA_NAME` | _(unset)_ | CLI-only fallback (`python main.py`); which schema entry in `config/jira_schema.json` to use. UI runs use the active filter's `params.schema_name` from `config/jira_filters.json`, which overrides this env var via `/api/generate`. |
 | `JIRA_SPRINT_COUNT` | `10` | Number of past sprints to include |
 | `AI_ASSISTED_LABEL` | `AI_assistance` | Label that marks an issue as AI-assisted |
 | `AI_EXCLUDE_LABELS` | _(empty)_ | Issues with these labels are excluded from the AI % denominator |

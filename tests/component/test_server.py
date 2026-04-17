@@ -182,6 +182,50 @@ def test_generate_ends_with_close_event(server_url):
     assert "event: close" in body
 
 
+def test_generate_passes_filter_jql_env_var(tmp_path):
+    """When a filter has a non-empty jql field, JIRA_FILTER_JQL is forwarded to the subprocess env."""
+    from unittest.mock import MagicMock, patch
+
+    from app.server.generate_handlers import GenerateHandlerMixin
+
+    filter_entry = {
+        "filter_name": "Kanban Test",
+        "slug": "kanban_test",
+        "is_default": False,
+        "jql": "project = SCRUM AND status = Done",
+        "report_name": "Kanban Test",
+        "params": {"PROJECT_TYPE": "KANBAN", "JIRA_BOARD_ID": "1"},
+    }
+
+    captured_env = {}
+
+    def fake_popen(cmd, **kwargs):
+        captured_env.update(kwargs.get("env") or {})
+        mock_proc = MagicMock()
+        mock_proc.stdout = iter([])
+        mock_proc.wait.return_value = None
+        mock_proc.returncode = 0
+        return mock_proc
+
+    handler = GenerateHandlerMixin()
+    handler.path = "/api/generate?filter=kanban_test"
+    handler.send_response = MagicMock()
+    handler.send_header = MagicMock()
+    handler.end_headers = MagicMock()
+    handler._cors_headers = MagicMock()
+    handler.wfile = MagicMock()
+    handler._load_filters = MagicMock(return_value=[filter_entry])
+
+    with (
+        patch("app.server.generate_handlers._dotenv_values", return_value={}),
+        patch("app.server.generate_handlers._root", return_value=tmp_path),
+        patch("app.server.generate_handlers.subprocess.Popen", side_effect=fake_popen),
+    ):
+        handler._handle_generate()
+
+    assert captured_env.get("JIRA_FILTER_JQL") == "project = SCRUM AND status = Done"
+
+
 # ---------------------------------------------------------------------------
 # GET /api/reports
 # ---------------------------------------------------------------------------
@@ -206,7 +250,7 @@ def test_get_reports_returns_empty_list_when_no_reports(server_url, tmp_path):
 
 
 def test_get_reports_returns_sorted_list(server_url, tmp_path):
-    """GET /api/reports returns folders sorted newest-first with ts/html/md keys."""
+    """GET /api/reports returns folders sorted newest-first with ts/html_file/md_file keys."""
     import app.server as srv
 
     reports_dir = tmp_path / "generated" / "reports"
@@ -229,8 +273,8 @@ def test_get_reports_returns_sorted_list(server_url, tmp_path):
     assert reports[1]["ts"] == "2026-01-01T10-00-00"
     assert reports[2]["ts"] == "2025-12-01T08-00-00"
     for entry in reports:
-        assert entry["html"] == "report.html"
-        assert entry["md"] == "report.md"
+        assert entry["html_file"] == "report.html"
+        assert entry["md_file"] == "report.md"
 
 
 # ---------------------------------------------------------------------------

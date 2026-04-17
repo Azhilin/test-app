@@ -6,6 +6,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import re
 import shutil
 from concurrent.futures import ThreadPoolExecutor, wait
 from pathlib import Path
@@ -32,9 +33,14 @@ def _parse_args() -> argparse.Namespace:
 
 def _timestamp_folder_name(iso_timestamp: str) -> str:
     """Build a filesystem-safe folder name from ISO timestamp (e.g. 2026-03-18T17-27-30)."""
-    # Use date and time up to seconds: YYYY-MM-DDTHH:MM:SS -> replace : with -
     prefix = (iso_timestamp or "")[:19]
     return prefix.replace(":", "-") if prefix else "report"
+
+
+def _report_name_slug(report_name: str) -> str:
+    """Convert a report name to a filesystem-safe slug for use as filename stem."""
+    slug = re.sub(r"[^a-z0-9]+", "_", report_name.lower().strip()).strip("_")[:80]
+    return slug or "report"
 
 
 def main() -> int:
@@ -98,12 +104,15 @@ def main() -> int:
     if config.JIRA_PROJECT:
         metrics_dict["project_key"] = config.JIRA_PROJECT
 
+    metrics_dict["report_name"] = config.REPORT_NAME or metrics_dict.get("filter_name") or "AI Adoption Metrics Report"
+
     folder_name = _timestamp_folder_name(metrics_dict["generated_at"])
     report_dir = REPORTS_DIR / folder_name
     report_dir.mkdir(parents=True, exist_ok=True)
 
-    path_html = report_dir / "report.html"
-    path_md = report_dir / "report.md"
+    stem = _report_name_slug(metrics_dict["report_name"])
+    path_html = report_dir / f"{stem}.html"
+    path_md = report_dir / f"{stem}.md"
 
     section_visibility = {
         "velocity_trend": config.METRIC_VELOCITY,

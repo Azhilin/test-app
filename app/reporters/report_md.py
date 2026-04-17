@@ -37,8 +37,9 @@ def generate_md(
     if section_visibility is None:
         section_visibility = {k: True for k in _SECTION_KEYS}
     unit_label = "tickets" if metrics.get("estimation_type") == "JiraTickets" else "points"
+    report_name = metrics.get("report_name") or "AI Adoption Metrics Report"
     parts = [
-        "# AI Adoption Metrics Report",
+        f"# {report_name}",
         "",
         f"Reported Date:  {(metrics.get('generated_at') or '')[:10]}",
     ]

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Adoption Metrics Report</title>
+  <title>{{ metrics.report_name or 'AI Adoption Metrics Report' }}</title>
   <style>
     body { font-family: system-ui, sans-serif; max-width: 900px; margin: 0 auto; padding: 1.5rem; color: #1a1a1a; background: #fafafa; }
     h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
@@ -26,7 +26,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha256-0q+JdOlScWOHcunpUk21uab1jW7C1deBQARHtKMcaB4=" crossorigin="anonymous"></script>
 </head>
 <body>
-  <h1>AI Adoption Metrics Report</h1>
+  <h1>{{ metrics.report_name or 'AI Adoption Metrics Report' }}</h1>
   {% set unit_label = 'tickets' if metrics.estimation_type == 'JiraTickets' else 'points' %}
   {% set unit_abbr = 'Tickets' if metrics.estimation_type == 'JiraTickets' else 'SP' %}
   <p class="meta">
@@ -366,6 +366,7 @@
       Chart.register({
         id: 'avgVelocityLabels',
         afterDatasetsDraw: function(chart) {
+          if (chart.canvas.id !== 'velocityChart') return;
           var ctx = chart.ctx;
           var padding = 4;
           var fontSize = 11;

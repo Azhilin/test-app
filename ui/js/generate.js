@@ -18,6 +18,10 @@ function getReportOptions() {
 function buildReportQueryString(filterFilename) {
   const params = new URLSearchParams();
   params.set('filter', filterFilename);
+  const reportNameEl = document.getElementById('generate-report-name');
+  if (reportNameEl && reportNameEl.value.trim()) {
+    params.set('report_name', reportNameEl.value.trim());
+  }
   const opts = getReportOptions();
   for (const [k, v] of Object.entries(opts)) {
     params.set(k, typeof v === 'boolean' ? (v ? '1' : '0') : v);
@@ -84,6 +88,11 @@ export function initGenerate(mainLog) {
     if (generateFilterSelect.value) {
       generateFilterSelect.classList.remove('invalid');
       errGenerateFilter.classList.remove('visible');
+    }
+    const reportNameEl = document.getElementById('generate-report-name');
+    if (reportNameEl) {
+      const selectedOpt = generateFilterSelect.options[generateFilterSelect.selectedIndex];
+      reportNameEl.value = selectedOpt ? (selectedOpt.dataset.reportName || '') : '';
     }
   });
 
@@ -175,12 +184,14 @@ function runGenerateSSE(log, select, setBusy, resetBtn) {
 }
 
 async function runGenerateSimulation(log, select, setBusy, resetBtn) {
-  const filterName = select.options[select.selectedIndex]?.text || '(none)';
-  const filterJql  = select.options[select.selectedIndex]?.dataset?.jql || '';
+  const filterName  = select.options[select.selectedIndex]?.text || '(none)';
+  const filterJql   = select.options[select.selectedIndex]?.dataset?.jql || '';
+  const reportNameEl = document.getElementById('generate-report-name');
+  const reportName  = reportNameEl?.value.trim() || filterName;
 
-  const rawSlug = filterName === '(none)' ? ''
-    : filterName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_\-]/g, '').replace(/^[_\-]+|[_\-]+$/g, '').slice(0, 60);
-  const stem = rawSlug ? `ai_adoption_report_${rawSlug}` : 'ai_adoption_report';
+  const rawSlug = reportName === '(none)' ? ''
+    : reportName.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_\-]/g, '').replace(/^[_\-]+|[_\-]+$/g, '').slice(0, 60);
+  const stem = rawSlug || 'report';
 
   setBusy();
   log.clear();

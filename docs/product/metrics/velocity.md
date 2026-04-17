@@ -48,7 +48,7 @@ Done statuses are configurable in the schema's `status_mapping.done_statuses` li
 
 | Variable | Default | Effect |
 |---|---|---|
-| `JIRA_SCHEMA_NAME` | _(unset)_ | Optional: which `schema_name` in `config/jira_schema.json` the CLI uses (`python main.py`) |
+| `JIRA_SCHEMA_NAME` | _(unset)_ | CLI-only fallback (`python main.py`). UI runs use the active filter's `params.schema_name` from `config/jira_filters.json`, which overrides this env var via `/api/generate`. |
 | `JIRA_SPRINT_COUNT` | `10` | Number of past sprints fetched and displayed |
 | `JIRA_BOARD_ID` | _(first board)_ | Scopes sprint and issue fetch to a specific board |
 

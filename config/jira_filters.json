@@ -6,12 +6,79 @@
     "is_default": true,
     "created_at": null,
     "jql": "",
+    "report_name": "Default_Jira_Filter",
     "params": {
       "JIRA_PROJECT": "",
       "JIRA_TEAM_ID": "",
       "JIRA_ISSUE_TYPES": "",
       "JIRA_CLOSED_SPRINTS_ONLY": "true",
       "schema_name": "Default_Jira_Cloud"
+    }
+  },
+  {
+    "filter_name": "Alex Filter",
+    "slug": "alex_filter",
+    "description": "",
+    "is_default": false,
+    "created_at": "2026-04-17T08:59:11",
+    "jql": "project = SCRUM AND status = Done AND sprint in closedSprints()",
+    "report_name": "Alex Report",
+    "params": {
+      "JIRA_PROJECT": "SCRUM",
+      "JIRA_TEAM_ID": "",
+      "JIRA_ISSUE_TYPES": "",
+      "JIRA_CLOSED_SPRINTS_ONLY": "true",
+      "PROJECT_TYPE": "SCRUM",
+      "ESTIMATION_TYPE": "StoryPoints",
+      "schema_name": "Alex Schema",
+      "JIRA_BOARD_ID": "1",
+      "JIRA_SPRINT_COUNT": "10",
+      "JIRA_FILTER_ID": "",
+      "JIRA_FILTER_PAGE_SIZE": ""
+    }
+  },
+  {
+    "filter_name": "Test Filter",
+    "slug": "test_filter",
+    "description": "",
+    "is_default": false,
+    "created_at": "2026-04-17T09:00:15",
+    "jql": "project = SCRUM AND status = Done AND sprint in closedSprints()",
+    "report_name": "Test Report",
+    "params": {
+      "JIRA_PROJECT": "SCRUM",
+      "JIRA_TEAM_ID": "",
+      "JIRA_ISSUE_TYPES": "",
+      "JIRA_CLOSED_SPRINTS_ONLY": "true",
+      "PROJECT_TYPE": "SCRUM",
+      "ESTIMATION_TYPE": "StoryPoints",
+      "schema_name": "Alex Schema",
+      "JIRA_BOARD_ID": "1",
+      "JIRA_SPRINT_COUNT": "10",
+      "JIRA_FILTER_ID": "",
+      "JIRA_FILTER_PAGE_SIZE": ""
+    }
+  },
+  {
+    "filter_name": "Kanban Story Points",
+    "slug": "kanban_story_points",
+    "description": "",
+    "is_default": false,
+    "created_at": "2026-04-17T14:49:05",
+    "jql": "project = SCRUM AND status = Done",
+    "report_name": "Kanban Story Points",
+    "params": {
+      "JIRA_PROJECT": "SCRUM",
+      "JIRA_TEAM_ID": "",
+      "JIRA_ISSUE_TYPES": "",
+      "JIRA_CLOSED_SPRINTS_ONLY": "false",
+      "PROJECT_TYPE": "KANBAN",
+      "ESTIMATION_TYPE": "StoryPoints",
+      "schema_name": "Test Schema",
+      "JIRA_BOARD_ID": "1",
+      "JIRA_SPRINT_COUNT": "10",
+      "JIRA_FILTER_ID": "",
+      "JIRA_FILTER_PAGE_SIZE": "100"
     }
   }
 ]

@@ -43,6 +43,7 @@ class GenerateHandlerMixin:
 
             qs = parse_qs(urlparse(self.path).query)
             filter_slug = urlunquote((qs.get("filter") or [""])[0]).strip()
+            report_name_param = urlunquote((qs.get("report_name") or [""])[0]).strip()
             if filter_slug:
                 _FILTER_PARAM_KEYS = [
                     "JIRA_PROJECT",
@@ -56,16 +57,31 @@ class GenerateHandlerMixin:
                     "PROJECT_TYPE",
                     "ESTIMATION_TYPE",
                 ]
-                for _entry in self._load_filters():
+                filters = self._load_filters()
+                for _idx, _entry in enumerate(filters):
                     if _entry.get("slug") == filter_slug:
                         _params = _entry.get("params") or {}
                         for _key in _FILTER_PARAM_KEYS:
                             _val = (_params.get(_key) or "").strip()
                             if _val:
                                 fresh_env[_key] = _val
+                        _filter_jql = (_entry.get("jql") or "").strip()
+                        if _filter_jql:
+                            fresh_env["JIRA_FILTER_JQL"] = _filter_jql
                         _schema_name = (_params.get("schema_name") or "").strip()
                         if _schema_name:
                             fresh_env["JIRA_SCHEMA_NAME"] = _schema_name
+                        stored_report_name = (_entry.get("report_name") or _entry.get("filter_name") or "").strip()
+                        effective_report_name = report_name_param or stored_report_name
+                        if effective_report_name:
+                            fresh_env["REPORT_NAME"] = effective_report_name
+                        if (
+                            report_name_param
+                            and report_name_param != stored_report_name
+                            and not _entry.get("is_default")
+                        ):
+                            filters[_idx]["report_name"] = report_name_param
+                            self._save_filters(filters)
                         break
 
             # Report generation params from UI query string (metric toggles only)
@@ -118,5 +134,9 @@ class GenerateHandlerMixin:
             for folder in sorted(reports_dir.iterdir(), reverse=True):
                 if not folder.is_dir():
                     continue
-                entries.append({"ts": folder.name, "html": "report.html", "md": "report.md"})
+                html_files = list(folder.glob("*.html"))
+                md_files = list(folder.glob("*.md"))
+                html_name = html_files[0].name if html_files else "report.html"
+                md_name = md_files[0].name if md_files else "report.md"
+                entries.append({"ts": folder.name, "html_file": html_name, "md_file": md_name})
         self._send_json(200, {"reports": entries})

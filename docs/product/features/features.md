@@ -30,6 +30,7 @@ The main workflow tab. Triggers report generation and displays live output.
 | Control | Description |
 |---------|-------------|
 | **Saved Filter** dropdown | Selects the JQL filter used to scope sprint issues. Populated from `config/jira_filters.json`. Required — the Generate button stays disabled until a filter is selected. |
+| **Report Name** field | Optional free-text name for the generated report. Auto-fills from the selected filter's `report_name` when a filter is chosen. When changed and the report is generated, the new value is saved back to the filter in `config/jira_filters.json`, used as the report `<h1>` / `# ` heading, and as the output filename stem (slugified). |
 | **Generate Report** button | Runs `python main.py` on the server and streams stdout/stderr as Server-Sent Events into the output panel. |
 | **Report Options** (collapsible) | Expands to reveal per-run configuration. |
 
@@ -71,13 +72,18 @@ Each entry is a clickable link to the corresponding `report.html`.
 
 Create and manage named JQL filters that scope which Jira issues are included in a report.
 Filters are stored in `config/jira_filters.json` and appear in the Generate Report dropdown.
+Each filter is the source of truth for which Jira field schema (`params.schema_name`) the
+report pipeline uses when that filter is run.
 
 | Feature | Description |
 |---------|-------------|
-| Filter list | All saved filters, with the default filter always first |
-| Add / edit filter | Name, JIRA Board ID, optional project key, optional label constraints |
-| Delete filter | Removes any non-default user filter |
-| Default filter protection | The default filter cannot be deleted via the UI |
+| **Active Schema** dropdown | Populated from `/api/schemas`. Chosen value is saved on the filter as `params.schema_name` and is what the pipeline reads when generating a report. Independent of the Schema Setup tab. |
+| **Filter Name** dropdown | Lists `— New filter —` plus every saved filter (the default is tagged `(default)`). Picking a filter loads its params into the form for in-place editing; picking `— New filter —` clears the form and reveals a text input pre-populated with `Default_Jira_Filter_<YYYY-MM-DD>`. |
+| **Report Name** field | Optional text input for the report title/filename. Auto-fills from the filter name when a filter is selected or the filter name is typed. Saved alongside the filter as `report_name` in `config/jira_filters.json`. |
+| Filter form | Project Key, optional Team ID, Issue Types, Closed-sprints-only, Project Type, Estimation Type, Board ID, Sprint Count, optional Jira Filter ID & page size |
+| Save button | Upserts the filter by name via `POST /api/filters`; disabled while `Default_Jira_Filter` is selected (the default is read-only) |
+| Filter list | All saved filters, default first; non-default entries show a Remove button |
+| Default filter protection | The default filter cannot be deleted or overwritten via the UI |
 
 ---
 
@@ -110,7 +116,7 @@ on each Jira instance. Schemas are stored in `config/jira_schema.json`; the tab 
 | New Schema | Loads a blank template into the editor; user sets `schema_name` directly in the JSON body before saving |
 | Save | Upserts the schema by `schema_name` via `POST /api/schemas`; client-side JSON validation blocks malformed bodies before the request is sent |
 | Delete | Removes any non-default schema entry; disabled while `Default_Jira_Cloud` is selected |
-| Active schema selection | The active schema name used by reports is read from `JIRA_SCHEMA_NAME` in `.env` |
+| Active schema selection | The Schema Setup tab is an editor and does not select the schema used for metrics. The active schema for a report run is determined by the selected filter's `params.schema_name` in `config/jira_filters.json`; for CLI-only runs, `JIRA_SCHEMA_NAME` in `.env` / `config/defaults.env` is used as a fallback. |
 
 ---
 
