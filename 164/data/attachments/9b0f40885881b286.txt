@@ -1,0 +1,2 @@
+DEBUG    app.core.metrics:metrics.py:558 Computing metrics: 1 sprint(s)
+DEBUG    app.core.metrics:metrics.py:566 Velocity computed for 1 sprint(s); totals: ['S1=5.0'] (estimation_type=StoryPoints)

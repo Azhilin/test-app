@@ -1,0 +1,2 @@
+WARNING  app.core.dau_normalizer:dau_normalizer.py:52 DAU normaliser: skipping malformed file dau_bad_20260101T000000Z.json — Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+INFO     app.core.dau_normalizer:dau_normalizer.py:127 DAU normalisation: 1 raw file(s) → 1 record(s) written to /tmp/pytest-of-runner/pytest-0/test_malformed_json_skipped_no0/norm

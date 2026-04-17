@@ -1,0 +1,1 @@
+INFO     app.core.dau_normalizer:dau_normalizer.py:127 DAU normalisation: 1 raw file(s) → 1 record(s) written to /tmp/pytest-of-runner/pytest-0/test_nested_folder_structure_m0/norm

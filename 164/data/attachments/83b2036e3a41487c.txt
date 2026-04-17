@@ -1,0 +1,1 @@
+ERROR    app.cli:cli.py:77 Failed to fetch Jira data: boom

@@ -1,0 +1,1 @@
+INFO     test.format:test_logging_setup.py:141 format check message

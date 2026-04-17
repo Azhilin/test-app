@@ -1,0 +1,3 @@
+ERROR: JIRA_URL is not set.
+Add it to your .env file (e.g. JIRA_URL=https://your-domain.atlassian.net)
+then re-run this script.
