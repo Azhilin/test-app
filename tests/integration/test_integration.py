@@ -46,12 +46,14 @@ def test_main_pipeline_success(monkeypatch, tmp_path):
     assert reports_dir.exists()
     subdirs = list(reports_dir.iterdir())
     assert len(subdirs) == 1
-    assert (subdirs[0] / "report.html").exists()
-    assert (subdirs[0] / "report.md").exists()
+    html_files = list(subdirs[0].glob("*.html"))
+    md_files = list(subdirs[0].glob("*.md"))
+    assert len(html_files) == 1
+    assert len(md_files) == 1
 
-    html = (subdirs[0] / "report.html").read_text(encoding="utf-8")
+    html = html_files[0].read_text(encoding="utf-8")
     assert "Sprint 1" in html
-    md = (subdirs[0] / "report.md").read_text(encoding="utf-8")
+    md = md_files[0].read_text(encoding="utf-8")
     assert "Sprint 1" in md
 
 
@@ -127,7 +129,9 @@ def test_filter_metadata_in_html(monkeypatch, tmp_path):
     assert rc == 0
 
     subdirs = list((tmp_path / "generated" / "reports").iterdir())
-    html = (subdirs[0] / "report.html").read_text(encoding="utf-8")
+    html_files = list(subdirs[0].glob("*.html"))
+    assert len(html_files) == 1
+    html = html_files[0].read_text(encoding="utf-8")
     assert "My Test Filter" in html
     assert "42" in html
 

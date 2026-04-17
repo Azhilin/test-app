@@ -144,6 +144,7 @@ def test_schema_load_into_editor_on_select(page: Page, live_server_url: str):
     page.get_by_role("tab", name="Schema Setup").click()
     expect(page.locator("#schema-select option[value='Default_Jira_Cloud']")).to_have_count(1)
 
+    page.select_option("#schema-select", "Default_Jira_Cloud")
     editor = page.locator("#schema-json-editor")
     expect(editor).to_contain_text('"schema_name": "Default_Jira_Cloud"')
 

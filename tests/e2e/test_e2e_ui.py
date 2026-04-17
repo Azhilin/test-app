@@ -81,14 +81,14 @@ def test_click_filter_tab(page: Page, live_server_url: str):
 def test_keyboard_arrow_right_navigation(page: Page, live_server_url: str):
     """ArrowRight on a focused tab activates the next tab."""
     _goto(page, live_server_url)
-    # Tab order in DOM: connection(0), filter(1), generate(2)
+    # Tab order in DOM: connection(0), schema(1), filter(2), generate(3)
     page.get_by_role("tab", name="Jira Connection").click()
     expect(page.locator("#panel-connection")).to_be_visible()
 
-    # Press ArrowRight → should move to Filter tab
+    # Press ArrowRight → should move to Schema Setup tab
     page.keyboard.press("ArrowRight")
-    expect(page.locator("#tab-filter")).to_have_attribute("aria-selected", "true")
-    expect(page.locator("#panel-filter")).to_be_visible()
+    expect(page.locator("#tab-schema")).to_have_attribute("aria-selected", "true")
+    expect(page.locator("#panel-schema")).to_be_visible()
     expect(page.locator("#panel-connection")).to_be_hidden()
 
 
