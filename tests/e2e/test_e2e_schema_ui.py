@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import copy
 import json
+import re
 
 import pytest
 from playwright.sync_api import Page, expect
@@ -146,7 +147,7 @@ def test_schema_load_into_editor_on_select(page: Page, live_server_url: str):
 
     page.select_option("#schema-select", "Default_Jira_Cloud")
     editor = page.locator("#schema-json-editor")
-    expect(editor).to_contain_text('"schema_name": "Default_Jira_Cloud"')
+    expect(editor).to_have_value(re.compile(r'"schema_name":\s*"Default_Jira_Cloud"'))
 
 
 # ---------------------------------------------------------------------------
