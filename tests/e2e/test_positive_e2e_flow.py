@@ -3,9 +3,8 @@
 Covers the complete sequential journey a first-time user would follow:
   Phase 1 — App launch: page loads with correct title and active tab
   Phase 2 — Jira Connection: fill credentials → test → save
-  Phase 3 — Filter Builder: name + project → save → filter appears in list
-  Phase 4 — Data Retrieval: board ID + sprint count → save → preview sprints
-  Phase 5 — Generate Report: select filter → SSE stream → report link appears
+  Phase 3 — Filter Builder: name + project + board + sprint count → save → filter appears in list
+  Phase 4 — Generate Report: select filter → SSE stream → report link appears
 
 Run:
     pytest tests/e2e/test_positive_e2e_flow.py -v
@@ -153,7 +152,6 @@ def test_positive_end_to_end_flow(page: Page, live_server_url: str) -> None:
             page.locator("#jira-project").fill(_PROJECT_KEY)
 
         with allure.step("Enter board ID and sprint count"):
-            page.locator("#filter-board-settings summary").click()
             page.locator("#jira-board-id").fill(_BOARD_ID)
             page.locator("#sprint-count").fill(_SPRINT_COUNT)
 
@@ -169,20 +167,9 @@ def test_positive_end_to_end_flow(page: Page, live_server_url: str) -> None:
             expect(page.locator("#filters-list")).to_contain_text(_FILTER_NAME)
 
     # ------------------------------------------------------------------
-    # Phase 4 — Board Settings
+    # Phase 4 — Generate Report
     # ------------------------------------------------------------------
-    with allure.step("Phase 4 — Board Settings: save board ID and sprint count"):
-        # Board settings (jira-board-id, sprint-count) live in the Filter Builder tab
-        # inside the collapsible #filter-board-settings section. Fields were already
-        # filled in Phase 3; clicking Save Data Settings persists them to the server.
-        with allure.step("Click Save Data Settings → confirmation flash appears"):
-            page.locator("#btn-save-data").click()
-            expect(page.locator("#save-confirm-data")).to_have_class(re.compile(r"visible"), timeout=5_000)
-
-    # ------------------------------------------------------------------
-    # Phase 5 — Generate Report
-    # ------------------------------------------------------------------
-    with allure.step("Phase 5 — Generate Report: select filter, run, assert report link"):
+    with allure.step("Phase 4 — Generate Report: select filter, run, assert report link"):
         page.route(
             "**/api/generate**",
             lambda r: r.fulfill(

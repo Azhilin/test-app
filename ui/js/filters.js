@@ -230,7 +230,7 @@ function loadFilterIntoForm(entry) {
   }
 
   if (params.JIRA_BOARD_ID || params.JIRA_SPRINT_COUNT) {
-    const det = document.getElementById('filter-board-settings');
+    const det = document.getElementById('filter-report-scope');
     if (det) det.open = true;
   }
 
@@ -378,15 +378,15 @@ export function initFilters(filterLog) {
     }
     const boardId = document.getElementById('jira-board-id').value.trim();
     if (!boardId) {
-      filterLog.line('⚠ Board ID is required. Enter it in the Agile Board & Sprint Count section.', 'log-error');
-      document.getElementById('filter-board-settings').open = true;
+      filterLog.line('⚠ Board ID is required. Enter it in the Report Scope section.', 'log-error');
+      document.getElementById('filter-report-scope').open = true;
       document.getElementById('jira-board-id').focus();
       return;
     }
     const sprintCount = document.getElementById('sprint-count').value.trim();
     if (!sprintCount) {
-      filterLog.line('⚠ Sprint Count / Period Count is required. Enter it in the Agile Board & Sprint Count section.', 'log-error');
-      document.getElementById('filter-board-settings').open = true;
+      filterLog.line('⚠ Sprint Count / Period Count is required. Enter it in the Report Scope section.', 'log-error');
+      document.getElementById('filter-report-scope').open = true;
       document.getElementById('sprint-count').focus();
       return;
     }

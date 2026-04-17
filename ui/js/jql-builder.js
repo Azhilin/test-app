@@ -43,10 +43,13 @@ export function initJqlBuilderVisibility() {
   const jqlBuilderEl  = document.getElementById('filter-jql-builder');
   if (!filterIdInput || !jqlBuilderEl) return () => {};
 
+  const pageSizeGroup = document.getElementById('filter-page-size-group');
+
   function sync() {
     const hasFilterId = filterIdInput.value.trim() !== '';
     jqlBuilderEl.hidden = hasFilterId;
     if (hasFilterId) { jqlBuilderEl.open = false; }
+    if (pageSizeGroup) { pageSizeGroup.hidden = !hasFilterId; }
   }
   filterIdInput.addEventListener('input', sync);
   return sync;
