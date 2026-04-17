@@ -120,6 +120,7 @@ class FilterHandlerMixin:
             return
 
         name = (body.get("name") or "").strip()
+        report_name = (body.get("report_name") or "").strip() or name
         params = body.get("params") or {}
 
         if not name:
@@ -168,6 +169,7 @@ class FilterHandlerMixin:
             "is_default": False,
             "created_at": created_at,
             "jql": jql,
+            "report_name": report_name,
             "params": params,
         }
 

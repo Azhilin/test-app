@@ -191,7 +191,7 @@ test-app/                          ← project root
 | `app/core/config.py` | Loads `.env` from project root via `python-dotenv`. Exposes all `JIRA_*` and `AI_*` constants as module-level names. `validate_config()` returns a list of error strings. |
 | `app/core/jira_client.py` | Wraps `atlassian-python-api`. `create_client()` returns an authenticated `Jira` instance. `fetch_sprint_data()` returns `(sprints, sprint_issues)`. Handles pagination and optional filter JQL. |
 | `app/core/metrics.py` | Pure functions: `compute_velocity`, `compute_cycle_time`, `compute_ai_assistance_trend`, `compute_ai_usage_details`, `compute_custom_trends` (placeholder). `build_metrics_dict()` assembles all results into a single dict consumed by both reporters. |
-| `app/core/schema.py` | Loads/saves/queries Jira field schemas from `config/jira_schema.json`. Provides field ID lookups and status mapping accessors. Ships a built-in `Default_Jira_Cloud` schema as fallback. |
+| `app/core/schema.py` | Loads/saves/queries Jira field schemas from `config/jira_schema.json`. Registry only — the module does not pick an "active" schema; active-schema selection is the caller's responsibility (CLI reads `JIRA_SCHEMA_NAME`; the dev server's `/api/generate` exports the selected filter's `params.schema_name` onto the subprocess env). Ships a built-in `Default_Jira_Cloud` schema as fallback. |
 | `app/reporters/report_html.py` | Renders `templates/report.html.j2` via Jinja2. Accepts a `section_visibility` dict to hide/show individual report sections. |
 | `app/reporters/report_md.py` | Builds a Markdown string (velocity bar chart, tables, cycle time stats) and writes to disk. Accepts a `section_visibility` dict to hide/show individual sections. |
 | `app/utils/cert_utils.py` | `validate_cert(Path)` — parses a PEM file with `cryptography`, returns a dict: `{valid, expires_at, days_remaining, subject}` (plus `error` on failure). |
@@ -310,8 +310,14 @@ browser → GET /                      → serve ui/index.html
 browser → GET /api/config            → return .env values (token masked)
 browser → POST /api/config           → write .env fields (17 keys supported)
 browser → POST /api/test-connection  → proxy to Jira /rest/api/3/myself
-browser → GET /api/generate          → spawn subprocess: python main.py
-                                        stream stdout/stderr as SSE events
+browser → GET /api/generate?filter=<slug>
+                                     → look up filter in config/jira_filters.json,
+                                        export params (JIRA_PROJECT, JIRA_BOARD_ID, …
+                                        and params.schema_name as JIRA_SCHEMA_NAME)
+                                        onto the subprocess env, then spawn
+                                        python main.py and stream stdout/stderr as SSE.
+                                        The active filter's schema_name is the source
+                                        of truth for UI-driven report runs.
 browser → GET /api/cert-status       → app.utils.cert_utils.validate_cert(...)
 browser → POST /api/fetch-cert       → ssl.get_server_certificate → certs/jira_ca_bundle.pem
 browser → GET /api/schemas           → list schemas from config/jira_schema.json
@@ -352,7 +358,7 @@ At startup, `config/defaults.env` is loaded first, then `.env` overrides it. Val
 |----------|------|---------|-------------|
 | `JIRA_BOARD_ID` | `int` | first available board | Numeric board ID; auto-detected if unset |
 | `JIRA_SPRINT_COUNT` | `int` | `10` | Number of past sprints to include |
-| `JIRA_SCHEMA_NAME` | `str` | _(unset)_ | Optional; `schema_name` in `config/jira_schema.json` for CLI (`python main.py`) |
+| `JIRA_SCHEMA_NAME` | `str` | _(unset)_ | CLI-only fallback (`python main.py`). For UI runs, the active filter's `params.schema_name` is exported onto the subprocess env by `/api/generate?filter=<slug>` and overrides this value. |
 | `JIRA_FILTER_ID` | `int` | `None` | Saved filter ID; when set, only matching issues are included |
 | `PORT` | `int` | `8080` | Dev server port |
 | `AI_ASSISTED_LABEL` | `str` | `AI_assistance` | Issue label marking AI-assisted work |

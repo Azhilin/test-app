@@ -218,6 +218,32 @@ def test_load_dau_records_empty_dir(tmp_path: Path) -> None:
     assert _load_dau_records(tmp_path) == []
 
 
+def test_load_dau_records_reads_from_subdirectory(tmp_path: Path) -> None:
+    sub = tmp_path / "2026-w11"
+    sub.mkdir()
+    _write(sub, "dau_a_20260101T000000Z.json", _response("a", "Every day (5 days)"))
+    records = _load_dau_records(tmp_path)
+    assert len(records) == 1
+
+
+def test_compute_dau_metrics_subdirectory_files(tmp_path: Path) -> None:
+    sub = tmp_path / "2026-w11"
+    sub.mkdir()
+    _write(sub, "dau_a_20260101T000000Z.json", _response("a", "Every day (5 days)"))
+    result = compute_dau_metrics(tmp_path)
+    assert result["response_count"] == 1
+    assert result["team_avg"] == 5.0
+
+
+def test_compute_dau_trend_subdirectory_files(tmp_path: Path) -> None:
+    sub = tmp_path / "2026-w11"
+    sub.mkdir()
+    _write(sub, "dau_a_20260101T000000Z.json", _response("a", "Every day (5 days)", week="2026-W11"))
+    trend = compute_dau_trend(tmp_path)
+    assert len(trend) == 1
+    assert trend[0]["week"] == "2026-W11"
+
+
 # ---------------------------------------------------------------------------
 # DAU-F-028: _dedup_by_user_week
 # ---------------------------------------------------------------------------

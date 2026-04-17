@@ -23,6 +23,12 @@ const TEMPLATE_SCHEMA = {
 };
 
 let _activeSchemaCache = null;
+const _schemaByNameCache = new Map();
+
+function getFilterSchemaSelection() {
+  const sel = document.getElementById('filter-schema-select');
+  return (sel && sel.value) ? sel.value : DEFAULT_SCHEMA_NAME;
+}
 
 function schemaStatus(el, msg, isError) {
   if (!el) return;
@@ -96,11 +102,28 @@ async function loadSelectedIntoEditor() {
   clearLog();
 }
 
-export function getActiveTeamJqlName() {
-  if (_activeSchemaCache && _activeSchemaCache.fields && _activeSchemaCache.fields.team) {
-    return _activeSchemaCache.fields.team.jql_name || _activeSchemaCache.fields.team.id || 'Team[Team]';
+function teamJqlFromSchema(schema) {
+  if (schema && schema.fields && schema.fields.team) {
+    return schema.fields.team.jql_name || schema.fields.team.id || 'Team[Team]';
   }
   return 'Team[Team]';
+}
+
+export function getActiveTeamJqlName() {
+  const name = getFilterSchemaSelection();
+  if (_schemaByNameCache.has(name)) {
+    return teamJqlFromSchema(_schemaByNameCache.get(name));
+  }
+  if (IS_SERVED) {
+    getSchemaByName(name)
+      .then((data) => {
+        if (data && data.ok && data.schema) {
+          _schemaByNameCache.set(name, data.schema);
+        }
+      })
+      .catch(() => {});
+  }
+  return teamJqlFromSchema(_activeSchemaCache);
 }
 
 function validateEditorContent(rawText) {
@@ -159,6 +182,7 @@ async function onSaveClick() {
       await loadSelectedIntoEditor();
       const verb = data.updated ? 'updated' : 'created';
       schemaStatus(statusEl, `Schema "${savedName}" ${verb}.`, false);
+      writeLog(`JSON validation passed successfully. Schema "${savedName}" ${verb}.`);
       window.dispatchEvent(new Event('jira-schema-changed'));
     } else {
       writeLog(data.error || 'Unknown server error.');
@@ -228,4 +252,8 @@ export function initSchema() {
   if (btnNew)    btnNew.addEventListener('click', onNewClick);
   btnSave.addEventListener('click', onSaveClick);
   if (btnDelete) btnDelete.addEventListener('click', onDeleteClick);
+
+  window.addEventListener('jira-schema-changed', () => {
+    _schemaByNameCache.clear();
+  });
 }

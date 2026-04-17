@@ -11,7 +11,8 @@ This document defines requirements for fetching Jira data used in metrics comput
 3. [Issue Fetching](#3-issue-fetching)
 4. [Changelog Fetching](#4-changelog-fetching)
 5. [Filter JQL Resolution](#5-filter-jql-resolution)
-6. [Future Enhancements](#6-future-enhancements)
+6. [KANBAN Period Fetching](#6-kanban-period-fetching)
+7. [Future Enhancements](#7-future-enhancements)
 
 ---
 
@@ -58,7 +59,18 @@ This document defines requirements for fetching Jira data used in metrics comput
 
 ---
 
-## 6. Future Enhancements
+## 6. KANBAN Period Fetching
+
+| ID | Requirement | Acceptance Criterion | Status | Tests |
+|----|-------------|----------------------|--------|-------|
+| JDF-K-001 | KANBAN periods align to ISO calendar weeks (Mon–Sun) | `fetch_kanban_data()` sets `week_start` to Monday of the target week and `week_end` to Sunday (or today for the current partial week); week labels use `YYYY-Www` ISO format | ✓ Met | `test_fetch_kanban_data_jql_uses_resolutiondate`, `test_fetch_kanban_data_closed_sprints_only_excludes_current_week`, `test_fetch_kanban_data_open_sprints_includes_current_week` |
+| JDF-K-002 | `JIRA_CLOSED_SPRINTS_ONLY=true` excludes the current working week | When true, period 0 is the most recently completed ISO week (starting last Monday); the current partial week is not included | ✓ Met | `test_fetch_kanban_data_closed_sprints_only_excludes_current_week` |
+| JDF-K-003 | `JIRA_CLOSED_SPRINTS_ONLY=false` includes the current working week | When false, period 0 covers current Monday through today and is marked `state: "active"`; subsequent periods are complete weeks marked `state: "closed"` | ✓ Met | `test_fetch_kanban_data_open_sprints_includes_current_week` |
+| JDF-K-004 | Local filter JQL is applied to KANBAN queries when `JIRA_FILTER_ID` is absent | `fetch_kanban_data()` combines the ISO-week date-range JQL with `config.JIRA_FILTER_JQL` using `AND`; `JIRA_FILTER_JQL` is populated from the filter's `jql` field by the generate handler | ✓ Met | `test_fetch_kanban_data_uses_config_filter_jql_as_fallback`, `test_fetch_kanban_data_filter_id_jql_takes_precedence_over_config_jql` |
+
+---
+
+## 7. Future Enhancements
 
 | ID | Requirement | Rationale | Status |
 |----|-------------|-----------|--------|

@@ -10,7 +10,8 @@ This document defines requirements for the Jira filter management system: the de
 2. [Filter Persistence — Server API](#2-filter-persistence--server-api)
 3. [UI — Filter Name Pre-population](#3-ui--filter-name-pre-population)
 4. [UI — Filter List Behaviour](#4-ui--filter-list-behaviour)
-5. [Future Enhancements](#5-future-enhancements)
+5. [UI — Active Schema & Filter Editing](#5-ui--active-schema--filter-editing)
+6. [Future Enhancements](#6-future-enhancements)
 
 ---
 
@@ -35,10 +36,14 @@ This document defines requirements for the Jira filter management system: the de
 | JFM-P-004 | `POST /api/filters` updates an existing entry when the name matches (upsert) | A POST with a `name` that matches an existing entry replaces it in place; response includes `{"ok": true, "updated": true, …}` | ✓ Met | — |
 | JFM-P-005 | `POST /api/filters` rejects a missing `JIRA_PROJECT` | When `params.JIRA_PROJECT` is absent or blank, the endpoint returns HTTP 200 with `{"ok": false, "error": "JIRA_PROJECT is required to build a JQL filter"}` | ✓ Met | — |
 | JFM-P-006 | `POST /api/filters` builds correct JQL from params | The generated JQL always includes `status = Done`, plus `project =`/`IN`, optional `Team[Team] =`/`IN`, optional `type IN`, and `sprint in closedSprints()` when `JIRA_CLOSED_SPRINTS_ONLY` is truthy | ✓ Met | — |
-| JFM-P-007 | `POST /api/filters` uses the schema's team JQL field name when `schema_name` is provided | If `params.schema_name` resolves to a schema with a `team.jql_name` field, that name is used in the `Team[…]` JQL clause instead of the hard-coded default `Team[Team]` | ✓ Met | — |
+| JFM-P-007 | `POST /api/filters` uses the schema's team JQL field name when `schema_name` is provided, and stores `schema_name` on the saved filter | If `params.schema_name` resolves to a schema with a `team.jql_name` field, that name is used in the `Team[…]` JQL clause instead of `Team[Team]`; the saved entry on disk preserves `params.schema_name` verbatim for later round-trip reads | ✓ Met | — |
 | JFM-P-008 | `DELETE /api/filters/<slug>` removes the matching entry from `config/jira_filters.json` | The entry with `slug == <slug>` is removed from the array and the file is rewritten; response is `{"ok": true}` | ✓ Met | — |
 | JFM-P-009 | `DELETE /api/filters/<slug>` returns 404 for an unknown slug | When no entry matches the slug, the response is HTTP 200 with `{"ok": false, "error": "Filter not found"}` | ✓ Met | — |
 | JFM-P-010 | Filter data persists across application restarts | Entries written to `config/jira_filters.json` via `POST /api/filters` are present in the `GET /api/filters` response after the server process is restarted | ✓ Met | — |
+| JFM-P-011 | `GET /api/generate?filter=<slug>` exports the filter's `params.schema_name` as `JIRA_SCHEMA_NAME` on the subprocess environment | When the selected filter's `params.schema_name` is non-empty, the value is set on the subprocess env and overrides any value from `config/defaults.env` or `.env`, making the active filter the source of truth for schema selection in UI runs | ✓ Met | — |
+| JFM-P-012 | Each filter entry stores a `report_name` field; it defaults to the filter name on creation | A newly created filter in `config/jira_filters.json` includes `"report_name"` equal to the filter name when `report_name` is not provided in the POST body | ✓ Met | `test_post_filter_report_name_defaults_to_filter_name` |
+| JFM-P-013 | `POST /api/filters` accepts and persists a custom `report_name` | When the POST body includes `"report_name"`, the persisted entry stores that value; subsequent `GET /api/filters` returns it unchanged | ✓ Met | `test_post_filter_round_trip_preserves_report_name` |
+| JFM-P-014 | `GET /api/generate?filter=<slug>&report_name=<value>` passes the report name to `main.py` as `REPORT_NAME` and updates the stored filter | When `report_name` query param is supplied and differs from the stored value, the filter JSON is updated and `REPORT_NAME` env var is set for the subprocess | ✓ Met | `test_generate_exports_report_name_to_subprocess` |
 
 ---
 
@@ -62,7 +67,21 @@ This document defines requirements for the Jira filter management system: the de
 
 ---
 
-## 5. Future Enhancements
+## 5. UI — Active Schema & Filter Editing
+
+| ID | Requirement | Acceptance Criterion | Status | Tests |
+|----|-------------|----------------------|--------|-------|
+| JFM-UI-007 | An Active Schema dropdown is shown on the Filter Builder tab | `#filter-schema-select` is populated from `GET /api/schemas`; the selection reflects the currently-selected filter's `params.schema_name`, or `Default_Jira_Cloud` when "— New filter —" is active | ✗ Not met | — |
+| JFM-UI-008 | The Filter Name field is a dropdown that lists existing filters | `#filter-name-select` lists every entry returned by `GET /api/filters` plus a leading `— New filter —` option; the default filter is labelled with a `(default)` suffix | ✗ Not met | — |
+| JFM-UI-009 | Selecting an existing filter loads it into the form for editing | Picking a filter in `#filter-name-select` populates the form from its `params` (project, team, issue types, board, sprint count, radios, Active Schema) and hides `#filter-name` with its value mirroring the filter name | ✗ Not met | — |
+| JFM-UI-010 | Selecting "— New filter —" resets the form to a blank-template state | Picking `__new__` in `#filter-name-select` unhides `#filter-name`, pre-populates it per JFM-UI-001, and clears every param field (Active Schema resets to `Default_Jira_Cloud`, radios reset to `SCRUM` / `StoryPoints`) | ✗ Not met | — |
+| JFM-UI-011 | Save uses the schema chosen in the Filter Builder dropdown | `POST /api/filters` request body sets `params.schema_name` equal to the value of `#filter-schema-select` at the moment of save — independent of the Schema Setup tab's selection | ✗ Not met | — |
+| JFM-UI-012 | The Filter Builder's schema dropdown does not mutate localStorage or Schema Setup state | Changing `#filter-schema-select` leaves `localStorage.jira_schema_name` unchanged and does not alter the `#schema-select` value on the Schema Setup tab | ✗ Not met | — |
+| JFM-UI-013 | The default filter is read-only in the UI | When `Default_Jira_Filter` is selected in `#filter-name-select`, the Save button is disabled; it re-enables when any other entry (including `— New filter —`) is selected | ✗ Not met | — |
+
+---
+
+## 6. Future Enhancements
 
 | ID | Requirement | Rationale | Status |
 |----|-------------|-----------|--------|
