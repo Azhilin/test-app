@@ -483,7 +483,7 @@ def test_save_sends_schema_from_filter_dropdown(page: Page, live_server_url: str
     with allure.step("Fill required fields and pick Custom_Schema"):
         page.evaluate(
             "document.getElementById('filter-jql-builder').open = true;"
-            "document.getElementById('filter-board-settings').open = true;"
+            "document.getElementById('filter-report-scope').open = true;"
         )
         page.locator("#filter-name").fill("Schema Test")
         page.locator("#jira-project").fill("ZZZ")

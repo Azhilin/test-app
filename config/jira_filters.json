@@ -65,19 +65,19 @@
     "description": "",
     "is_default": false,
     "created_at": "2026-04-17T14:49:05",
-    "jql": "project = SCRUM AND status = Done",
+    "jql": "",
     "report_name": "Kanban Story Points",
     "params": {
-      "JIRA_PROJECT": "SCRUM",
+      "JIRA_PROJECT": "",
       "JIRA_TEAM_ID": "",
       "JIRA_ISSUE_TYPES": "",
-      "JIRA_CLOSED_SPRINTS_ONLY": "false",
+      "JIRA_CLOSED_SPRINTS_ONLY": "",
       "PROJECT_TYPE": "KANBAN",
       "ESTIMATION_TYPE": "StoryPoints",
       "schema_name": "Test Schema",
       "JIRA_BOARD_ID": "1",
       "JIRA_SPRINT_COUNT": "10",
-      "JIRA_FILTER_ID": "",
+      "JIRA_FILTER_ID": "10032",
       "JIRA_FILTER_PAGE_SIZE": "100"
     }
   }

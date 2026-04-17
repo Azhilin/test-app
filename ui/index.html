@@ -122,7 +122,7 @@
             spellcheck="false"
             maxlength="150"
           />
-          <p class="form-helper" style="margin-bottom:0;">Overrides the report title and output filename. Saved back to the filter when changed.</p>
+          <p class="form-helper" style="margin-bottom:0;">Overrides the report title and output filename for this run. Does not modify the saved filter.</p>
         </div>
         <p class="form-error" id="err-no-metrics" style="margin-bottom:12px;">Select at least one metric section to generate a report.</p>
         <p class="form-helper" style="margin-bottom:16px;">The selected filter's JQL will be used to scope sprint issues for the report.</p>
@@ -157,99 +157,99 @@
           </div>
         </details>
 
-        <!-- AI Adoption Labels -->
-        <div class="card">
-          <div class="card-title">AI Adoption Labels</div>
-          <div class="card-subtitle">
-            Labels added in Jira to track AI-assisted work. Labels are case-sensitive and must match exactly.
-            Click <strong>Save AI Labels</strong> to persist these to <code>.env</code>.
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="ai-assisted-label">AI Assisted Label</label>
-            <input
-              class="form-input"
-              type="text"
-              id="ai-assisted-label"
-              name="AI_ASSISTED_LABEL"
-              placeholder="AI_assistance"
-              autocomplete="off"
-              spellcheck="false"
-              maxlength="200"
-            />
-            <p class="form-helper">Label that marks an issue as AI-assisted. Default: <strong>AI_assistance</strong>.</p>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="ai-exclude-labels">
-              Exclude Labels <span class="optional">optional — comma-separated</span>
-            </label>
-            <input
-              class="form-input"
-              type="text"
-              id="ai-exclude-labels"
-              name="AI_EXCLUDE_LABELS"
-              placeholder="e.g. spike,admin,tech-debt"
-              autocomplete="off"
-              spellcheck="false"
-              maxlength="1000"
-            />
-            <p class="form-helper">Issues carrying these labels are excluded from the AI % denominator. Use for non-delivery work such as spikes or admin tickets.</p>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="ai-tool-labels">
-              Tool Labels <span class="optional">optional — comma-separated</span>
-            </label>
-            <input
-              class="form-input"
-              type="text"
-              id="ai-tool-labels"
-              name="AI_TOOL_LABELS"
-              placeholder="AI_Tool_Copilot,AI_Tool_ChatGPT,AI_Tool_Gemini"
-              autocomplete="off"
-              spellcheck="false"
-              maxlength="1000"
-            />
-            <p class="form-helper">Labels identifying AI tools used. One label per tool; an issue can carry multiple tool labels. Default: <strong>AI_Tool_Copilot,AI_Tool_ChatGPT,AI_Tool_Gemini</strong>.</p>
-          </div>
-
-          <div class="form-group">
-            <label class="form-label" for="ai-action-labels">
-              Action Labels <span class="optional">optional — comma-separated</span>
-            </label>
-            <input
-              class="form-input"
-              type="text"
-              id="ai-action-labels"
-              name="AI_ACTION_LABELS"
-              placeholder="AI_Case_CodeGen,AI_Case_Review,AI_Case_Testing"
-              autocomplete="off"
-              spellcheck="false"
-              maxlength="1000"
-            />
-            <p class="form-helper">Labels identifying AI use-cases. Default: <strong>AI_Case_CodeGen,AI_Case_Review,AI_Case_Testing</strong>.</p>
-          </div>
-
-          <div class="btn-row">
-            <button class="btn btn-primary" id="btn-save-ai-labels" type="button">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                <polyline points="17 21 17 13 7 13 7 21"/>
-                <polyline points="7 3 7 8 15 8"/>
-              </svg>
-              Save AI Labels
-            </button>
-            <span class="save-confirm" id="save-confirm-ai" aria-live="polite">Settings saved</span>
-          </div>
-        </div>
-
         <div class="log-wrap" aria-live="polite" aria-label="Report generation output">
           <div class="log-toolbar">
             <span class="log-toolbar-label">Output</span>
             <button class="log-clear-btn" id="btn-clear-log" type="button" title="Clear log">Clear</button>
           </div>
           <div class="log-output" id="log-output" role="log" aria-live="polite"></div>
+        </div>
+      </div>
+
+      <!-- AI Adoption Labels (extracted as sibling card) -->
+      <div class="card">
+        <div class="card-title">AI Adoption Labels</div>
+        <div class="card-subtitle">
+          Labels added in Jira to track AI-assisted work. Labels are case-sensitive and must match exactly.
+          Click <strong>Save AI Labels</strong> to persist these to <code>.env</code>.
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="ai-assisted-label">AI Assisted Label</label>
+          <input
+            class="form-input"
+            type="text"
+            id="ai-assisted-label"
+            name="AI_ASSISTED_LABEL"
+            placeholder="AI_assistance"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="200"
+          />
+          <p class="form-helper">Label that marks an issue as AI-assisted. Default: <strong>AI_assistance</strong>.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="ai-exclude-labels">
+            Exclude Labels <span class="optional">optional — comma-separated</span>
+          </label>
+          <input
+            class="form-input"
+            type="text"
+            id="ai-exclude-labels"
+            name="AI_EXCLUDE_LABELS"
+            placeholder="e.g. spike,admin,tech-debt"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="1000"
+          />
+          <p class="form-helper">Issues carrying these labels are excluded from the AI % denominator. Use for non-delivery work such as spikes or admin tickets.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="ai-tool-labels">
+            Tool Labels <span class="optional">optional — comma-separated</span>
+          </label>
+          <input
+            class="form-input"
+            type="text"
+            id="ai-tool-labels"
+            name="AI_TOOL_LABELS"
+            placeholder="AI_Tool_Copilot,AI_Tool_ChatGPT,AI_Tool_Gemini"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="1000"
+          />
+          <p class="form-helper">Labels identifying AI tools used. One label per tool; an issue can carry multiple tool labels. Default: <strong>AI_Tool_Copilot,AI_Tool_ChatGPT,AI_Tool_Gemini</strong>.</p>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="ai-action-labels">
+            Action Labels <span class="optional">optional — comma-separated</span>
+          </label>
+          <input
+            class="form-input"
+            type="text"
+            id="ai-action-labels"
+            name="AI_ACTION_LABELS"
+            placeholder="AI_Case_CodeGen,AI_Case_Review,AI_Case_Testing"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="1000"
+          />
+          <p class="form-helper">Labels identifying AI use-cases. Default: <strong>AI_Case_CodeGen,AI_Case_Review,AI_Case_Testing</strong>.</p>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-save-ai-labels" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            Save AI Labels
+          </button>
+          <span class="save-confirm" id="save-confirm-ai" aria-live="polite">Settings saved</span>
         </div>
       </div>
 
@@ -287,11 +287,11 @@
         </p>
       </div>
 
-      <!-- Primary save card -->
+      <!-- Filter identity card -->
       <div class="card">
         <div class="card-title">Save Jira Filter</div>
         <div class="card-subtitle">
-          Set a Filter Name and either a Jira Filter ID or use the JQL Builder below, then click
+          Set a Filter Name and configure the data source and report scope below, then click
           <strong>Save Filter</strong>. The filter is saved to <code>config/jira_filters.json</code>.
         </div>
 
@@ -351,167 +351,157 @@
             Used as the report title and output filename. Defaults to the filter name when left empty.
           </p>
         </div>
-
-        <div class="form-group">
-          <label class="form-label" for="filter-id">
-            Jira Filter ID <span class="optional">optional — or use JQL Builder below</span>
-          </label>
-          <input
-            class="form-input"
-            type="number"
-            id="filter-id"
-            name="JIRA_FILTER_ID"
-            min="1"
-            placeholder="e.g. 10042"
-            autocomplete="off"
-          />
-          <p class="form-helper">
-            ID of a saved Jira filter. When set, the filter's own JQL is used during data retrieval — no Project Key needed.
-            Find the ID in the filter URL: <code>.../issues?filter=10042</code>.
-          </p>
-        </div>
-
-        <div class="form-group">
-          <label class="form-label" for="jira-filter-page-size">
-            Filter Page Size <span class="optional">optional</span>
-          </label>
-          <input
-            class="form-input"
-            type="number"
-            id="jira-filter-page-size"
-            name="JIRA_FILTER_PAGE_SIZE"
-            min="1"
-            max="100"
-            placeholder="100"
-            autocomplete="off"
-          />
-          <p class="form-helper">Issues fetched per page when using a Jira Filter ID. Valid range: 1–100. Default: <strong>100</strong>.</p>
-        </div>
-
-        <button class="btn btn-primary" id="btn-save-jira-filter" type="button" style="font-size:0.95rem; padding:11px 24px;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-            <polyline points="17 21 17 13 7 13 7 21"/>
-            <polyline points="7 3 7 8 15 8"/>
-          </svg>
-          Save Filter
-        </button>
-
-        <div class="log-wrap" aria-live="polite" aria-label="Filter save output">
-          <div class="log-toolbar">
-            <span class="log-toolbar-label">Output &mdash; JQL</span>
-            <div style="display:flex;gap:10px;align-items:center;">
-              <button class="log-clear-btn" id="btn-copy-filter-jql" type="button" title="Copy JQL to clipboard">Copy JQL</button>
-              <button class="log-clear-btn" id="btn-clear-filter-log" type="button" title="Clear output">Clear</button>
-            </div>
-          </div>
-          <div class="log-output" id="filter-log-output" role="log" aria-live="polite"></div>
-        </div>
       </div>
 
-      <!-- JQL Builder (collapsible, optional) -->
-      <details class="filter-details" id="filter-jql-builder">
-        <summary>JQL Builder <span style="font-weight:400;color:var(--text-muted);font-size:0.82rem;">&mdash; optional, only needed when no Jira Filter ID is set</span></summary>
+      <!-- Data Source (open by default) -->
+      <details class="filter-details" id="filter-data-source" open>
+        <summary>Data Source</summary>
         <div class="filter-details-body">
           <p class="form-helper" style="margin-bottom:16px;">
-            Provide a <strong>Project Key</strong> to generate a JQL filter. Expand this section instead of
-            setting a Jira Filter ID above when your team does not have a saved native filter.
+            Choose one path: enter a <strong>Jira Filter ID</strong> to use your saved Jira filter,
+            or expand the <strong>JQL Builder</strong> below to build a query from project settings.
           </p>
 
           <div class="form-group">
-            <label class="form-label" for="jira-project">
-              Project Key <span class="optional">required if no Jira Filter ID is set</span>
+            <label class="form-label" for="filter-id">
+              Jira Filter ID <span class="optional">optional — or use JQL Builder below</span>
             </label>
             <input
               class="form-input"
-              type="text"
-              id="jira-project"
-              name="JIRA_PROJECT"
-              placeholder="e.g. MYTEAM or MYTEAM, OTHERPROJ"
+              type="number"
+              id="filter-id"
+              name="JIRA_FILTER_ID"
+              min="1"
+              placeholder="e.g. 10042"
               autocomplete="off"
-              spellcheck="false"
-              maxlength="1000"
             />
-            <p class="form-helper">Jira project key(s) used to build a JQL filter. Comma-separate multiple values.</p>
+            <p class="form-helper">
+              ID of a saved Jira filter. When set, the filter's own JQL is used during data retrieval — no Project Key needed.
+              Find the ID in the filter URL: <code>.../issues?filter=10042</code>.
+            </p>
           </div>
 
-          <div class="form-group">
-            <label class="form-label" for="jira-team-id">
-              Team ID <span class="optional">optional — comma-separated</span>
+          <div class="form-group" id="filter-page-size-group">
+            <label class="form-label" for="jira-filter-page-size">
+              Filter Page Size <span class="optional">optional</span>
             </label>
             <input
               class="form-input"
-              type="text"
-              id="jira-team-id"
-              name="JIRA_TEAM_ID"
-              placeholder="e.g. 50953e1b-... or uuid1, uuid2"
+              type="number"
+              id="jira-filter-page-size"
+              name="JIRA_FILTER_PAGE_SIZE"
+              min="1"
+              max="100"
+              placeholder="100"
               autocomplete="off"
-              spellcheck="false"
-              maxlength="1000"
             />
-            <p class="form-helper">Team UUID(s) from the <code>Team[Team]</code> custom field. Comma-separate multiple values.</p>
+            <p class="form-helper">Issues fetched per page when using a Jira Filter ID. Valid range: 1–100. Default: <strong>100</strong>.</p>
           </div>
 
-          <div class="form-group">
-            <label class="form-label" for="jira-issue-types">
-              Issue Types <span class="optional">optional</span>
-            </label>
-            <input
-              class="form-input"
-              type="text"
-              id="jira-issue-types"
-              name="JIRA_ISSUE_TYPES"
-              placeholder="Bug, Story, Task, Spike"
-              autocomplete="off"
-              spellcheck="false"
-              maxlength="100"
-            />
-            <p class="form-helper">Comma-separated issue types to include. Leave blank to include all types.</p>
-          </div>
+          <!-- JQL Builder (collapsible, nested inside Data Source) -->
+          <details class="filter-details" id="filter-jql-builder" style="margin-top:8px;">
+            <summary>JQL Builder <span style="font-weight:400;color:var(--text-muted);font-size:0.82rem;">&mdash; optional, only needed when no Jira Filter ID is set</span></summary>
+            <div class="filter-details-body">
+              <p class="form-helper" style="margin-bottom:16px;">
+                Provide a <strong>Project Key</strong> to generate a JQL filter. Expand this section instead of
+                setting a Jira Filter ID above when your team does not have a saved native filter.
+              </p>
 
-          <div class="form-group">
-            <label class="form-label" for="jira-closed-sprints-only">Closed Sprints Only</label>
-            <select
-              class="form-input"
-              id="jira-closed-sprints-only"
-              name="JIRA_CLOSED_SPRINTS_ONLY"
-            >
-              <option value="true">true &mdash; include issues from closed sprints only (default)</option>
-              <option value="false">false &mdash; include issues from all sprints</option>
-            </select>
-            <p class="form-helper">When <strong>true</strong>, only issues from closed sprints are counted. Default: <strong>true</strong>.</p>
-          </div>
+              <div class="form-group">
+                <label class="form-label" for="jira-project">
+                  Project Key <span class="optional">required if no Jira Filter ID is set</span>
+                </label>
+                <input
+                  class="form-input"
+                  type="text"
+                  id="jira-project"
+                  name="JIRA_PROJECT"
+                  placeholder="e.g. MYTEAM or MYTEAM, OTHERPROJ"
+                  autocomplete="off"
+                  spellcheck="false"
+                  maxlength="1000"
+                />
+                <p class="form-helper">Jira project key(s) used to build a JQL filter. Comma-separate multiple values.</p>
+              </div>
 
+              <div class="form-group">
+                <label class="form-label" for="jira-team-id">
+                  Team ID <span class="optional">optional — comma-separated</span>
+                </label>
+                <input
+                  class="form-input"
+                  type="text"
+                  id="jira-team-id"
+                  name="JIRA_TEAM_ID"
+                  placeholder="e.g. 50953e1b-... or uuid1, uuid2"
+                  autocomplete="off"
+                  spellcheck="false"
+                  maxlength="1000"
+                />
+                <p class="form-helper">Team UUID(s) from the <code>Team[Team]</code> custom field. Comma-separate multiple values.</p>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="jira-issue-types">
+                  Issue Types <span class="optional">optional</span>
+                </label>
+                <input
+                  class="form-input"
+                  type="text"
+                  id="jira-issue-types"
+                  name="JIRA_ISSUE_TYPES"
+                  placeholder="Bug, Story, Task, Spike"
+                  autocomplete="off"
+                  spellcheck="false"
+                  maxlength="100"
+                />
+                <p class="form-helper">Comma-separated issue types to include. Leave blank to include all types.</p>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label" for="jira-closed-sprints-only">Closed Sprints Only</label>
+                <select
+                  class="form-input"
+                  id="jira-closed-sprints-only"
+                  name="JIRA_CLOSED_SPRINTS_ONLY"
+                >
+                  <option value="true">true &mdash; include issues from closed sprints only (default)</option>
+                  <option value="false">false &mdash; include issues from all sprints</option>
+                </select>
+                <p class="form-helper">When <strong>true</strong>, only issues from closed sprints are counted. Default: <strong>true</strong>.</p>
+              </div>
+
+            </div>
+          </details>
         </div>
       </details>
 
-      <div class="option-group" style="margin:20px 0;padding:14px;background:var(--accent-light);border-radius:var(--radius);">
-        <div class="option-group-label" style="margin-bottom:10px;">Project Type</div>
-        <label class="radio-row">
-          <input type="radio" name="filter-project-type" value="SCRUM" checked> SCRUM (sprint-based)
-        </label>
-        <label class="radio-row">
-          <input type="radio" name="filter-project-type" value="KANBAN"> KANBAN (time-period-based)
-        </label>
-        <p class="form-helper" style="margin-top:8px;font-size:0.78rem;color:var(--text-muted);">Select SCRUM for sprint-based teams or KANBAN for continuous-flow teams with no sprints.</p>
-      </div>
-
-      <div class="option-group" style="margin:20px 0;padding:14px;background:var(--accent-light);border-radius:var(--radius);">
-        <div class="option-group-label" style="margin-bottom:10px;">Estimation Type</div>
-        <label class="radio-row">
-          <input type="radio" name="filter-estimation-type" value="StoryPoints" checked> Story Points
-        </label>
-        <label class="radio-row">
-          <input type="radio" name="filter-estimation-type" value="JiraTickets"> Jira Tickets (count)
-        </label>
-        <p class="form-helper" style="margin-top:8px;font-size:0.78rem;color:var(--text-muted);">Use Story Points if your team estimates. Use Jira Tickets if no story point values are available.</p>
-      </div>
-
-      <!-- Agile Board & Sprint Count (collapsible, optional) -->
-      <details class="filter-details" id="filter-board-settings">
-        <summary>Agile Board &amp; Sprint Count</summary>
+      <!-- Report Scope (open by default — contains required fields) -->
+      <details class="filter-details" id="filter-report-scope" open>
+        <summary>Report Scope <span class="required-star" aria-hidden="true">*</span></summary>
         <div class="filter-details-body">
-          <p class="form-helper" style="margin-bottom:16px;">Specify which board and how many sprints (or time periods) to include in your report.</p>
+
+          <div class="option-group" style="padding:14px;background:var(--accent-light);border-radius:var(--radius);margin-bottom:16px;">
+            <div class="option-group-label" style="margin-bottom:10px;">Project Type</div>
+            <label class="radio-row">
+              <input type="radio" name="filter-project-type" value="SCRUM" checked> SCRUM (sprint-based)
+            </label>
+            <label class="radio-row">
+              <input type="radio" name="filter-project-type" value="KANBAN"> KANBAN (time-period-based)
+            </label>
+            <p class="form-helper" style="margin-top:8px;font-size:0.78rem;color:var(--text-muted);">Select SCRUM for sprint-based teams or KANBAN for continuous-flow teams with no sprints.</p>
+          </div>
+
+          <div class="option-group" style="padding:14px;background:var(--accent-light);border-radius:var(--radius);margin-bottom:16px;">
+            <div class="option-group-label" style="margin-bottom:10px;">Estimation Type</div>
+            <label class="radio-row">
+              <input type="radio" name="filter-estimation-type" value="StoryPoints" checked> Story Points
+            </label>
+            <label class="radio-row">
+              <input type="radio" name="filter-estimation-type" value="JiraTickets"> Jira Tickets (count)
+            </label>
+            <p class="form-helper" style="margin-top:8px;font-size:0.78rem;color:var(--text-muted);">Use Story Points if your team estimates. Use Jira Tickets if no story point values are available.</p>
+          </div>
 
           <div class="form-group">
             <label class="form-label" for="jira-board-id">
@@ -546,19 +536,31 @@
             <p class="form-helper">For SCRUM: number of past sprints to include. For KANBAN: number of weeks to look back. Default: <strong>10</strong>.</p>
           </div>
 
-          <div class="btn-row">
-            <button class="btn btn-primary" id="btn-save-data" type="button">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
-                <polyline points="17 21 17 13 7 13 7 21"/>
-                <polyline points="7 3 7 8 15 8"/>
-              </svg>
-              Save Data Settings
-            </button>
-            <span class="save-confirm" id="save-confirm-data" aria-live="polite">Settings saved</span>
-          </div>
         </div>
       </details>
+
+      <!-- Save Filter button + output log (after all fields) -->
+      <div class="card">
+        <button class="btn btn-primary" id="btn-save-jira-filter" type="button" style="font-size:0.95rem; padding:11px 24px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+            <polyline points="17 21 17 13 7 13 7 21"/>
+            <polyline points="7 3 7 8 15 8"/>
+          </svg>
+          Save Filter
+        </button>
+
+        <div class="log-wrap" aria-live="polite" aria-label="Filter save output">
+          <div class="log-toolbar">
+            <span class="log-toolbar-label">Output &mdash; JQL</span>
+            <div style="display:flex;gap:10px;align-items:center;">
+              <button class="log-clear-btn" id="btn-copy-filter-jql" type="button" title="Copy JQL to clipboard">Copy JQL</button>
+              <button class="log-clear-btn" id="btn-clear-filter-log" type="button" title="Clear output">Clear</button>
+            </div>
+          </div>
+          <div class="log-output" id="filter-log-output" role="log" aria-live="polite"></div>
+        </div>
+      </div>
 
       <!-- Last Created Filters -->
       <div class="card">

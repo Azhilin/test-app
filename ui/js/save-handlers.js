@@ -4,23 +4,6 @@ import { saveConfig } from './api.js';
 import { flashConfirm } from './connection.js';
 
 export function initSaveHandlers() {
-  const btnSaveData = document.getElementById('btn-save-data');
-  if (btnSaveData) {
-    btnSaveData.addEventListener('click', () => {
-      const boardId     = document.getElementById('jira-board-id').value.trim();
-      const sprintCount = document.getElementById('sprint-count').value.trim();
-      store.set(STORE_KEYS.JIRA_BOARD_ID,     boardId);
-      store.set(STORE_KEYS.JIRA_SPRINT_COUNT, sprintCount);
-      flashConfirm('save-confirm-data');
-      if (IS_SERVED) {
-        saveConfig({
-          JIRA_BOARD_ID:     boardId,
-          JIRA_SPRINT_COUNT: sprintCount,
-        });
-      }
-    });
-  }
-
   const btnSaveAi = document.getElementById('btn-save-ai-labels');
   if (btnSaveAi) {
     btnSaveAi.addEventListener('click', () => {
