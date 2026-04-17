@@ -238,17 +238,185 @@ def test_get_issues_for_sprint_empty(mock_jira):
 # ---------------------------------------------------------------------------
 
 
-def test_fetch_kanban_data_jql_uses_resolutiondate(mock_jira, monkeypatch):
-    """fetch_kanban_data() must group issues by resolutiondate, not created."""
+def test_fetch_kanban_data_jql_uses_updated_not_resolutiondate(mock_jira, monkeypatch):
+    """fetch_kanban_data() uses a single `updated >= oldest` JQL, not per-week resolutiondate ranges.
+
+    Jira workflows (especially team-managed projects) often do not set resolutiondate when an
+    issue transitions to Done. Using `updated` ensures issues are captured regardless.
+    """
+    from datetime import date
+
     monkeypatch.setattr("app.core.config.JIRA_SPRINT_COUNT", 1)
+    monkeypatch.setattr("app.core.config.JIRA_CLOSED_SPRINTS_ONLY", True)
     monkeypatch.setattr(jira_client, "get_board_id", lambda jira: 1)
-    mock_jira.jql.return_value = {"issues": [], "total": 0}
+    monkeypatch.setattr(jira_client, "get_filter_jql", lambda jira: "")
+    monkeypatch.setattr("app.core.config.JIRA_FILTER_JQL", "")
+    mock_jira.get.return_value = {"issues": []}
 
     jira_client.fetch_kanban_data(mock_jira)
 
-    called_jql = mock_jira.jql.call_args[0][0]
-    assert "resolutiondate" in called_jql
+    # Only one REST call is made (single query, not one per week)
+    assert mock_jira.get.call_count == 1
+    called_jql = mock_jira.get.call_args[1]["params"]["jql"]
+
+    # Uses `updated`, not `resolutiondate`, as the date constraint
+    assert "updated" in called_jql
+    assert "resolutiondate" not in called_jql
     assert "created" not in called_jql
+
+    # Date in the JQL must be a Monday (oldest ISO week start)
+    import re
+
+    dates = re.findall(r"\d{4}-\d{2}-\d{2}", called_jql)
+    assert len(dates) >= 1
+    oldest_start = date.fromisoformat(dates[0])
+    assert oldest_start.weekday() == 0, "oldest period start must be a Monday"
+
+
+def test_fetch_kanban_data_groups_issues_by_updated_date(mock_jira, monkeypatch):
+    """Issues are placed into the week period matching their updated date."""
+    from datetime import date, timedelta
+
+    today = date.today()
+    current_monday = today - timedelta(days=today.weekday())
+    last_monday = current_monday - timedelta(weeks=1)
+
+    monkeypatch.setattr("app.core.config.JIRA_SPRINT_COUNT", 2)
+    monkeypatch.setattr("app.core.config.JIRA_CLOSED_SPRINTS_ONLY", True)
+    monkeypatch.setattr(jira_client, "get_board_id", lambda jira: 1)
+    monkeypatch.setattr(jira_client, "get_filter_jql", lambda jira: "")
+    monkeypatch.setattr("app.core.config.JIRA_FILTER_JQL", "")
+
+    issue_in_last_week = {
+        "key": "X-1",
+        "fields": {"status": {"name": "Done"}, "updated": f"{last_monday}T10:00:00.000+0000", "resolutiondate": None},
+    }
+    issue_in_prev_week = {
+        "key": "X-2",
+        "fields": {
+            "status": {"name": "Done"},
+            "updated": f"{last_monday - timedelta(weeks=1)}T10:00:00.000+0000",
+            "resolutiondate": None,
+        },
+    }
+    mock_jira.get.return_value = {"issues": [issue_in_last_week, issue_in_prev_week]}
+
+    periods, period_issues = jira_client.fetch_kanban_data(mock_jira)
+
+    assert len(periods) == 2
+    # Period 0 is last complete week; X-1's updated date is within it
+    assert any(i["key"] == "X-1" for i in period_issues[periods[0]["id"]])
+    # Period 1 is the week before; X-2 belongs there
+    assert any(i["key"] == "X-2" for i in period_issues[periods[1]["id"]])
+
+
+def test_fetch_kanban_data_prefers_resolutiondate_over_updated(mock_jira, monkeypatch):
+    """When resolutiondate is set it takes priority over updated for week grouping."""
+    from datetime import date, timedelta
+
+    today = date.today()
+    current_monday = today - timedelta(days=today.weekday())
+    last_monday = current_monday - timedelta(weeks=1)
+    two_mondays_ago = current_monday - timedelta(weeks=2)
+
+    monkeypatch.setattr("app.core.config.JIRA_SPRINT_COUNT", 2)
+    monkeypatch.setattr("app.core.config.JIRA_CLOSED_SPRINTS_ONLY", True)
+    monkeypatch.setattr(jira_client, "get_board_id", lambda jira: 1)
+    monkeypatch.setattr(jira_client, "get_filter_jql", lambda jira: "")
+    monkeypatch.setattr("app.core.config.JIRA_FILTER_JQL", "")
+
+    # resolutiondate is in period 1 (two weeks ago); updated is in period 0 (last week)
+    issue = {
+        "key": "X-1",
+        "fields": {
+            "status": {"name": "Done"},
+            "resolutiondate": f"{two_mondays_ago}T09:00:00.000+0000",
+            "updated": f"{last_monday}T15:00:00.000+0000",
+        },
+    }
+    mock_jira.get.return_value = {"issues": [issue]}
+
+    periods, period_issues = jira_client.fetch_kanban_data(mock_jira)
+
+    # Must land in period 1 (resolutiondate week), not period 0 (updated week)
+    assert any(i["key"] == "X-1" for i in period_issues[periods[1]["id"]])
+    assert not any(i["key"] == "X-1" for i in period_issues[periods[0]["id"]])
+
+
+def test_fetch_kanban_data_closed_sprints_only_excludes_current_week(mock_jira, monkeypatch):
+    """When JIRA_CLOSED_SPRINTS_ONLY=True period 0 starts on last Monday, not current Monday."""
+    from datetime import date, timedelta
+
+    monkeypatch.setattr("app.core.config.JIRA_SPRINT_COUNT", 1)
+    monkeypatch.setattr("app.core.config.JIRA_CLOSED_SPRINTS_ONLY", True)
+    monkeypatch.setattr(jira_client, "get_board_id", lambda jira: 1)
+    monkeypatch.setattr(jira_client, "get_filter_jql", lambda jira: "")
+    monkeypatch.setattr("app.core.config.JIRA_FILTER_JQL", "")
+    mock_jira.get.return_value = {"issues": []}
+
+    periods, _ = jira_client.fetch_kanban_data(mock_jira)
+
+    today = date.today()
+    current_monday = today - timedelta(days=today.weekday())
+    last_monday = current_monday - timedelta(weeks=1)
+
+    assert periods[0]["startDate"] == str(last_monday)
+    assert periods[0]["state"] == "closed"
+    assert periods[0]["startDate"] != str(current_monday), "current week must not be period 0 when closed-sprints-only"
+
+
+def test_fetch_kanban_data_open_sprints_includes_current_week(mock_jira, monkeypatch):
+    """When JIRA_CLOSED_SPRINTS_ONLY=False period 0 is the current partial week (active state)."""
+    from datetime import date, timedelta
+
+    monkeypatch.setattr("app.core.config.JIRA_SPRINT_COUNT", 2)
+    monkeypatch.setattr("app.core.config.JIRA_CLOSED_SPRINTS_ONLY", False)
+    monkeypatch.setattr(jira_client, "get_board_id", lambda jira: 1)
+    monkeypatch.setattr(jira_client, "get_filter_jql", lambda jira: "")
+    monkeypatch.setattr("app.core.config.JIRA_FILTER_JQL", "")
+    mock_jira.get.return_value = {"issues": []}
+
+    periods, _ = jira_client.fetch_kanban_data(mock_jira)
+
+    today = date.today()
+    current_monday = today - timedelta(days=today.weekday())
+
+    assert periods[0]["startDate"] == str(current_monday)
+    assert periods[0]["endDate"] == str(today)
+    assert periods[0]["state"] == "active"
+    assert periods[1]["state"] == "closed"
+
+
+def test_fetch_kanban_data_uses_config_filter_jql_as_fallback(mock_jira, monkeypatch):
+    """fetch_kanban_data() combines JIRA_FILTER_JQL with updated constraint when JIRA_FILTER_ID absent."""
+    monkeypatch.setattr("app.core.config.JIRA_SPRINT_COUNT", 1)
+    monkeypatch.setattr("app.core.config.JIRA_CLOSED_SPRINTS_ONLY", True)
+    monkeypatch.setattr(jira_client, "get_board_id", lambda jira: 1)
+    monkeypatch.setattr(jira_client, "get_filter_jql", lambda jira: "")
+    monkeypatch.setattr("app.core.config.JIRA_FILTER_JQL", "project = SCRUM AND status = Done")
+    mock_jira.get.return_value = {"issues": []}
+
+    jira_client.fetch_kanban_data(mock_jira)
+
+    called_jql = mock_jira.get.call_args[1]["params"]["jql"]
+    assert "project = SCRUM AND status = Done" in called_jql
+    assert "updated" in called_jql
+
+
+def test_fetch_kanban_data_filter_id_jql_takes_precedence_over_config_jql(mock_jira, monkeypatch):
+    """When get_filter_jql() returns a JQL, config.JIRA_FILTER_JQL is not used."""
+    monkeypatch.setattr("app.core.config.JIRA_SPRINT_COUNT", 1)
+    monkeypatch.setattr("app.core.config.JIRA_CLOSED_SPRINTS_ONLY", True)
+    monkeypatch.setattr(jira_client, "get_board_id", lambda jira: 1)
+    monkeypatch.setattr(jira_client, "get_filter_jql", lambda jira: "project = OTHER")
+    monkeypatch.setattr("app.core.config.JIRA_FILTER_JQL", "project = FALLBACK")
+    mock_jira.get.return_value = {"issues": []}
+
+    jira_client.fetch_kanban_data(mock_jira)
+
+    called_jql = mock_jira.get.call_args[1]["params"]["jql"]
+    assert "project = OTHER" in called_jql
+    assert "project = FALLBACK" not in called_jql
 
 
 # ---------------------------------------------------------------------------

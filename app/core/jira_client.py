@@ -130,78 +130,115 @@ def fetch_sprint_data(jira: Jira) -> tuple[list[dict[str, Any]], dict[int | str,
     return sprints, sprint_issues
 
 
+def _find_period_for_date(date_str: str, periods: list[dict[str, Any]]) -> str | None:
+    """Return the period id whose [startDate, endDate] range contains date_str, or None.
+
+    ISO date strings compare correctly as plain strings (YYYY-MM-DD lexicographic order).
+    """
+    if not date_str or len(date_str) < 10:
+        return None
+    date_prefix = date_str[:10]
+    for period in periods:
+        if period["startDate"] <= date_prefix <= period["endDate"]:
+            return period["id"]
+    return None
+
+
 def fetch_kanban_data(jira: Jira) -> tuple[list[dict[str, Any]], dict[int | str, list[dict[str, Any]]]]:
     """
-    Fetch KANBAN board data grouped by time periods (weeks) instead of sprints.
-    Returns a tuple of (periods_list, period_id -> list of issues) with same shape as fetch_sprint_data.
-    Each period represents an ISO week going backward from today.
-    If JIRA_FILTER_ID is set, only issues matching that filter's JQL are included.
+    Fetch KANBAN board data grouped by ISO calendar weeks instead of sprints.
+
+    KANBAN strategy (differs from SCRUM):
+    - Builds N ISO week periods based on JIRA_SPRINT_COUNT and JIRA_CLOSED_SPRINTS_ONLY.
+    - Issues a SINGLE JQL query using `updated >= oldest_period_start` — does not rely on
+      `resolutiondate`, which many Jira workflows leave unset on Done issues.
+    - Groups each issue into its week by completion date: `resolutiondate` if set, else `updated`.
+    - Returns (periods, period_issues) with the same shape as fetch_sprint_data so all
+      downstream metrics functions (compute_velocity, compute_ai_assistance_trend, etc.) work
+      unchanged for both SCRUM and KANBAN.
     """
     board_id = get_board_id(jira)
-    logger.debug("Fetching KANBAN data for board %s (as time periods)", board_id)
+    logger.debug("Fetching KANBAN data for board %s (as ISO week periods)", board_id)
 
-    # Note: board_info could be fetched here for logging, but it's optional
-
-    # Create synthetic time periods (weeks going backward from today)
+    # Align to ISO week boundaries (Monday = weekday 0).
+    # JIRA_CLOSED_SPRINTS_ONLY controls whether the current partial week is included.
     today = datetime.utcnow().date()
+    current_monday = today - timedelta(days=today.weekday())
     periods: list[dict[str, Any]] = []
-    period_issues: dict[int | str, list[dict[str, Any]]] = {}
 
-    filter_jql = get_filter_jql(jira)
-    if filter_jql:
-        logger.debug("Applying filter JQL: %s", filter_jql)
+    for i in range(config.JIRA_SPRINT_COUNT):
+        if config.JIRA_CLOSED_SPRINTS_ONLY:
+            # Skip current week; use the N most recently completed ISO weeks.
+            week_start = current_monday - timedelta(weeks=i + 1)
+            week_end = week_start + timedelta(days=6)
+            state = "closed"
+        else:
+            # Period 0 is the current (possibly partial) week; subsequent periods are complete.
+            week_start = current_monday - timedelta(weeks=i)
+            week_end = today if i == 0 else week_start + timedelta(days=6)
+            state = "active" if i == 0 else "closed"
 
-    for week_offset in range(config.JIRA_SPRINT_COUNT):
-        # Calculate the week start and end dates
-        week_end = today - timedelta(days=week_offset * 7)
-        week_start = week_end - timedelta(days=6)
-        week_num = week_start.isocalendar()[1]
-        week_year = week_start.isocalendar()[0]
-        period_label = f"{week_year}-W{week_num:02d}"
+        iso = week_start.isocalendar()
+        period_label = f"{iso[0]}-W{iso[1]:02d}"
         period_id = f"week-{period_label}"
-
-        # Build JQL to fetch issues resolved/completed in this week
-        jql_date_range = f'resolutiondate >= "{week_start}" AND resolutiondate <= "{week_end}"'
-        combined_jql = jql_date_range
-        if filter_jql:
-            combined_jql = f"({jql_date_range}) AND ({filter_jql})"
-
-        # Fetch issues for this period
-        all_issues: list[dict[str, Any]] = []
-        start = 0
-        limit = 50
-        logger.debug("Fetching issues for period %s (jql=%r)", period_label, combined_jql)
-        while True:
-            try:
-                result = jira.jql(combined_jql, start=start, limit=limit)
-                if result is None:
-                    break
-                issues = result.get("issues") or []
-                all_issues.extend(issues)
-                total = result.get("total", 0)
-                if start + len(issues) >= total or len(issues) == 0:
-                    break
-                start += limit
-            except Exception as exc:
-                logger.warning("Error fetching issues for period %s: %s", period_label, _sanitise_error(str(exc)))
-                break
-
-        period_issues[period_id] = all_issues
         periods.append(
             {
                 "id": period_id,
                 "name": period_label,
-                "state": "closed",  # KANBAN periods are always "closed" (historical)
+                "state": state,
                 "startDate": str(week_start),
                 "endDate": str(week_end),
             }
         )
-        logger.debug("Period %s: fetched %s issue(s)", period_label, len(all_issues))
 
-    total_issues = sum(len(v) for v in period_issues.values())
-    logger.debug(
-        "KANBAN data ready: %s period(s), %s total issue(s)",
-        len(periods),
-        total_issues,
-    )
+    # Prefer a Jira-hosted filter; fall back to the local JQL forwarded by the generate handler.
+    filter_jql = get_filter_jql(jira) or config.JIRA_FILTER_JQL
+    if filter_jql:
+        logger.debug("Applying filter JQL: %s", filter_jql)
+
+    # Single JQL query covering the full period window.
+    # Use `updated` instead of `resolutiondate` — many Jira workflows (especially team-managed
+    # projects) do not set resolutiondate when an issue transitions to a Done-category status.
+    oldest_start = periods[-1]["startDate"]
+    date_constraint = f'updated >= "{oldest_start}"'
+    combined_jql = f"({filter_jql}) AND {date_constraint}" if filter_jql else date_constraint
+    logger.debug("Fetching KANBAN issues (jql=%r)", combined_jql)
+
+    # Use the v3 search/jql endpoint (v2 /search was removed from Jira Cloud, returns HTTP 410).
+    # Pagination is cursor-based via nextPageToken, not offset-based.
+    all_issues: list[dict[str, Any]] = []
+    next_page_token: str | None = None
+    limit = 50
+    search_url = jira.resource_url("search/jql", api_version=3)
+    while True:
+        try:
+            params: dict[str, Any] = {"jql": combined_jql, "fields": "*all", "maxResults": limit}
+            if next_page_token is not None:
+                params["nextPageToken"] = next_page_token
+            result = jira.get(search_url, params=params)
+            if result is None:
+                break
+            issues = result.get("issues") or []
+            all_issues.extend(issues)
+            next_page_token = result.get("nextPageToken")
+            if not next_page_token or len(issues) == 0:
+                break
+        except Exception as exc:
+            logger.warning("Error fetching KANBAN issues: %s", _sanitise_error(str(exc)))
+            break
+
+    logger.debug("Fetched %s total KANBAN issue(s)", len(all_issues))
+
+    # Group issues into week periods by their completion date.
+    # Use resolutiondate when set (most accurate), else fall back to updated.
+    period_issues: dict[int | str, list[dict[str, Any]]] = {p["id"]: [] for p in periods}
+    for issue in all_issues:
+        fields = issue.get("fields") or {}
+        done_date = (fields.get("resolutiondate") or fields.get("updated") or "")[:10]
+        pid = _find_period_for_date(done_date, periods)
+        if pid is not None:
+            period_issues[pid].append(issue)
+
+    placed = sum(len(v) for v in period_issues.values())
+    logger.debug("KANBAN data ready: %s period(s), %s issue(s) placed in periods", len(periods), placed)
     return periods, period_issues
